@@ -47,7 +47,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "buddy3d-camera"
-	release = extension.Version("0.8.0")
+	release = extension.Version("0.8.1")
 )
 
 // The name module.yaml gives the camera's port.

@@ -3,6 +3,12 @@
 What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host.
 
+## 0.1.2 - 2026-11-24
+
+### Changed
+
+- The build tooling takes minimatch 11 for GHSA-g3hv-75wg-m249. Nothing the extension ships changes.
+
 ## 0.1.1 - 2026-11-24
 
 ### Changed

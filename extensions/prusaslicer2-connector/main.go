@@ -37,7 +37,7 @@ import (
 // the newest entry of CHANGELOG.md and the version module.yaml declares.
 const (
 	name    = "prusaslicer2-connector"
-	release = extension.Version("0.1.1")
+	release = extension.Version("0.1.2")
 )
 
 // openAPI is the fragment describing the routes, with every path relative to

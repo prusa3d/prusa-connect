@@ -61,7 +61,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "buddy-debug-logs"
-	release = extension.Version("0.1.10")
+	release = extension.Version("0.1.11")
 )
 
 // The names module.yaml gives the two ports under needs.listen.

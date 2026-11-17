@@ -1,6 +1,6 @@
 {
   "name": "prusaslicer3-connector-client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A typed client for the routes of module com.github.aux.prusa3d.prusaslicer3-connector, generated from its OpenAPI fragment. It binds onto a @prusa/connect client.",
   "type": "module",
   "sideEffects": false,

@@ -1,6 +1,6 @@
 {
   "name": "prusaslicer3-connector-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "The browser half of the prusaslicer3-connector module: the pages PrusaSlicer 3 opens, built into the bundle the host serves.",
   "type": "module",

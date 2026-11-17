@@ -1,6 +1,6 @@
 {
   "name": "simple-queue-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "The browser half of the print queue module: the Queue tab of each printer, a line on each printer card, a section of the print dialog and the Print queue page, built into the bundle the host serves.",
   "type": "module",
