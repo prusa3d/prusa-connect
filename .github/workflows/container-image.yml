@@ -8,6 +8,12 @@ name: Container image
 # its own repository's packages, so a fixed name would fail in every copy of
 # the repository but one.
 #
+# Docker Hub gets the same image, at the same digest, when the repository
+# variable DOCKERHUB_IMAGE names it, such as prusa3d/prusa-connect. The
+# variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN, an access token
+# that may push to that repository, sign in. Without DOCKERHUB_IMAGE the job
+# pushes to ghcr.io alone.
+#
 # Two ways in:
 #   - release.yml calls it for every release, after the release is published
 #   - by hand, from the Actions tab, naming a release that is already out.
@@ -130,7 +136,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.IMAGE }}
+          images: |
+            ${{ env.IMAGE }}
+            name=docker.io/${{ vars.DOCKERHUB_IMAGE }},enable=${{ vars.DOCKERHUB_IMAGE != '' }}
           tags: |
             type=semver,pattern={{version}},value=v${{ steps.version.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.version }},enable=${{ inputs.move-tags }}
@@ -166,6 +174,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        if: vars.DOCKERHUB_IMAGE != ''
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # 64-bit only. linux/arm/v7 is left out because two extensions the image
       # carries do not compile for 32-bit: parts (MaxID overflows int) and
       # server-slicing (Maxrss is int32 there). linux/arm/v6 has no
@@ -191,8 +206,15 @@ jobs:
 
       # Keyless: the certificate names this workflow file and the ref it ran
       # from, and there is no key to rotate. Signed by digest, so it covers
-      # every tag above.
+      # every tag above. A registry keeps the signature beside the image, so
+      # each registry gets its own.
       - name: Sign the image
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-        run: cosign sign --yes "$IMAGE@$DIGEST"
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+        run: |
+          set -eu
+          cosign sign --yes "$IMAGE@$DIGEST"
+          if [ -n "$DOCKERHUB_IMAGE" ]; then
+            cosign sign --yes "docker.io/$DOCKERHUB_IMAGE@$DIGEST"
+          fi

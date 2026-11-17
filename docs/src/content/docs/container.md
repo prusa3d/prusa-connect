@@ -33,6 +33,9 @@ The image is `ghcr.io/prusa3d/prusa-connect`, for `linux/amd64` and `linux/arm64
 with a 64-bit system is `arm64`. A 32-bit system has no image, so run the binary there, as
 [Install from a release](./install-from-a-release.md) describes.
 
+Docker Hub holds the same image as `prusa3d/prusa-connect`, with the same tags and the same
+signature. Use either name.
+
 | tag | names |
 |---|---|
 | `0.2.1` | that release. It never moves |

@@ -742,6 +742,8 @@ jobs:
     uses: ./.github/workflows/container-image.yml
     with:
       version: ${{ github.ref_name }}
+    # DOCKERHUB_TOKEN, when Docker Hub gets the image too.
+    secrets: inherit
 
   # Every release goes to the beta portal as well, from the release this run
   # just published. Whether testers hear of it at once is the portal's
