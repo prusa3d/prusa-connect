@@ -2,6 +2,8 @@
   import {
     BED_PATH,
     BED_TARGET_PATH,
+    CHAMBER_PATH,
+    CHAMBER_TARGET_PATH,
     nozzlePath,
     nozzleTargetPath,
     PREHEAT_PRESETS,
@@ -19,6 +21,7 @@
   import {
     BED_MAX_CELSIUS,
     blocked,
+    CHAMBER_MAX_CELSIUS,
     degreeScale,
     groupReason,
     NOZZLE_MAX_CELSIUS,
@@ -52,7 +55,12 @@
 
   const nozzle = $derived(resolve(VERBS.nozzle));
   const bed = $derived(resolve(VERBS.bed));
-  const reason = $derived(groupReason([nozzle, bed]));
+  const chamber = $derived(resolve(VERBS.chamberTemp));
+  // A printer with no chamber has neither the verb nor the reading.
+  const hasChamber = $derived(
+    chamber.kind !== 'absent' || reading(CHAMBER_PATH) !== undefined,
+  );
+  const reason = $derived(groupReason([nozzle, bed, chamber]));
 
   const celsius = (value: number | undefined): string =>
     value === undefined
@@ -155,6 +163,16 @@
       targetTemp={reading(BED_TARGET_PATH)}
       {...bed.kind === 'absent' ? {} : { action: bedEditor }}
     />
+    {#if hasChamber}
+      <HeaterRow
+        class={READING_TILE}
+        label={t('printerDetailControls.chamberTemp.label')}
+        kind="chamber"
+        nozzleTemp={reading(CHAMBER_PATH)}
+        targetTemp={reading(CHAMBER_TARGET_PATH)}
+        {...chamber.kind === 'absent' ? {} : { action: chamberEditor }}
+      />
+    {/if}
   </div>
 
   {#if reason}
@@ -191,5 +209,24 @@
     disabled={blocked(bed, busy)}
     announceTarget={reading(BED_TARGET_PATH) !== undefined}
     onCommit={(next: number) => send(VERBS.bed, 'bed_temperature', next)}
+  />
+{/snippet}
+
+{#snippet chamberEditor()}
+  <ValueEditor
+    label={t('printerDetailControls.chamberTemp.label')}
+    currentLabel={celsius(reading(CHAMBER_PATH))}
+    target={scale.shown(reading(CHAMBER_TARGET_PATH) ?? 0)}
+    unit={scale.unit}
+    min={scale.shown(0)}
+    max={scale.shown(CHAMBER_MAX_CELSIUS)}
+    step={scale.step}
+    presets={[
+      { label: t('printerDetailControls.preset.off'), value: scale.shown(0) },
+    ]}
+    disabled={blocked(chamber, busy)}
+    announceTarget={reading(CHAMBER_TARGET_PATH) !== undefined}
+    onCommit={(next: number) =>
+      send(VERBS.chamberTemp, 'chamber.target_temp', next)}
   />
 {/snippet}

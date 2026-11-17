@@ -21,6 +21,12 @@ export const NOZZLE_PATH = '/tools/0/nozzle_temp';
 export const NOZZLE_TARGET_PATH = '/tools/0/nozzle_target_temp';
 export const BED_PATH = '/temperature/bed';
 export const BED_TARGET_PATH = '/temperature/bed_target';
+/**
+ * The air inside an enclosed printer and the target it is held to. A printer
+ * with no chamber never writes them, and a target of 0 is no target.
+ */
+export const CHAMBER_PATH = '/temperature/chamber';
+export const CHAMBER_TARGET_PATH = '/temperature/chamber_target';
 
 export const AXIS_X_PATH = '/axis/x';
 export const AXIS_Y_PATH = '/axis/y';

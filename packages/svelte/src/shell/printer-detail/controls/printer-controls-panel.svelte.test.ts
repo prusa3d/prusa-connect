@@ -526,6 +526,52 @@ describe('PrinterControlsPanel', () => {
     });
   });
 
+  // A CORE One reports its chamber and takes a target for it. A printer with
+  // neither the reading nor the verb draws no chamber row.
+  it('sets the chamber target where the printer has a chamber', async () => {
+    const onCommand = vi.fn();
+    const chamber: TelemetrySource = {
+      value: (path) =>
+        ({
+          ...READINGS,
+          '/temperature/chamber': 38.4,
+          '/temperature/chamber_target': 0,
+        })[path],
+      points: () => [],
+    };
+    await render(PrinterControlsPanel, {
+      props: props({
+        telemetry: chamber,
+        device: printer('IDLE', [
+          ...EVERY_VERB,
+          'core.command.set_chamber_target_temp',
+          'core.command.set_chamber_target_temp#chamber.target_temp',
+        ]),
+        commands: { onCommand },
+      }),
+    });
+
+    await page
+      .getByRole('button', { name: 'Set chamber target, currently 0°C' })
+      .click();
+    const surface = await openSurface();
+    await surface.getByRole('spinbutton', { name: 'Target (°C)' }).fill('45');
+    await surface.getByRole('button', { name: 'Set', exact: true }).click();
+
+    expect(onCommand).toHaveBeenCalledWith(
+      'core.command.set_chamber_target_temp',
+      { 'chamber.target_temp': '45' },
+    );
+  });
+
+  it('draws no chamber row on a printer without one', async () => {
+    await render(PrinterControlsPanel, { props: props() });
+
+    await expect
+      .element(page.getByRole('button', { name: /^Set chamber target/ }))
+      .not.toBeInTheDocument();
+  });
+
   // The row reads in the unit the reader chose, so its editor does too, and
   // the printer is still sent Celsius.
   it('edits a heater in Fahrenheit when the reader chose it', async () => {

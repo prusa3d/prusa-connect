@@ -8,6 +8,7 @@
   "printerDetailControls.chamber.light": "Light",
   "printerDetailControls.chamber.manual": "Manual",
   "printerDetailControls.chamber.off": "Off",
+  "printerDetailControls.chamberTemp.label": "Chamber",
   "printerDetailControls.disableSteppers.label": "Disable steppers",
   "printerDetailControls.exitIdle": "Exit to idle",
   "printerDetailControls.flow.label": "Flow",

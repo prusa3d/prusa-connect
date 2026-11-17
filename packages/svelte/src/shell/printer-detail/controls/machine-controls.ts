@@ -27,6 +27,7 @@ export const VERBS = {
   cancelPrinterReady: 'core.command.cancel_printer_ready',
   chamberFan: 'core.command.set_chamber_fan_target',
   chamberLight: 'core.command.set_chamber_led_intensity',
+  chamberTemp: 'core.command.set_chamber_target_temp',
   disableSteppers: 'core.command.disable_steppers',
   flow: 'core.command.set_flow',
   home: 'core.command.home',
@@ -50,6 +51,11 @@ export const VERBS = {
 /** The setpoint ceilings the xbuddy dialect declares for these two. */
 export const NOZZLE_MAX_CELSIUS = 300;
 export const BED_MAX_CELSIUS = 120;
+/**
+ * The highest chamber target a CORE One L heats to. The firmware clamps a
+ * higher one, and a CORE One clamps at 55.
+ */
+export const CHAMBER_MAX_CELSIUS = 60;
 
 /**
  * A heater's setpoint as its editor shows it. The printer takes Celsius, and

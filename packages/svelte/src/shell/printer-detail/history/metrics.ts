@@ -11,6 +11,8 @@ import {
   AXIS_Z_PATH,
   BED_PATH,
   BED_TARGET_PATH,
+  CHAMBER_PATH,
+  CHAMBER_TARGET_PATH,
   FLOW_PATH,
   nozzlePath,
   SPEED_PATH,
@@ -30,6 +32,11 @@ const READINGS: Readonly<Record<string, Reading>> = {
   [BED_PATH]: { key: 'printerDetailHistory.metric.bed', unit: CELSIUS },
   [BED_TARGET_PATH]: {
     key: 'printerDetailHistory.metric.bedTarget',
+    unit: CELSIUS,
+  },
+  [CHAMBER_PATH]: { key: 'printerDetailHistory.metric.chamber', unit: CELSIUS },
+  [CHAMBER_TARGET_PATH]: {
+    key: 'printerDetailHistory.metric.chamberTarget',
     unit: CELSIUS,
   },
   [AXIS_X_PATH]: { key: 'printerDetailHistory.metric.axisX', unit: MILLIMETRE },

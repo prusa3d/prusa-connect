@@ -1,5 +1,6 @@
 {
   "printerDetail.chip.bed": "Bed",
+  "printerDetail.chip.chamber": "Chamber",
   "printerDetail.chip.flow": "Flow",
   "printerDetail.chip.material": "Material",
   "printerDetail.chip.nozzle": "Nozzle",

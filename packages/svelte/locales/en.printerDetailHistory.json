@@ -51,6 +51,8 @@
   "printerDetailHistory.metric.axisZ": "Z axis",
   "printerDetailHistory.metric.bed": "Bed",
   "printerDetailHistory.metric.bedTarget": "Bed target",
+  "printerDetailHistory.metric.chamber": "Chamber",
+  "printerDetailHistory.metric.chamberTarget": "Chamber target",
   "printerDetailHistory.metric.flow": "Flow",
   "printerDetailHistory.metric.speed": "Speed",
   "printerDetailHistory.transfers.column.file": "File",

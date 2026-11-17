@@ -465,6 +465,72 @@ describe('TelemetryChips', () => {
     await expect.element(setButton()).not.toBeInTheDocument();
   });
 
+  describe('the chamber', () => {
+    const coreOne = {
+      ...heating,
+      model: 'CoreOne',
+      capabilities: [
+        ...heating.capabilities,
+        'core.command.set_chamber_target_temp',
+        'core.command.set_chamber_target_temp#chamber.target_temp',
+      ],
+      state: {
+        ...heating.state,
+        '/temperature/chamber': 38.4,
+        '/temperature/chamber_target': 45,
+      },
+    };
+
+    // A printer with no chamber has neither the reading nor the verb.
+    it('draws no chamber chip on a printer without one', async () => {
+      await render(TelemetryChips, {
+        props: { telemetry: silent, device: heating },
+      });
+
+      await expect
+        .element(page.getByText('Chamber', { exact: true }))
+        .not.toBeInTheDocument();
+    });
+
+    it('sets the chamber target on a CORE One', async () => {
+      const onCommand = vi.fn();
+      await render(TelemetryChips, {
+        props: { telemetry: silent, device: coreOne, commands: { onCommand } },
+      });
+
+      await page
+        .getByRole('button', {
+          name: /^Set chamber target, currently 45°C,/,
+        })
+        .click();
+      const surface = await openSurface();
+      await surface.getByRole('spinbutton', { name: 'Target (°C)' }).fill('50');
+      await surface.getByRole('button', { name: 'Set', exact: true }).click();
+
+      expect(onCommand).toHaveBeenCalledWith(
+        'core.command.set_chamber_target_temp',
+        { 'chamber.target_temp': '50' },
+      );
+    });
+
+    // An XL reports the air of its enclosure and takes no chamber target.
+    it('draws an enclosure reading with no verb as a reading', async () => {
+      const { container } = await render(TelemetryChips, {
+        props: {
+          telemetry: silent,
+          device: {
+            ...heating,
+            state: { ...heating.state, '/temperature/chamber': 31 },
+          },
+          commands: { onCommand: vi.fn() },
+        },
+      });
+
+      expect(container.textContent).toContain('31°');
+      expect(container.querySelectorAll('button')).toHaveLength(2);
+    });
+  });
+
   it('has nothing axe objects to', async () => {
     const { container } = await render(TelemetryChips, {
       props: { telemetry: silent, device },
