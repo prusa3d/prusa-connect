@@ -1,0 +1,104 @@
+version: 2
+
+# One group per ecosystem keeps a week's updates to one pull request for npm
+# and one for Go. The cooldown matches `minimumReleaseAge: 4320` in each
+# project's pnpm-workspace.yaml, and it has to match, or Dependabot proposes a
+# version pnpm then refuses to resolve. A security update ignores the cooldown,
+# so a cve pull request can stay red until its newest version is three days old.
+#
+# Each commit-message block fixes the subject at chore(deps): or
+# chore(deps-dev):. Left to guess, Dependabot also writes build(deps):, which
+# the commit prefix gate in .agents/rules/git-discipline.md refuses.
+
+updates:
+  # Every JS project carries its own lockfile. One group across all of them
+  # moves a shared dependency in lockstep: frontend type-checks packages/svelte
+  # through tsconfig paths, so two svelte versions there are two Snippet types.
+  # The extensions are in it too, so each such pull request also needs a patch
+  # release of every extension it touches: extensions/scripts/check-version-bump.sh.
+  - package-ecosystem: npm
+    directories:
+      - /frontend
+      - /docs
+      - /packages/svelte
+      - /packages/standards
+      - /packages/typescript
+      - /examples/nozzle-watch/ui
+      - /examples/service-plugin/client
+      - /packages/fractal/client
+      - /examples/spools/ui
+      - /examples/spools/client
+      - /extensions/fleet-stats/ui
+      - /extensions/parts/ui
+      - /extensions/parts/client
+      - /extensions/materials/ui
+      - /extensions/materials/client
+      - /extensions/buddy-debug-logs/ui
+      - /extensions/buddy-debug-logs/client
+      - /extensions/server-slicing/ui
+      - /extensions/server-slicing/client
+      - /extensions/threemf/ui
+      - /extensions/threemf/client
+      - /packages/typescript/testdata/consumers/browser-vite
+      - /packages/typescript/testdata/consumers/node-esm
+      - /packages/typescript/testdata/consumers/svelte
+      - /packages/typescript/testdata/consumers/svelte-ui
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    # Majors held back on purpose. Each is blocked by something outside our
+    # control, so Dependabot would otherwise re-propose it every week.
+    ignore:
+      # Astro 7 is its own piece of work: a framework major should not ride
+      # along with anything else. @astrojs/starlight >=0.41 tracks Astro 7, so
+      # it is held with it.
+      - dependency-name: astro
+        update-types: [version-update:semver-major]
+      - dependency-name: '@astrojs/starlight'
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      # @typescript-eslint peers typescript <6.1.0. Unblock when it widens.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # js-yaml 5 drops the ESM default export that the docs AsyncAPI
+      # generator imports. Unblock by rewriting that import.
+      - dependency-name: js-yaml
+        update-types: [version-update:semver-major]
+      # @types/node follows the Node major the projects run on, not the newest.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+    groups:
+      npm:
+        patterns:
+          - '*'
+      # Security fixes bypass the version-update groups entirely, so they need
+      # their own grouping or they go back to one PR per advisory.
+      cve:
+        applies-to: security-updates
+        patterns:
+          - '*'
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      go:
+        patterns:
+          - '*'
+      cve:
+        applies-to: security-updates
+        patterns:
+          - '*'
