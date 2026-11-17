@@ -866,7 +866,10 @@ jobs:
       # publint reads the manifest of a tarball, and @arethetypeswrong/cli
       # reads how its types resolve. Both are devDependencies of the SDK, and
       # the library's tarball is read by publint alone: its declarations name
-      # the Svelte shims, which no Node resolver finds.
+      # the Svelte shims, which no Node resolver finds. They run from
+      # node_modules/.bin, not through `pnpm exec`: the step above changed the
+      # manifests, and pnpm refuses to run anything after that until the next
+      # install.
       - name: Pack both packages and read the tarballs
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -883,9 +886,9 @@ jobs:
           test -f "$UI"
 
           cd packages/typescript
-          pnpm exec publint --strict "$SDK"
-          pnpm exec attw --profile esm-only "$SDK"
-          pnpm exec publint --strict "$UI"
+          ./node_modules/.bin/publint --strict "$SDK"
+          ./node_modules/.bin/attw --profile esm-only "$SDK"
+          ./node_modules/.bin/publint --strict "$UI"
 
       # A rerun of a release that already published reaches the registry and
       # fails there, on a message about an immutable version. This says which
