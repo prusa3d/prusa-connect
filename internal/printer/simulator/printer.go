@@ -201,6 +201,8 @@ type Printer struct {
 	// for each. A verb the host should send and never does is invisible on the
 	// state tree. See Asked.
 	asked map[string]int
+	// chamber is the enclosure of a machine with one. See chamber.go.
+	chamber chamber
 	// filamentToLoad is the name the last M701 carried, and filamentAsked is
 	// whether one arrived at all. See FilamentToLoad.
 	filamentToLoad string
@@ -281,6 +283,7 @@ func New(cfg Config) (*Printer, error) {
 		state:        stateIdle,
 		jobState:     stateIdle,
 		asked:        map[string]int{},
+		chamber:      newChamber(),
 		booted:       time.Now(),
 		nextDialogID: firstDialogID,
 		metrics:      metricsTarget{metricsPort: defaultMetricsPort, syslogPort: defaultSyslogPort},

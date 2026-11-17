@@ -276,7 +276,7 @@
     },
     {
       "interface": "Chamber1",
-      "reason": "The telemetry a printer sends to this server has no chamber reading. This server has commands that set a chamber target, but it has no reading of the target, so it would report a value the printer did not confirm."
+      "reason": "A printer with a chamber reports its air at /temperature/chamber and its target at /temperature/chamber_target. This table can give an interface to every printer or to each head or slot, and not to only the printers that have a chamber. Mapped here, an MK4 would show a chamber with no readings."
     },
     {
       "interface": "FDMPrinter1",

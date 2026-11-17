@@ -472,6 +472,13 @@ Depending on printer family:
 - enclosure block may be present on XL enclosure setups
 - chamber block is present on CoreOne / CoreOneL style platforms
 
+Both arrive in full telemetry frames only. The driver writes the chamber's
+`temp` to `/temperature/chamber` and its `target_temp` to
+`/temperature/chamber_target`. An XL enclosure's `temp` also lands at
+`/temperature/chamber`, and the XL has no chamber target. The firmware sends 0
+for a reading it does not have, so a reading of 0 removes the node. A target
+of 0 means no target and stays 0.
+
 Example chamber object:
 
 ```json

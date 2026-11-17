@@ -239,7 +239,7 @@ console.log(JSON.stringify({ id, name, model, connected, state }));
 
 ```
 4 printers
-{"id":"abf6b4a1-9c0e-44cf-8766-118ab4e95337","name":"CoreOne DEMO-01","model":"CoreOne","connected":true,"state":{"/axis/x":0,"/axis/y":0,"/axis/z":10.200000000000001,"/flow":100,"/job/id":2,"/job/path":"/usb/tangle.bgcode","/job/progress":17,"/job/state":"PRINTING","/job/time_printing":51,"/job/time_remaining":249,"/speed":100,"/state":"PRINTING","/temperature/bed":60,"/temperature/bed_target":60,"/tools/0/active":true,"/tools/0/nozzle_temp":215,"/tools/0/nozzle_target_temp":215,"/tools/0/material_package_instance/package/material/abbreviation":"PLA"}}
+{"id":"abf6b4a1-9c0e-44cf-8766-118ab4e95337","name":"CoreOne DEMO-01","model":"CoreOne","connected":true,"state":{"/axis/x":0,"/axis/y":0,"/axis/z":10.200000000000001,"/flow":100,"/job/id":2,"/job/path":"/usb/tangle.bgcode","/job/progress":17,"/job/state":"PRINTING","/job/time_printing":51,"/job/time_remaining":249,"/speed":100,"/state":"PRINTING","/temperature/bed":60,"/temperature/bed_target":60,"/temperature/chamber":32,"/temperature/chamber_target":0,"/tools/0/active":true,"/tools/0/nozzle_temp":215,"/tools/0/nozzle_target_temp":215,"/tools/0/material_package_instance/package/material/abbreviation":"PLA"}}
 ```
 
 A printer also carries `kind`, `vendor`, `firmware`, `serial`, `driver`,

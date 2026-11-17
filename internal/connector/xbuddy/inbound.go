@@ -138,10 +138,9 @@ const (
 //
 // It covers the keys every model reports. The tools, in a slot block or a
 // tools object, and the nozzle and material at the top of the frame, which
-// belong to a head, are read by reportToolTelemetry. The other model-specific blocks (enclosure, chamber,
-// temp_heatbreak) are not here: the profile data does not name them, and
-// inventing paths for them here would put a second copy of that vocabulary in
-// a driver. A key this map does not carry is not emitted.
+// belong to a head, are read by reportToolTelemetry. The chamber and enclosure
+// blocks are read by reportChamber. A key this map does not carry is not
+// emitted.
 //
 //nolint:gochecknoglobals // a lookup table, read-only after init.
 var telemetryPaths = map[string]string{
@@ -297,6 +296,7 @@ func (s *Session) dispatchTelemetry(message inboundMessage) {
 	}
 
 	s.reportToolTelemetry(message.fields)
+	s.reportChamber(message.fields)
 
 	// The job number is remembered as well as reported. SEND_JOB_INFO names the
 	// print it is asking about and telemetry is where the number comes from, so

@@ -332,6 +332,10 @@ func (p *Printer) dispatch(ctx context.Context, conn *websocket.Conn, id uint32,
 		}
 	case "SEND_STATE_INFO":
 		return p.send(conn, event{Event: eventStateChanged, CommandID: &id, State: p.State()})
+	case chamberSetter, "SET_CHAMBER_FAN_TARGET", "SET_CHAMBER_LED_INTENSITY":
+		p.mu.Lock()
+		p.setChamber(command.Command, command.Kwargs)
+		p.mu.Unlock()
 	}
 
 	if err := p.send(conn, event{Event: eventFinished, CommandID: &id, State: p.State()}); err != nil {
