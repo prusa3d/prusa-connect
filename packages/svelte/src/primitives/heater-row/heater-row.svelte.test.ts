@@ -112,6 +112,26 @@ describe('HeaterRow', () => {
     expect(commanded.word.textContent.trim()).toBe('Heating');
   });
 
+  // A chamber is a heater against its target and off with none, so a warm XL
+  // enclosure with no target shows neither cooling nor arrived.
+  it('reads a chamber against its target, and as off with none', async () => {
+    const chamber = { label: 'Chamber', kind: 'chamber' as const };
+
+    const warming = await draw({ ...chamber, nozzleTemp: 30, targetTemp: 45 });
+    expect(warming.word.textContent.trim()).toBe('Heating, target 45°C');
+    expect(arrowOf(warming.row)).toBe('up');
+
+    const held = await draw({ ...chamber, nozzleTemp: 50, targetTemp: 45 });
+    expect(held.word.textContent.trim()).toBe('Cooling, target 45°C');
+
+    for (const targetTemp of [undefined, 0]) {
+      const idle = await draw({ ...chamber, nozzleTemp: 45, targetTemp });
+
+      expect(idle.word.textContent.trim()).toBe('Off');
+      expect(idle.row.hasAttribute('title')).toBe(false);
+    }
+  });
+
   it('marks the feeding head by weight, and by nothing else', async () => {
     const feeding = await draw({ active: true });
     const idle = await draw();
@@ -154,7 +174,7 @@ describe('HeaterRow', () => {
       targetTemp: 45,
     });
 
-    expect(row.querySelector('svg.lucide-thermometer')).not.toBeNull();
+    expect(row.querySelector('svg[data-slot="control-icon"]')).not.toBeNull();
     expect(row.querySelector('.font-mono.truncate')).toBeNull();
   });
 

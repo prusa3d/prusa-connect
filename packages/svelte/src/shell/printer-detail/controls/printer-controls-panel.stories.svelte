@@ -95,6 +95,26 @@
 
   const commands = { onCommand: () => undefined };
 
+  // A CORE One printing with a chamber target: the bed warms the air towards
+  // it, and the fans run on their own.
+  const coreOne: Device = {
+    ...fakeDevice('p3', 'CORE One #7'),
+    model: 'CoreOne',
+    capabilities: [
+      ...EVERY_VERB,
+      'core.command.set_chamber_target_temp',
+      'core.command.set_chamber_target_temp#chamber.target_temp',
+    ],
+    state: { '/state': 'PRINTING' },
+  };
+
+  const chamberWarming = readings({
+    '/temperature/chamber': 38.4,
+    '/temperature/chamber_target': 45,
+    '/chamber/fan_pwm_target': -1,
+    '/chamber/led_intensity': 100,
+  });
+
   const MATERIAL = 'material_package_instance/package/material/abbreviation';
 
   // Two heads in the tool tree. Head 1 prints and head 0 heats to its own
@@ -171,6 +191,14 @@
   <PrinterControlsPanel
     device={printer('PRINTING')}
     telemetry={readings()}
+    {commands}
+  />
+</Story>
+
+<Story name="Chamber" asChild>
+  <PrinterControlsPanel
+    device={coreOne}
+    telemetry={chamberWarming}
     {commands}
   />
 </Story>

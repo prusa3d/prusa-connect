@@ -148,8 +148,8 @@
     verb: string;
     /** What the dialect calls the setpoint on the wire. */
     argument: string;
-    /** A chamber, which only fans cool. */
-    coolsOnly: boolean;
+    /** A chamber, which is off with no target whatever the air. */
+    chamber: boolean;
   }
 
   const heater = (spec: {
@@ -161,7 +161,7 @@
     argument: string;
     max: number;
     column?: (preset: PreheatPreset) => number;
-    coolsOnly?: boolean;
+    chamber?: boolean;
   }): HeaterChip => {
     const projection = resolve(spec.verb);
 
@@ -179,7 +179,7 @@
       max: spec.max,
       verb: spec.verb,
       argument: spec.argument,
-      coolsOnly: spec.coolsOnly === true,
+      chamber: spec.chamber === true,
     };
   };
 
@@ -220,7 +220,7 @@
       verb: VERBS.chamberTemp,
       argument: 'chamber.target_temp',
       max: chamberMaxCelsius(device.model),
-      coolsOnly: true,
+      chamber: true,
     }),
   );
   const hasChamber = $derived(
@@ -337,7 +337,7 @@
                     {icon}
                     current={chip.current}
                     target={chip.target}
-                    coolsOnly={chip.coolsOnly}
+                    chamber={chip.chamber}
                   />
                   <ChevronDownIcon aria-hidden="true" />
                 </button>
@@ -351,7 +351,7 @@
             {icon}
             current={chip.current}
             target={chip.target}
-            coolsOnly={chip.coolsOnly}
+            chamber={chip.chamber}
           />
         </Badge>
       {/if}

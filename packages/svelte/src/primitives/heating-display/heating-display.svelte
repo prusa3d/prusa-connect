@@ -34,12 +34,12 @@
     current,
     target,
     muted = false,
-    coolsOnly = false,
+    chamber = false,
     class: className,
   }: TemperatureReadingProps = $props();
 
   const state = $derived(
-    (coolsOnly ? chamberState : heaterState)({ current, target }),
+    (chamber ? chamberState : heaterState)({ current, target }),
   );
 </script>
 

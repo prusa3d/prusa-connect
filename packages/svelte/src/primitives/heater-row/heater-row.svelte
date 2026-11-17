@@ -13,11 +13,11 @@
   of forced width plus a 4px gap that `truncate` can never claw back.
 -->
 <script lang="ts">
-  import ThermometerIcon from '@lucide/svelte/icons/thermometer';
   import type { Component } from 'svelte';
 
   import { chamberState, type HeaterState, heaterState } from '../../domain';
   import { formatUnit, t } from '../../i18n';
+  import { ChamberIcon } from '../control-icon';
   import { HeatReading } from '../heating-display';
   import { HeatbedIcon, NozzleIcon } from '../telemetry-icon';
   import type { HeaterKind, HeaterRowProps } from './types';
@@ -43,14 +43,11 @@
     'not-reported': 'primitives.heaterRow.notReported',
   };
 
-  // Prusa Connect's own icon set carries nozzle, heatbed and spool line art
-  // and nothing else. A chamber reads as an ambient enclosure reading rather
-  // than a heater with a shape of its own, which is what lucide's thermometer
-  // glyph already means elsewhere in this tree.
+  // The chamber draws the same icon as its chip in the printer's header.
   const KIND_ICON: Record<HeaterKind, Component<Record<string, unknown>>> = {
     tool: NozzleIcon,
     bed: HeatbedIcon,
-    chamber: ThermometerIcon,
+    chamber: ChamberIcon,
   };
 
   // The reading and the target are written whole, with the unit where the

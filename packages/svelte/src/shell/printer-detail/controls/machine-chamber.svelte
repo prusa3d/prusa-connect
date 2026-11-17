@@ -1,6 +1,10 @@
 <!-- Chamber: how hard the enclosure fan runs, and how bright its light is. -->
 <script lang="ts">
-  import { CHAMBER_FAN_PATH, CHAMBER_LIGHT_PATH } from '../../../domain';
+  import {
+    CHAMBER_FAN_PATH,
+    CHAMBER_LIGHT_PATH,
+    CHAMBER_TARGET_PATH,
+  } from '../../../domain';
   import { t } from '../../../i18n';
   import {
     ChamberIcon,
@@ -47,17 +51,27 @@
   };
 
   let mode = $derived<FanMode>(modeOf(reportedFan));
-  let fanPercent = $derived(
-    reportedFan !== undefined && reportedFan > FAN_OFF
-      ? reportedFan
-      : PERCENT_MAX,
-  );
+
+  // The speed Manual starts from: the last one above Off the printer reported
+  // or a person picked, so Off and back to Manual returns to it rather than to
+  // full speed. It is a plain variable rather than state: it changes only as
+  // a side note of a report or a pick, and nothing draws it.
+  let lastSpeed = PERCENT_MAX;
+  let fanPercent = $derived.by(() => {
+    if (reportedFan !== undefined && reportedFan > FAN_OFF) {
+      lastSpeed = reportedFan;
+    }
+
+    return lastSpeed;
+  });
   let lightPercent = $derived(reportedLight ?? PERCENT_MAX);
 
   // The fans hold the chamber under its target only while they run on their
-  // own, so a target does nothing while they are set by hand.
+  // own, so a target set does nothing while they are set by hand.
   const targetIgnored = $derived(
-    mode !== 'auto' && resolve(VERBS.chamberTemp).kind !== 'absent',
+    mode !== 'auto' &&
+      resolve(VERBS.chamberTemp).kind !== 'absent' &&
+      (reading(CHAMBER_TARGET_PATH) ?? 0) > 0,
   );
 
   const sendFan = (target: number) =>
@@ -80,6 +94,7 @@
   };
 
   const commitFan = (next: number) => {
+    if (next > FAN_OFF) lastSpeed = next;
     fanPercent = next;
     sendFan(next);
   };

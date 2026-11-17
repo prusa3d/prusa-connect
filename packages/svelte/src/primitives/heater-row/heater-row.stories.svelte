@@ -215,16 +215,29 @@
   </HeaterRows>
 </Story>
 
-<!-- Chamber: the one kind with no editor trigger and no material line.
-     Lucide's thermometer stands in for a heater kind with no line art of its
-     own among the ported icons. -->
+<!-- Chamber: the one kind with no material line. It warms towards its target
+     while a print waits on it, and with no target it is off however warm the
+     air, as an XL enclosure with no target is. -->
 <Story name="Chamber" asChild>
-  <HeaterRows rows={1}>
+  <HeaterRows rows={3}>
+    <HeaterRow
+      label="Chamber"
+      kind="chamber"
+      nozzleTemp={38.4}
+      targetTemp={45}
+      action={setTarget}
+    />
     <HeaterRow
       label="Chamber"
       kind="chamber"
       nozzleTemp={45.2}
       targetTemp={45}
+    />
+    <HeaterRow
+      label="Enclosure"
+      kind="chamber"
+      nozzleTemp={31}
+      targetTemp={undefined}
     />
   </HeaterRows>
 </Story>

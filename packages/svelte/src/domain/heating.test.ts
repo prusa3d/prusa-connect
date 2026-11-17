@@ -111,13 +111,15 @@ describe('isHeating', () => {
   });
 });
 
-// A chamber has fans and no heater, so its target is a ceiling.
+// A chamber has fans and no heater. A print waits for it to warm to its target,
+// and the fans hold it under the target, so it reads as a heater against one.
 describe('chamberState', () => {
   it.each([
     { current: undefined, target: 45, want: 'not-reported' },
-    { current: 25, target: undefined, want: 'at-temperature' },
-    { current: 25, target: 0, want: 'at-temperature' },
-    { current: 25, target: 45, want: 'at-temperature' },
+    { current: 25, target: undefined, want: 'off' },
+    { current: 25, target: 0, want: 'off' },
+    { current: 50, target: 0, want: 'off' },
+    { current: 25, target: 45, want: 'heating' },
     { current: 45, target: 45, want: 'at-temperature' },
     { current: 50, target: 45, want: 'cooling' },
   ] as const)(

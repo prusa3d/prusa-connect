@@ -55,6 +55,17 @@
   </div>
 </Story>
 
+<!-- A chamber: a heater against its target, so it warms towards one and
+     cools under one, and off with none, however warm the air, where a nozzle
+     at 48 with no target shows cooling. -->
+<Story name="Chamber" asChild>
+  <div class="flex items-center gap-6 text-sm">
+    <TemperatureReading icon={nozzle} current={30} target={45} chamber />
+    <TemperatureReading icon={nozzle} current={50} target={45} chamber />
+    <TemperatureReading icon={nozzle} current={48} target={0} chamber />
+  </div>
+</Story>
+
 <Story name="Last Known Reading" asChild>
   <div class="flex items-center gap-6 text-sm">
     <TemperatureReading icon={nozzle} current={48} target={215} />

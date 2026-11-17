@@ -492,12 +492,17 @@ describe('PrinterControlsPanel', () => {
   // A CORE One reports its fan target and light, so the section opens on what
   // the printer runs rather than on a default.
   it('shows the chamber fan and light the printer reports', async () => {
-    const reporting = (fan: number, light: number): TelemetrySource => ({
+    const reporting = (
+      fan: number,
+      light: number,
+      target = 45,
+    ): TelemetrySource => ({
       value: (path) =>
         ({
           ...READINGS,
           '/chamber/fan_pwm_target': fan,
           '/chamber/led_intensity': light,
+          '/temperature/chamber_target': target,
         })[path],
       points: () => [],
     });
@@ -532,7 +537,7 @@ describe('PrinterControlsPanel', () => {
       .toBeVisible();
 
     await first.unmount();
-    await render(PrinterControlsPanel, {
+    const second = await render(PrinterControlsPanel, {
       props: props({
         telemetry: reporting(-1, 100),
         device: printer('IDLE', chamberVerbs),
@@ -549,6 +554,58 @@ describe('PrinterControlsPanel', () => {
         ),
       )
       .not.toBeInTheDocument();
+
+    // With no target there is nothing for the note to warn about.
+    await second.unmount();
+    await render(PrinterControlsPanel, {
+      props: props({
+        telemetry: reporting(0, 100, 0),
+        device: printer('IDLE', chamberVerbs),
+      }),
+    });
+
+    await expect
+      .element(page.getByRole('radio', { name: 'Off' }))
+      .toBeChecked();
+    await expect
+      .element(
+        page.getByText(
+          'The chamber target applies only while the fans run on Auto.',
+        ),
+      )
+      .not.toBeInTheDocument();
+  });
+
+  // Off and back to Manual returns to the speed the fans last ran at, not to
+  // full speed.
+  it('returns to the last chamber fan speed after Off', async () => {
+    let fan = $state(40);
+    const onCommand = vi.fn();
+    await render(PrinterControlsPanel, {
+      props: props({
+        commands: { onCommand },
+        telemetry: {
+          value: (path) =>
+            ({ ...READINGS, '/chamber/fan_pwm_target': fan })[path],
+          points: () => [],
+        },
+      }),
+    });
+
+    await expect
+      .element(page.getByRole('radio', { name: 'Manual' }))
+      .toBeChecked();
+    fan = 0;
+    await expect
+      .element(page.getByRole('radio', { name: 'Off' }))
+      .toBeChecked();
+
+    await page.getByRole('radio', { name: 'Manual' }).click();
+
+    expect(onCommand).toHaveBeenLastCalledWith(
+      'core.command.set_chamber_fan_target',
+      { 'chamber.fan_pwm_target': '40' },
+    );
   });
 
   // A preset is a shortcut to a figure.

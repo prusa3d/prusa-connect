@@ -29,9 +29,9 @@ export interface TemperatureReadingProps {
   /** A last-known reading from a printer this instance can no longer hear from. */
   muted?: boolean;
   /**
-   * A chamber, which fans hold under its target and nothing heats. It reads
-   * cooling above the target and never heating.
+   * A chamber: a heater against its target, and off with none whatever the
+   * air. See `chamberState`.
    */
-  coolsOnly?: boolean;
+  chamber?: boolean;
   class?: ClassValue | undefined;
 }

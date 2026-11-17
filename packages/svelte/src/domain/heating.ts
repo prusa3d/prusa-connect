@@ -55,9 +55,11 @@ export const heaterState = ({
 };
 
 /**
- * What a chamber is doing. A chamber has fans and no heater: its target is the
- * temperature the fans hold the air under, so it is never heating and never
- * off. Above its target it is cooling, and otherwise it holds.
+ * What a chamber is doing. A chamber has fans and no heater, and its target
+ * works both ways: the fans hold the air under it, and a print waits while the
+ * bed warms the air up to it. So against a target it is a heater like any
+ * other, and with no target it is off whatever the air, because nothing is holding the
+ * air anywhere and a warm chamber is no hazard the way a warm nozzle is.
  */
 export const chamberState = ({
   current,
@@ -66,14 +68,10 @@ export const chamberState = ({
   if (current === undefined) {
     return 'not-reported';
   }
-  if (
-    target !== undefined &&
-    target > 0 &&
-    current > target + HEATING_TOLERANCE_CELSIUS
-  ) {
-    return 'cooling';
+  if (target === undefined || target <= 0) {
+    return 'off';
   }
-  return 'at-temperature';
+  return heaterState({ current, target });
 };
 
 // Whether a heater is still climbing towards its target: the one condition
