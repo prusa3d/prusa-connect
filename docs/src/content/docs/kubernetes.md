@@ -20,9 +20,9 @@ kubectl apply -k deploy/kubernetes/ -n acme
 kubectl -n acme rollout status deployment/prusa-connect
 ```
 
-The image is the one [Container Deployment](./container.md) describes. No image is published to a
-registry, so [No image is published](#no-image-is-published) says how to build one from a release
-and push it where the cluster can pull it. Everything else below is the cluster around it.
+The image is the one [Container Deployment](./container.md) describes, and
+[Set the image](#set-the-image) says which reference to give the Deployment. Everything else below
+is the cluster around it.
 
 ## Files and the objects they declare
 
@@ -170,36 +170,28 @@ These do not hold, and a first deployment is what would settle them:
 carrying a field that does not exist, so it proves the YAML parses and the kind is recognised, and
 nothing further.
 
-## No image is published
-
-:::note
-During the closed beta, the beta portal gives out the release binaries only. It gives out no source archive, and no image is published. Run the binary as [Install from a release](./install-from-a-release.md) describes. Images are planned for the public release.
-:::
+## Set the image
 
 `deploy/kubernetes/deployment.yaml` names `prusa-connect:local`, which is the tag the compose
-build writes. No registry holds that image, so build it from a release, push it to a registry the
-cluster can pull from, and put that reference in the Deployment.
+build writes. Replace it with the published image at the release you deploy, on the container and
+on the init container:
 
-Build it from the release's `prusa-connect-<version>-source.tar.gz`, as
-[Build the image from a release](./container.md#build-the-image-from-a-release) shows, with the
-release's version in `.env`. `PRUSA_CONNECT_TAG` names the tag the build writes:
-
-```text
-$ echo PCL_BUILD_VERSION=0.1.0 > .env
-$ echo PRUSA_CONNECT_TAG=0.1.0 >> .env
-$ docker compose -f docker-compose.local.yml build prusa-connect
+```yaml
+image: ghcr.io/prusa3d/prusa-connect:0.2.0
 ```
 
-Then tag it for your registry and push it. `registry.example.com` stands for yours:
+The image is published for `linux/amd64` and `linux/arm64`, so a node of either kind pulls it with
+no credential. `GET /api/v1/health` on the pod names the version.
+
+A cluster that cannot reach `ghcr.io` takes an image you build, as
+[Build the image from a release](./container.md#build-the-image-from-a-release) shows.
+`PRUSA_CONNECT_TAG` in `.env` names the tag the build writes. Tag it for your registry, push it,
+and name it in the Deployment. `registry.example.com` stands for yours:
 
 ```bash
-docker tag prusa-connect:0.1.0 registry.example.com/prusa-connect:0.1.0
-docker push registry.example.com/prusa-connect:0.1.0
+docker tag prusa-connect:0.2.0 registry.example.com/prusa-connect:0.2.0
+docker push registry.example.com/prusa-connect:0.2.0
 ```
-
-Set `image: registry.example.com/prusa-connect:0.1.0` on the container in
-`deploy/kubernetes/deployment.yaml`, then apply the manifests. `GET /api/v1/health` on the pod names
-the version the image was built with.
 
 ## Troubleshooting
 
@@ -210,5 +202,5 @@ the version the image was built with.
 | a key set in the ConfigMap has no effect | the pod has not restarted since the edit |
 | the rollout hangs with two pods | the strategy is `RollingUpdate` and the claim is `ReadWriteOnce` |
 | `permission denied` under `/storage` | `fsGroup` is missing, or the volume was provisioned before it was added |
-| `ErrImagePull` or `ImagePullBackOff` | the cluster cannot pull `prusa-connect:local`. Push the image to a registry and name it there |
+| `ErrImagePull` or `ImagePullBackOff` | the Deployment still names `prusa-connect:local`. Name the published image, as [Set the image](#set-the-image) shows |
 | `/api/v1/health` reports version `0.0.0-dev` | the image was built with no `PCL_BUILD_VERSION` |

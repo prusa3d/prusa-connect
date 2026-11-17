@@ -176,19 +176,19 @@ active
 
 ## Upgrade in Docker
 
-:::note
-During the closed beta, there is no source archive to download, so this section applies once the project is public. Until then, upgrade the binary as [Upgrade a folder install](#upgrade-a-folder-install) or [Upgrade the systemd service](#upgrade-the-systemd-service) describes.
-:::
-
 The binary is owned by the immutable image, so the server deliberately never
 rewrites it. The Updates page still downloads and verifies the
 candidate, runs preflight and migration rehearsal, and creates the backup.
 It then reports that Docker manages the executable. After preparation, update
-the image:
+the image.
+
+With the published image, change the version on the `image:` line of your
+`compose.yaml` to the new release. Then, in the folder that holds it, download
+the image and start the new container:
 
 ```bash
-docker compose -f docker-compose.local.yml pull prusa-connect
-docker compose -f docker-compose.local.yml up -d prusa-connect
+docker compose pull
+docker compose up -d
 ```
 
 If you build locally, download the new release's
@@ -350,6 +350,10 @@ docker cp prusa_connect:/storage ./backup/storage
 docker compose -f docker-compose.local.yml start prusa-connect
 ```
 
+With the published image, the container has the same name. Stop and start it
+with `docker compose stop` and `docker compose start` in the folder that holds
+`compose.yaml`.
+
 The same copy from a test container, which had a name of its own:
 
 ```text
@@ -370,8 +374,8 @@ authz.db
 resources.json
 ```
 
-`config/config.yaml` is already a file in your folder. Keep a copy of it
-with the two folders.
+`config/config.yaml`, or `config.yaml` beside `compose.yaml`, is already a
+file in your folder. Keep a copy of it with the two folders.
 
 ## Uninstall a folder install
 
@@ -398,6 +402,12 @@ Leave it out to keep them.
 
 ## Uninstall in Docker
 
+In the folder that holds `compose.yaml`:
+
+```bash
+docker compose down -v
+```
+
 In the folder you built from:
 
 ```bash
@@ -405,8 +415,9 @@ docker compose -f docker-compose.local.yml down -v
 ```
 
 `-v` deletes the named volumes, which hold the database and your uploads.
-Without `-v` the volumes stay. The image stays too, and
-`docker image rm prusa-connect:local` deletes it.
+Without `-v` the volumes stay. The image stays too.
+`docker image rm ghcr.io/prusa3d/prusa-connect:<version>` deletes the
+published one, and `docker image rm prusa-connect:local` the one you built.
 
 ## Stop a printer from connecting
 

@@ -1,11 +1,12 @@
 ---
 title: Container Deployment
-description: Building the image from a release, what it runs, its ports, the configuration file it reads, the writable paths, the two probes, and the security settings compose applies.
+description: Running the published image or building it from a release, what it runs, its ports, the configuration file it reads, the writable paths, the two probes, and the security settings compose applies.
 audience: run
 rewrite:
   describes: current
   implementedBy:
     - docker/server
+    - .github/workflows/container-image.yml
     - docker-compose.local.yml
     - scripts/build-version.sh
     - internal/app/probe.go
@@ -15,9 +16,9 @@ rewrite:
     - internal/arch/container_environment_test.go
 ---
 
-This page is for a person who runs Prusa Connect in Docker. No image is published to a
-registry, so you build it yourself from a release's source code, and Docker Compose starts it. A
-hosted deployment runs one instance per tenant, so this page also covers a definition somebody else
+This page is for a person who runs Prusa Connect in Docker. Every release publishes an image to
+GitHub's container registry, and Docker Compose starts it. You can also build the image yourself
+from a release's source code. A hosted deployment runs one instance per tenant, so this page also covers a definition somebody else
 generates.
 
 The image is Debian slim holding the server binary and the built web app. It runs as an
@@ -26,16 +27,129 @@ unprivileged user with a read-only root filesystem and an empty Linux capability
 [Install from a release](./install-from-a-release.md) covers running the binary with no Docker at
 all, which is the shorter way on a Raspberry Pi.
 
+## Run the published image
+
+The image is `ghcr.io/prusa3d/prusa-connect`, for `linux/amd64` and `linux/arm64`. A Raspberry Pi
+with a 64-bit system is `arm64`. A 32-bit system has no image, so run the binary there, as
+[Install from a release](./install-from-a-release.md) describes.
+
+| tag | names |
+|---|---|
+| `0.2.1` | that release. It never moves |
+| `0.2` | the newest `0.2.x` release |
+| `0` | the newest `0.x.x` release |
+| `latest` | the newest release |
+
+A prerelease, such as `0.2.0-beta.1`, gets only its own tag. Name an exact version, so the server
+changes only when you change the version.
+
+Download the image with the version of the release you install:
+
+```bash
+docker pull ghcr.io/prusa3d/prusa-connect:0.2.0
+```
+
+### Start it with Docker Compose
+
+Docker Compose starts the container with the right volumes and security settings. Make an empty
+folder, download the release's `config.yaml` into it, and save the example below beside it as
+`compose.yaml`:
+
+```bash
+mkdir prusa-connect && cd prusa-connect
+curl -fLO https://github.com/prusa3d/prusa-connect/releases/download/v0.2.0/config.yaml
+```
+
+```yaml
+services:
+  prusa-connect:
+    # An exact version. Change it here to upgrade.
+    image: ghcr.io/prusa3d/prusa-connect:0.2.0
+    container_name: prusa_connect
+    restart: unless-stopped
+    ports:
+      # The browser, the API and the printers.
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      # The database and the settings the server writes.
+      - prusa_connect_config:/config/config.d
+      # The uploaded print files.
+      - prusa_connect_storage:/storage
+      - prusa_connect_data:/data
+      - prusa_connect_files:/files
+      # Large uploads pass through /tmp.
+      - prusa_connect_tmp:/tmp
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+# Fixed names, so a NAS app that renames the project still finds the same data.
+volumes:
+  prusa_connect_config:
+    name: prusa-connect_prusa_connect_config
+  prusa_connect_storage:
+    name: prusa-connect_prusa_connect_storage
+  prusa_connect_data:
+    name: prusa-connect_prusa_connect_data
+  prusa_connect_files:
+    name: prusa-connect_prusa_connect_files
+  prusa_connect_tmp:
+    name: prusa-connect_prusa_connect_tmp
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+```
+
+Your settings are in the `config.yaml` in this folder, which the container reads but never writes.
+The server reads it only when it starts, so run `docker compose restart` after an edit. The
+image has its own health check, and the container reports itself healthy within 30 seconds of the
+start:
+
+```bash
+docker compose ps
+curl -s http://localhost:8080/api/v1/health
+```
+
+The first page in the browser asks how people sign in and how printers join.
+[Set it up in the wizard](./install-from-a-release.md#set-it-up-in-the-wizard) explains each
+question.
+
+The container name and the volume names are the ones the build below uses. The commands on the
+rest of this page and on
+[Upgrade, back up and uninstall](./upgrade-back-up-and-uninstall.md#upgrade-in-docker) work for
+both. A server you built before keeps its data when you move to the published image.
+
+### Verify the image signature
+
+Every image is signed with [cosign](https://docs.sigstore.dev/), with no key of its own. The
+signature names the workflow file that built the image and the tag or branch it ran from. A release
+is published from its tag. A release that was out before images were published, such as
+`0.1.0-beta.1`, was published later from `main`. With cosign installed:
+
+```bash
+cosign verify ghcr.io/prusa3d/prusa-connect:0.2.0 \
+  --certificate-identity-regexp '^https://github\.com/prusa3d/prusa-connect/\.github/workflows/container-image\.yml@refs/(tags/v.+|heads/main)$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The image also carries its build provenance and an SBOM, a software bill of materials: the list of
+the packages inside the image. `docker buildx imagetools inspect` reads both.
+
 ## Build the image from a release
 
-:::note
-During the closed beta, the beta portal gives out the release binaries only. It gives out no source archive, and no image is published. Run the binary as [Install from a release](./install-from-a-release.md) describes. Images are planned for the public release.
-:::
+Build the image yourself to change it, or where the registry cannot be reached.
 
 A release carries its source code as `prusa-connect-<version>-source.tar.gz`, beside the
-binaries and listed in `SHA256SUMS`. Download that file, not the **Source code** archive GitHub
-adds to every release: while the repository is private, GitHub's own archive reaches only people
-with access to the repository. Unpack it and build the image in the folder it makes. The build
+binaries and listed in `SHA256SUMS`, so you can check it before you build. Unpack it and build the image in the folder it makes. The build
 needs Docker with Compose and a network connection, and it takes several minutes. The image cannot
 read the version from git, so give it the release's version in `.env`:
 
@@ -101,6 +215,8 @@ file in it answers the same document, so reloading a page inside the app works.
 
 | | |
 |---|---|
+| Registry | `ghcr.io/prusa3d/prusa-connect` |
+| Platforms | `linux/amd64`, `linux/arm64` |
 | Base | `debian:trixie-slim`, digest-pinned |
 | Entrypoint | `/prusa_connect` |
 | Command | `core` |
@@ -470,6 +586,7 @@ on a single-board host once a real workload has been measured.
 
 | Symptom | Cause |
 |---|---|
+| `no matching manifest for linux/arm/v7` | a 32-bit system. Run the binary instead |
 | `mkdir config/config.d: read-only file system` | no writable volume at `/config/config.d` |
 | `/api/v1/health` reports version `0.0.0-dev` | the image was built with no `PCL_BUILD_VERSION` in `.env` |
 | `lookup … on 127.0.0.11:53` in the marketplace or sign-in message | the container has no working DNS. Test with `docker exec prusa_connect getent hosts plugin-marketplace.prusa3d.com` |
