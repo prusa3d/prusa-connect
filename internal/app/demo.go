@@ -128,16 +128,15 @@ const (
 	demoEchoFirmware  = "0.12.0"
 )
 
+// demoEnclosureModel is the model whose demo printer has its enclosure fitted.
+const demoEnclosureModel = "XL"
+
 // demoModels are the models the fleet is drawn from. Three families with three
 // different capability sets, so the demo shows what a fleet of one model cannot.
 // The XL is the one with five toolheads, so a page's per-tool rows have a
 // printer to draw.
 //
-// demoEnclosureModel is the model whose demo printer has its enclosure fitted.
-//
 //nolint:gochecknoglobals // a fixed default list, read-only.
-const demoEnclosureModel = "XL"
-
 var demoModels = []string{"CoreOne", "MK4S", "XL"}
 
 // errNoPrinters is a demo asked for a fleet of none. The whole point of the
