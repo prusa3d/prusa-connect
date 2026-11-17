@@ -3,7 +3,8 @@ name: CLA
 # Every author of a pull request signs CLA.md once, by posting the sentence
 # below as a comment. The signatures are kept in signatures/cla.json on the
 # branch cla-signatures of this repository, and the job fails until every
-# author has signed. Bots are on the allowlist.
+# author has signed. Bots are on the allowlist, among them prusa-codefixer, the
+# beta portal's fix agent that opens draft pull requests.
 #
 # ci.yml and extensions.yml stop at their first step while an author has not
 # signed (scripts/check-cla-signed.sh). Once a signature comment makes this
@@ -52,7 +53,7 @@ jobs:
           path-to-document: ${{ github.server_url }}/${{ github.repository }}/blob/main/CLA.md
           path-to-signatures: signatures/cla.json
           branch: cla-signatures
-          allowlist: dependabot[bot],github-actions[bot],renovate[bot]
+          allowlist: dependabot[bot],github-actions[bot],renovate[bot],prusa-codefixer[bot]
           lock-pullrequest-aftermerge: true
 
       # After a signature, the pipelines that stopped for it run again from
