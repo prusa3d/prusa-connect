@@ -20,7 +20,7 @@ const (
 // firmware's name, which is also the argument its setter takes. A fan target
 // of -1 means the fans run on their own, and the light is a percentage.
 //
-//nolint:gochecknoglobals // a lookup table, read-only after init.
+//nolint:gochecknoglobals,gosec // a read-only lookup table. G101 takes the "pw" of "fan_pwm_target" for a password.
 var chamberPaths = map[string]string{
 	"fan_pwm_target": "/chamber/fan_pwm_target",
 	"fan_1_rpm":      "/chamber/fan_1_rpm",

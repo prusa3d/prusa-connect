@@ -2,97 +2,97 @@
   "comment": "The capability set each cell of the full matrix resolves to. Regenerate with `go test ./test/fleet -run TestTheCapabilityGoldensAreCurrent -update`. A diff here is a change to what a supported printer is believed to support and needs a reason in the pull request.",
   "cells": {
     "CoreOne@6.4.0-0": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "ac554b5306a7bc4a642b3ffa82afa8d15bb3c02262704c99fc5f5f51dae87b4c",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne@6.5.7": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "ac554b5306a7bc4a642b3ffa82afa8d15bb3c02262704c99fc5f5f51dae87b4c",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne@6.8.1": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "ac554b5306a7bc4a642b3ffa82afa8d15bb3c02262704c99fc5f5f51dae87b4c",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL@6.4.0-0": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "e746a0fa8fd296386360efa6cbb505d1992c07f585cef3a97a49a067d60c25fe",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL@6.5.7": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "e746a0fa8fd296386360efa6cbb505d1992c07f585cef3a97a49a067d60c25fe",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL@6.8.1": {
-      "digest": "2ea1abfd729dbc2c600e62819074f3a2785cf10cb2ad97692a2064e5cba3c186",
+      "digest": "e746a0fa8fd296386360efa6cbb505d1992c07f585cef3a97a49a067d60c25fe",
       "capabilities": 88,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL_INDX@6.4.0-0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "86d67355c1351bad0246fb1b009e879c952c791add4180bf3330272649d915a5",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL_INDX@6.5.7": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "86d67355c1351bad0246fb1b009e879c952c791add4180bf3330272649d915a5",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL_INDX@6.6.0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "86d67355c1351bad0246fb1b009e879c952c791add4180bf3330272649d915a5",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL_INDX@6.6.3": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "86d67355c1351bad0246fb1b009e879c952c791add4180bf3330272649d915a5",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOneL_INDX@6.9.0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "86d67355c1351bad0246fb1b009e879c952c791add4180bf3330272649d915a5",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne_INDX@6.4.0-0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "a0ea4bb0d9c829c617a95da52aa3bfca8f60d86673cdfb85ce5704133f975239",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne_INDX@6.5.7": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "a0ea4bb0d9c829c617a95da52aa3bfca8f60d86673cdfb85ce5704133f975239",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne_INDX@6.6.0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "a0ea4bb0d9c829c617a95da52aa3bfca8f60d86673cdfb85ce5704133f975239",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne_INDX@6.6.3": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "a0ea4bb0d9c829c617a95da52aa3bfca8f60d86673cdfb85ce5704133f975239",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
     },
     "CoreOne_INDX@6.9.0": {
-      "digest": "91acea8c13b5a3f4d1f60d0d99310ac738799983eafd8018763103a8aad71985",
+      "digest": "a0ea4bb0d9c829c617a95da52aa3bfca8f60d86673cdfb85ce5704133f975239",
       "capabilities": 89,
       "verbs": 48,
       "profile_matched": true
