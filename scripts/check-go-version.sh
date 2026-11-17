@@ -121,18 +121,22 @@ done
 # what a reader sees, so it has to name the release go.mod pins: a digest that
 # outlives a Go bump is an operating system layer nobody re-pinned.
 PIN_MINOR="$(echo "$PIN" | cut -d. -f1,2)"
-RACE_PIN="$(grep -m1 '^FROM golang:' "$ROOT/docker/race/Dockerfile" \
-  | sed -E 's/^FROM golang:([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+# A FROM line may carry a --platform flag before the image, as a stage that
+# cross-compiles does. A file with no golang FROM line leaves the value empty,
+# and the comparison below then fails with a message instead of a silent exit.
+FROM_GOLANG='^FROM (--platform=[^ ]+ )?golang:'
+RACE_PIN="$(grep -m1 -E "$FROM_GOLANG" "$ROOT/docker/race/Dockerfile" \
+  | sed -E 's/^FROM (--platform=[^ ]+ )?golang:([0-9]+\.[0-9]+\.[0-9]+).*/\2/' || true)"
 [ "$RACE_PIN" = "$PIN" ] && ok "docker/race/Dockerfile" \
   || fail "docker/race/Dockerfile builds FROM golang:$RACE_PIN, go.mod says $PIN"
 
 # The builder stages take their tag from ARG GO_VERSION and carry a digest
 # too. A digest wins over the tag, so each one has to name the race image's
 # digest, which the check above ties to the release go.mod pins.
-RACE_DIGEST="$(grep -m1 '^FROM golang:' "$ROOT/docker/race/Dockerfile" \
-  | sed -E 's/.*@(sha256:[0-9a-f]+).*/\1/')"
+RACE_DIGEST="$(grep -m1 -E "$FROM_GOLANG" "$ROOT/docker/race/Dockerfile" \
+  | sed -E 's/.*@(sha256:[0-9a-f]+).*/\1/' || true)"
 for f in docker/server/Dockerfile .github/dockerfiles/Dockerfile.build docker/mockup/Dockerfile; do
-  BUILDER_DIGEST="$(grep -m1 '^FROM golang:' "$ROOT/$f" | sed -E 's/.*@(sha256:[0-9a-f]+).*/\1/')"
+  BUILDER_DIGEST="$(grep -m1 -E "$FROM_GOLANG" "$ROOT/$f" | sed -E 's/.*@(sha256:[0-9a-f]+).*/\1/' || true)"
   [ "$BUILDER_DIGEST" = "$RACE_DIGEST" ] && ok "$f golang digest" \
     || fail "$f builds FROM golang@$BUILDER_DIGEST, docker/race/Dockerfile names $RACE_DIGEST"
 done

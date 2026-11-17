@@ -686,7 +686,9 @@ jobs:
 
           `prusa-connect.service` runs it as a systemd service on Linux. The page "Install from a release" says how to install it.
 
-          `prusa-connect-<version>-source.tar.gz` is the source code of this release. Docker, a NAS image and Kubernetes build the image from it.
+          The container image of this release is on GitHub's container registry, for amd64 and arm64. The page "Container Deployment" says how to run it with Docker Compose.
+
+          `prusa-connect-<version>-source.tar.gz` is the source code of this release, for a person who builds the image or the binary.
 
           Then open `http://<this machine>:8080/` in a browser. The first page asks how people sign in and how printers join.
 
@@ -724,6 +726,22 @@ jobs:
           draft: false
           # A tag with a hyphen, such as v0.1.0-beta.1, is a prerelease.
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # The container image of this release, on GitHub's container registry. It
+  # runs after create-release, so a release that failed publishes no image. It
+  # writes packages, not the repository, so the rule at the top of this file
+  # still holds. container-image.yml says what it builds and checks.
+  publish-image:
+    name: Publish the container image
+    needs: [create-release]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/container-image.yml
+    with:
+      version: ${{ github.ref_name }}
 
   # Every release goes to the beta portal as well, from the release this run
   # just published. Whether testers hear of it at once is the portal's

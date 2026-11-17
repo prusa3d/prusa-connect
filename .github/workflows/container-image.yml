@@ -1,0 +1,198 @@
+name: Container image
+
+# Builds the server image of a release, checks it, pushes it to GitHub's
+# container registry and signs it.
+#
+# The image is named after the repository this runs in:
+# ghcr.io/<owner>/<repository>, in lowercase. The job's token can push only to
+# its own repository's packages, so a fixed name would fail in every copy of
+# the repository but one.
+#
+# Two ways in:
+#   - release.yml calls it for every release, after the release is published
+#   - by hand, from the Actions tab, naming a release that is already out.
+#     That pushes only the exact version tag and moves no other
+#
+# The source is the release's tag. docker/server/Dockerfile is the one of the
+# commit this workflow runs from, so a release cut before the image was
+# published builds the way a new one does. From release.yml that is the tag
+# itself.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The release to publish, with or without its leading v
+        required: true
+        type: string
+      move-tags:
+        description: Also move X.Y, X and latest, on a release without a hyphen
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The release to publish, such as 0.1.0-beta.1
+        required: true
+        type: string
+      move-tags:
+        description: Also move X.Y, X and latest, on a release without a hyphen
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  # The image built for amd64 passes the three checks the CI job
+  # `Docker / Hardened image` runs before anything is pushed. The push then
+  # builds every platform. No cache from another run is read or written, for
+  # the reason release.yml gives above build-full-binaries. The second build
+  # reuses only the layers the first build in this job made.
+  publish:
+    name: Publish the container image
+    runs-on: ubuntu-latest
+    # Only main and the v* tags may enter.
+    environment: release
+    permissions:
+      contents: read
+      # Push to ghcr.io with the job's own GITHUB_TOKEN. No stored credential.
+      packages: write
+      # cosign signs with a short-lived certificate for this job's OIDC token.
+      id-token: write
+
+    steps:
+      # GitHub keeps the owner's capitals, as in Prusa-Research, and a registry
+      # refuses an image name with a capital letter.
+      - name: Read the version and name the image
+        id: version
+        env:
+          INPUT: ${{ inputs.version }}
+        run: |
+          set -eu
+          VERSION=${INPUT#v}
+          case "$VERSION" in
+          "" | *[!0-9A-Za-z.-]*)
+            echo "::error::'$VERSION' is not a version this workflow can publish."
+            exit 1
+            ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+          echo "publishing $VERSION"
+
+      - name: Checkout the release
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: v${{ steps.version.outputs.version }}
+          persist-credentials: false
+
+      # REVISION is the release's commit, which the image's labels name
+      # instead of the commit this workflow runs from.
+      - name: Take the Dockerfile this workflow runs with
+        run: |
+          set -eu
+          echo "REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          git fetch --quiet --depth=1 origin "$GITHUB_SHA"
+          git show FETCH_HEAD:docker/server/Dockerfile > "$RUNNER_TEMP/Dockerfile"
+
+      # Only the runtime stage runs on the target platform, and only for the
+      # step that adds the user and its directories. Every compiler runs on the
+      # runner's own platform; see docker/server/Dockerfile.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The same values the release binaries are built with.
+      - name: Gather the build arguments
+        id: args
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          DOCS_URL: ${{ vars.DOCS_URL || 'https://beta.prusa3d.com/connect-local/docs/{version}/' }}
+          UPGRADE_PUBLIC_KEYS: ${{ vars.UPGRADE_PUBLIC_KEYS }}
+        run: |
+          set -eu
+          {
+            echo "build_args<<ARGS"
+            echo "GO_VERSION=$(grep '^go ' go.mod | awk '{print $2}')"
+            echo "BUILD_VERSION=$VERSION"
+            echo "DOCS_URL=$DOCS_URL"
+            echo "UPGRADE_PUBLIC_KEYS=$UPGRADE_PUBLIC_KEYS"
+            echo "ARGS"
+          } >> "$GITHUB_OUTPUT"
+
+      # The exact version always. X.Y, X and latest only when move-tags is on,
+      # and then docker/metadata-action leaves them off a prerelease.
+      - name: Choose the tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.version }},enable=${{ inputs.move-tags }}
+            type=semver,pattern={{major}},value=v${{ steps.version.outputs.version }},enable=${{ inputs.move-tags }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.REVISION }}
+          flavor: |
+            latest=${{ inputs.move-tags && 'auto' || 'false' }}
+
+      - name: Build the amd64 image for the checks
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ runner.temp }}/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: prusa-connect:release
+          build-args: ${{ steps.args.outputs.build_args }}
+
+      - name: Check the image runs as non-root
+        run: bash scripts/check-container-nonroot.sh prusa-connect:release
+
+      - name: Probe the image the way a deployment does
+        run: bash scripts/check-container-probes.sh prusa-connect:release
+
+      - name: Confirm a privileged port is served by a non-root process
+        run: bash scripts/check-container-privileged-port.sh prusa-connect:release
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 64-bit only. linux/arm/v7 is left out because two extensions the image
+      # carries do not compile for 32-bit: parts (MaxID overflows int) and
+      # server-slicing (Maxrss is int32 there). linux/arm/v6 has no
+      # debian:trixie-slim image at all. A 32-bit Raspberry Pi runs the
+      # prusa_connect_armv7 or prusa_connect_armhf binary instead.
+      - name: Build and push every platform
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ runner.temp }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          build-args: ${{ steps.args.outputs.build_args }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      # Keyless: the certificate names this workflow file and the ref it ran
+      # from, and there is no key to rotate. Signed by digest, so it covers
+      # every tag above.
+      - name: Sign the image
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"

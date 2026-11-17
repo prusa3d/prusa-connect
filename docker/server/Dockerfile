@@ -15,7 +15,10 @@ ARG GO_VERSION=1.26.11
 # Digest-pinned: a floating tag means two builds of the same commit can differ.
 # Bump the tag and the digest together
 # (`docker buildx imagetools inspect node:24-alpine`).
-FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS packages-builder
+# On the build machine's platform, never under an emulator: everything this
+# stage and the two built from it produce is JavaScript, the same on every
+# processor the image is published for.
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS packages-builder
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 ENV HUSKY=0
@@ -93,7 +96,13 @@ RUN cd extensions/materials/client && pnpm install --frozen-lockfile && pnpm run
 # digest wins over the tag, so scripts/check-go-version.sh requires this digest
 # to equal the race image's, whose tag must name the release go.mod pins. A Go
 # bump therefore moves the digest here too, or the check fails.
-FROM golang:${GO_VERSION}-trixie@sha256:fa340cb59ebeb1d53ac1cccfc334201d938fe5f3458003cccb767096d8e032b8 AS builder
+#
+# The stage runs on the build machine's platform and Go compiles for the
+# image's platform, so a multi-platform build runs no compiler under an
+# emulator. Only `go build` is pointed at the target. `go run` builds a tool
+# for this machine and runs it here, so GOOS and GOARCH are never set for the
+# whole stage.
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-trixie@sha256:fa340cb59ebeb1d53ac1cccfc334201d938fe5f3458003cccb767096d8e032b8 AS builder
 
 # No apt step. The image built with a C toolchain and the SQLite headers while
 # a cgo-only driver was linked. Nothing reaches that driver now, so the build is
@@ -156,9 +165,14 @@ ARG UPGRADE_PUBLIC_KEYS=""
 # Where the binary links its documentation: the beta portal while the project
 # is private. A public build passes --build-arg DOCS_URL=<the public site>.
 ARG DOCS_URL=https://beta.prusa3d.com/connect-local/docs/{version}/
+# The platform the image is built for, set by BuildKit. TARGETVARIANT is v7
+# for linux/arm/v7, and GOARM takes the number alone. Empty on amd64 and arm64,
+# where Go ignores GOARM.
+ARG TARGETOS TARGETARCH TARGETVARIANT
 RUN TAGS="$(go run ./cmd/detect-build-tags --config "$CONFIG_FILE" --variant full --extra "$EXTRA_BUILD_TAGS")" && \
     echo "Building with tags: full $TAGS" && \
-    CGO_ENABLED=0 go build -v -tags "full $TAGS" \
+    GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" CGO_ENABLED=0 \
+    go build -v -tags "full $TAGS" \
     -ldflags="-X github.com/prusa3d/prusa-connect/internal/kernel/version.stamped=${BUILD_VERSION} -X github.com/prusa3d/prusa-connect/internal/kernel/version.docsURL=${DOCS_URL} -X github.com/prusa3d/prusa-connect/internal/upgrade.officialPublicKeys=${UPGRADE_PUBLIC_KEYS}" \
     -o /prusa_connect ./cmd/prusa-connect
 
@@ -166,41 +180,48 @@ RUN TAGS="$(go run ./cmd/detect-build-tags --config "$CONFIG_FILE" --variant ful
 # module binds the sdk to this checkout through a replace, and its two
 # database drivers are at the versions the core pins, which `go mod download`
 # above already fetched. So the build downloads nothing. The binary is named
-# for the platform this stage builds on, which is the one the image runs on.
+# for the image's platform: the export at the start of each step points Go at
+# it, and `go env` then reports it.
 COPY --from=extensions-builder /app/extensions/parts/ui/dist ./extensions/parts/ui/dist
-RUN BINARY="/tmp/parts_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/parts_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C extensions/parts build -o "$BINARY" . && \
     sh extensions/scripts/pack-release.sh extensions/parts/ui/dist "$BINARY" /opt/modules/parts
 
 # The Prusa printer logs release, laid out the same way.
 COPY --from=extensions-builder /app/extensions/buddy-debug-logs/ui/dist ./extensions/buddy-debug-logs/ui/dist
-RUN BINARY="/tmp/buddy-debug-logs_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/buddy-debug-logs_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C extensions/buddy-debug-logs build -o "$BINARY" . && \
     sh extensions/scripts/pack-release.sh extensions/buddy-debug-logs/ui/dist "$BINARY" /opt/modules/buddy-debug-logs
 
 # The 3MF projects release, laid out the same way. Its Go module needs the sdk
 # alone.
 COPY --from=extensions-builder /app/extensions/threemf/ui/dist ./extensions/threemf/ui/dist
-RUN BINARY="/tmp/threemf_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/threemf_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C extensions/threemf build -o "$BINARY" . && \
     sh extensions/scripts/pack-release.sh extensions/threemf/ui/dist "$BINARY" /opt/modules/threemf
 
 # The server-slicing release, laid out the same way. It carries no PrusaSlicer.
 COPY --from=extensions-builder /app/extensions/server-slicing/ui/dist ./extensions/server-slicing/ui/dist
-RUN BINARY="/tmp/server-slicing_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/server-slicing_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C extensions/server-slicing build -o "$BINARY" . && \
     sh extensions/scripts/pack-release.sh extensions/server-slicing/ui/dist "$BINARY" /opt/modules/server-slicing
 
 # The materials release, laid out the same way.
 COPY --from=extensions-builder /app/extensions/materials/ui/dist ./extensions/materials/ui/dist
-RUN BINARY="/tmp/materials_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/materials_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C extensions/materials build -o "$BINARY" . && \
     sh extensions/scripts/pack-release.sh extensions/materials/ui/dist "$BINARY" /opt/modules/materials
 
 # The Fractal release. It has no web page, so its bundle is the manifest and
 # the route document alone. Its NATS dependencies are not the core's, so this
 # build downloads them.
-RUN BINARY="/tmp/fractal_$(go env GOOS)_$(go env GOARCH)" && \
+RUN export GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="${TARGETVARIANT#v}" && \
+    BINARY="/tmp/fractal_$(go env GOOS)_$(go env GOARCH)" && \
     CGO_ENABLED=0 go -C packages/fractal build -o "$BINARY" . && \
     mkdir /tmp/fractal-bundle && \
     cp packages/fractal/module.yaml packages/fractal/openapi.json /tmp/fractal-bundle/ && \
