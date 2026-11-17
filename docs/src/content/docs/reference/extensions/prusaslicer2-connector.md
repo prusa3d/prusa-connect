@@ -29,7 +29,7 @@ Lets PrusaSlicer 2.4 and later send a print to each printer of this server as it
 
 | | |
 |---|---|
-| version | 0.1.1 |
+| version | 0.1.2 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/prusaslicer2-connector` |
 | namespace | `com.github.aux.prusa3d.prusaslicer2-connector` |

@@ -43,7 +43,7 @@ Lets EasyPrint, the Prusa slicer in the browser on Printables, send prints to th
 
 | | |
 |---|---|
-| version | 0.1.0 |
+| version | 0.1.1 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/easyprint` |
 | namespace | `com.github.aux.prusa3d.easyprint` |

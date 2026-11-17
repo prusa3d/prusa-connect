@@ -31,7 +31,7 @@ Takes the pictures of a Buddy3D camera on your network, without Prusa's cloud, a
 
 | | |
 |---|---|
-| version | 0.8.0 |
+| version | 0.8.1 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/buddy3d-camera` |
 | namespace | `com.github.aux.prusa3d.buddy3d-camera` |
