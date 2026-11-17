@@ -20,6 +20,7 @@
   } from '../../../primitives';
   import {
     bedTravelsOnZ,
+    chamberMaxCelsius,
     declaresArgument,
     readingOf,
     resolverFor,
@@ -156,6 +157,7 @@
             material={activeMaterialOf(telemetry, device)}
             {slots}
             perTool={declaresArgument(device, VERBS.nozzle, 'tool')}
+            chamberMax={chamberMaxCelsius(device.model)}
           />
 
           {#if speed.kind !== 'absent'}
@@ -180,7 +182,12 @@
             />
           {/if}
 
-          <MachineChamber {resolve} {busy} onCommand={commands.onCommand} />
+          <MachineChamber
+            {resolve}
+            {reading}
+            {busy}
+            onCommand={commands.onCommand}
+          />
 
           <MachineNozzles
             {resolve}

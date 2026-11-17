@@ -16,7 +16,7 @@
   import ThermometerIcon from '@lucide/svelte/icons/thermometer';
   import type { Component } from 'svelte';
 
-  import { type HeaterState, heaterState } from '../../domain';
+  import { chamberState, type HeaterState, heaterState } from '../../domain';
   import { formatUnit, t } from '../../i18n';
   import { HeatReading } from '../heating-display';
   import { HeatbedIcon, NozzleIcon } from '../telemetry-icon';
@@ -59,7 +59,10 @@
     formatUnit(value, '°C', { maximumFractionDigits: 0 });
 
   const state = $derived(
-    heaterState({ current: nozzleTemp, target: targetTemp }),
+    (kind === 'chamber' ? chamberState : heaterState)({
+      current: nozzleTemp,
+      target: targetTemp,
+    }),
   );
   const Icon = $derived(KIND_ICON[kind]);
 

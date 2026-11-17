@@ -24,7 +24,7 @@
   that carries no `data-slot` of its own.
 -->
 <script lang="ts">
-  import { heaterState } from '../../domain';
+  import { chamberState, heaterState } from '../../domain';
   import { wholeDegrees } from './degrees';
   import HeatReading from './heat-reading.svelte';
   import type { TemperatureReadingProps } from './types';
@@ -34,10 +34,13 @@
     current,
     target,
     muted = false,
+    coolsOnly = false,
     class: className,
   }: TemperatureReadingProps = $props();
 
-  const state = $derived(heaterState({ current, target }));
+  const state = $derived(
+    (coolsOnly ? chamberState : heaterState)({ current, target }),
+  );
 </script>
 
 {#if current === undefined}

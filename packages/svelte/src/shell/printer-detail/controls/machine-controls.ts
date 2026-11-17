@@ -52,10 +52,12 @@ export const VERBS = {
 export const NOZZLE_MAX_CELSIUS = 300;
 export const BED_MAX_CELSIUS = 120;
 /**
- * The highest chamber target a CORE One L heats to. The firmware clamps a
- * higher one, and a CORE One clamps at 55.
+ * The highest chamber target a model takes: 60 °C on a CORE One L and 55 °C
+ * on a CORE One, each with its INDX build. The firmware cuts a higher one
+ * down without saying so, and the host refuses it.
  */
-export const CHAMBER_MAX_CELSIUS = 60;
+export const chamberMaxCelsius = (model: string): number =>
+  printerModelOf(model).startsWith('core_one_l') ? 60 : 55;
 
 /**
  * A heater's setpoint as its editor shows it. The printer takes Celsius, and

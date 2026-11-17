@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  chamberState,
   COOLING_FLOOR_CELSIUS,
   heaterState,
   HEATING_TOLERANCE_CELSIUS,
@@ -108,4 +109,21 @@ describe('isHeating', () => {
       }
     }
   });
+});
+
+// A chamber has fans and no heater, so its target is a ceiling.
+describe('chamberState', () => {
+  it.each([
+    { current: undefined, target: 45, want: 'not-reported' },
+    { current: 25, target: undefined, want: 'at-temperature' },
+    { current: 25, target: 0, want: 'at-temperature' },
+    { current: 25, target: 45, want: 'at-temperature' },
+    { current: 45, target: 45, want: 'at-temperature' },
+    { current: 50, target: 45, want: 'cooling' },
+  ] as const)(
+    'reads $current against $target as $want',
+    ({ current, target, want }) => {
+      expect(chamberState({ current, target })).toBe(want);
+    },
+  );
 });

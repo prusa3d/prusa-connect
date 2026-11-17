@@ -54,6 +54,28 @@ export const heaterState = ({
   return 'at-temperature';
 };
 
+/**
+ * What a chamber is doing. A chamber has fans and no heater: its target is the
+ * temperature the fans hold the air under, so it is never heating and never
+ * off. Above its target it is cooling, and otherwise it holds.
+ */
+export const chamberState = ({
+  current,
+  target,
+}: HeaterReading): HeaterState => {
+  if (current === undefined) {
+    return 'not-reported';
+  }
+  if (
+    target !== undefined &&
+    target > 0 &&
+    current > target + HEATING_TOLERANCE_CELSIUS
+  ) {
+    return 'cooling';
+  }
+  return 'at-temperature';
+};
+
 // Whether a heater is still climbing towards its target: the one condition
 // the interface marks with continuous motion (a slow pulse on the reading),
 // because a monitoring product with no sign of life on screen reads as a

@@ -8,6 +8,7 @@
   "printerDetailControls.chamber.light": "Light",
   "printerDetailControls.chamber.manual": "Manual",
   "printerDetailControls.chamber.off": "Off",
+  "printerDetailControls.chamber.targetIgnored": "The chamber target applies only while the fans run on Auto.",
   "printerDetailControls.chamberTemp.label": "Chamber",
   "printerDetailControls.disableSteppers.label": "Disable steppers",
   "printerDetailControls.exitIdle": "Exit to idle",

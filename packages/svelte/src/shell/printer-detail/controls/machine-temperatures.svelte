@@ -21,7 +21,6 @@
   import {
     BED_MAX_CELSIUS,
     blocked,
-    CHAMBER_MAX_CELSIUS,
     degreeScale,
     groupReason,
     NOZZLE_MAX_CELSIUS,
@@ -39,12 +38,15 @@
     material,
     slots = [],
     perTool = false,
+    chamberMax,
   }: SectionProps & {
     material: string | undefined;
     /** The toolheads of a tool changer. Empty draws nothing. */
     slots?: readonly ToolReading[];
     /** Whether the nozzle verb takes a tool, so each head is set alone. */
     perTool?: boolean;
+    /** The highest chamber target the model takes, in Celsius. */
+    chamberMax: number;
   } = $props();
 
   // The nozzle row shows the head printing now, and head 0 of a printer that
@@ -219,7 +221,7 @@
     target={scale.shown(reading(CHAMBER_TARGET_PATH) ?? 0)}
     unit={scale.unit}
     min={scale.shown(0)}
-    max={scale.shown(CHAMBER_MAX_CELSIUS)}
+    max={scale.shown(chamberMax)}
     step={scale.step}
     presets={[
       { label: t('printerDetailControls.preset.off'), value: scale.shown(0) },

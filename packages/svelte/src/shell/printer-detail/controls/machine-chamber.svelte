@@ -1,5 +1,6 @@
 <!-- Chamber: how hard the enclosure fan runs, and how bright its light is. -->
 <script lang="ts">
+  import { CHAMBER_FAN_PATH, CHAMBER_LIGHT_PATH } from '../../../domain';
   import { t } from '../../../i18n';
   import {
     ChamberIcon,
@@ -21,7 +22,7 @@
 
   type FanMode = 'off' | 'auto' | 'manual';
 
-  let { resolve, busy, onCommand }: Omit<SectionProps, 'reading'> = $props();
+  let { resolve, reading, busy, onCommand }: SectionProps = $props();
 
   const fan = $derived(resolve(VERBS.chamberFan));
   const light = $derived(resolve(VERBS.chamberLight));
@@ -33,9 +34,31 @@
 
   const uid = $props.id();
 
-  let mode = $state<FanMode>('auto');
-  let fanPercent = $state(PERCENT_MAX);
-  let lightPercent = $state(PERCENT_MAX);
+  // A CORE One reports its fan target and its light; an XL takes the light
+  // and reports nothing of it. Each control shows what the printer reports,
+  // what a person picked until the next report, or the firmware's default.
+  const reportedFan = $derived(reading(CHAMBER_FAN_PATH));
+  const reportedLight = $derived(reading(CHAMBER_LIGHT_PATH));
+
+  const modeOf = (fan: number | undefined): FanMode => {
+    if (fan === undefined || fan < 0) return 'auto';
+
+    return fan === FAN_OFF ? 'off' : 'manual';
+  };
+
+  let mode = $derived<FanMode>(modeOf(reportedFan));
+  let fanPercent = $derived(
+    reportedFan !== undefined && reportedFan > FAN_OFF
+      ? reportedFan
+      : PERCENT_MAX,
+  );
+  let lightPercent = $derived(reportedLight ?? PERCENT_MAX);
+
+  // The fans hold the chamber under its target only while they run on their
+  // own, so a target does nothing while they are set by hand.
+  const targetIgnored = $derived(
+    mode !== 'auto' && resolve(VERBS.chamberTemp).kind !== 'absent',
+  );
 
   const sendFan = (target: number) =>
     onCommand(VERBS.chamberFan, {
@@ -100,6 +123,12 @@
             {t('printerDetailControls.chamber.manual')}
           </ToggleGroupItem>
         </ToggleGroup>
+
+        {#if targetIgnored}
+          <p class="text-xs text-muted-foreground">
+            {t('printerDetailControls.chamber.targetIgnored')}
+          </p>
+        {/if}
 
         {#if mode === 'manual'}
           <SliderField

@@ -27,6 +27,12 @@ export const BED_TARGET_PATH = '/temperature/bed_target';
  */
 export const CHAMBER_PATH = '/temperature/chamber';
 export const CHAMBER_TARGET_PATH = '/temperature/chamber_target';
+/**
+ * The chamber fans' target, as a percentage, with -1 while they run on their
+ * own, and the chamber light as a percentage.
+ */
+export const CHAMBER_FAN_PATH = '/chamber/fan_pwm_target';
+export const CHAMBER_LIGHT_PATH = '/chamber/led_intensity';
 
 export const AXIS_X_PATH = '/axis/x';
 export const AXIS_Y_PATH = '/axis/y';

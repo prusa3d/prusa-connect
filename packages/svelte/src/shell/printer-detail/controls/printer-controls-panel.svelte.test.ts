@@ -489,6 +489,68 @@ describe('PrinterControlsPanel', () => {
     );
   });
 
+  // A CORE One reports its fan target and light, so the section opens on what
+  // the printer runs rather than on a default.
+  it('shows the chamber fan and light the printer reports', async () => {
+    const reporting = (fan: number, light: number): TelemetrySource => ({
+      value: (path) =>
+        ({
+          ...READINGS,
+          '/chamber/fan_pwm_target': fan,
+          '/chamber/led_intensity': light,
+        })[path],
+      points: () => [],
+    });
+    const chamberVerbs = [
+      ...EVERY_VERB,
+      'core.command.set_chamber_target_temp',
+      'core.command.set_chamber_target_temp#chamber.target_temp',
+    ];
+
+    const first = await render(PrinterControlsPanel, {
+      props: props({
+        telemetry: reporting(40, 49),
+        device: printer('IDLE', chamberVerbs),
+      }),
+    });
+
+    await expect
+      .element(page.getByRole('radio', { name: 'Manual' }))
+      .toBeChecked();
+    await expect
+      .element(page.getByRole('slider', { name: 'Chamber fan speed' }))
+      .toHaveAttribute('aria-valuenow', '40');
+    await expect
+      .element(page.getByRole('slider', { name: 'Light' }))
+      .toHaveAttribute('aria-valuenow', '49');
+    await expect
+      .element(
+        page.getByText(
+          'The chamber target applies only while the fans run on Auto.',
+        ),
+      )
+      .toBeVisible();
+
+    await first.unmount();
+    await render(PrinterControlsPanel, {
+      props: props({
+        telemetry: reporting(-1, 100),
+        device: printer('IDLE', chamberVerbs),
+      }),
+    });
+
+    await expect
+      .element(page.getByRole('radio', { name: 'Auto' }))
+      .toBeChecked();
+    await expect
+      .element(
+        page.getByText(
+          'The chamber target applies only while the fans run on Auto.',
+        ),
+      )
+      .not.toBeInTheDocument();
+  });
+
   // A preset is a shortcut to a figure.
   it('sends the firmware figure for the material a reader picks', async () => {
     const onCommand = vi.fn();

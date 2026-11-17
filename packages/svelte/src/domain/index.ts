@@ -16,6 +16,7 @@ export {
   type StateTransition,
 } from './command';
 export {
+  chamberState,
   COOLING_FLOOR_CELSIUS,
   HEATING_TOLERANCE_CELSIUS,
   heaterState,
@@ -85,6 +86,8 @@ export {
   AXIS_Z_PATH,
   BED_PATH,
   BED_TARGET_PATH,
+  CHAMBER_FAN_PATH,
+  CHAMBER_LIGHT_PATH,
   CHAMBER_PATH,
   CHAMBER_TARGET_PATH,
   DIALOG_BUTTONS_PATH,
