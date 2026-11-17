@@ -86,7 +86,7 @@ func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 
 		// The light moves the block, so the frame after it carries the target
 		// the printer holds.
-		if _, err := session.Do(rig.ctx, connectorapi.Command{
+		if _, err = session.Do(rig.ctx, connectorapi.Command{
 			Verb: xbuddy.VerbSetChamberLED, Args: map[string]string{"chamber.led_intensity": "100"},
 		}); err != nil {
 			t.Fatal(err)

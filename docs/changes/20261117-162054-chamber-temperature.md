@@ -1,5 +1,5 @@
 ### Fixed
-- A CORE One now reports its chamber temperature and target at /temperature/chamber and /temperature/chamber_target, and an XL reports its enclosure temperature at /temperature/chamber until the enclosure is switched off. The printer sends both, and they were dropped on the way in.
+- A CORE One now reports its chamber temperature and target at /temperature/chamber and /temperature/chamber_target. An XL reports its enclosure temperature at /temperature/chamber while the enclosure is on. The printer sends both, and they were dropped on the way in.
 
 ### Added
 - A CORE One now reports its chamber fans and light at /chamber/fan_pwm_target, /chamber/fan_1_rpm, /chamber/fan_2_rpm and /chamber/led_intensity. Firmware 7.0.0 and later report a new target, fan target or light within seconds, and older firmware with its next full telemetry frame.

@@ -486,8 +486,8 @@ state tree:
 
 The chamber has fans and no heater. A target is the temperature the fans hold
 the air under, and only while they run on their own. Firmware 7.0.0 and later
-drop a target sent while the fans are set by hand and still answer that the
-command finished; older firmware keeps it. A print warms the chamber from the
+ignore a target sent while the fans are manual, and still answer that the
+command finished. Older firmware keeps the target. A print warms the chamber from the
 bed, and `M191` waits for the air to reach the target, so a target is also
 the temperature a print waits for. A CORE One takes a target up to 55 C and
 a CORE One L up to 60 C. The firmware cuts a higher one down without saying

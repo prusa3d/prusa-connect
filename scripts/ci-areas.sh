@@ -117,9 +117,10 @@ areas_of() {
 	# files of the component library a Go test or generator reads, the
 	# modules with a Go half and a browser half, the extensions the web app's
 	# Storybook and the image build, the test modules both sides load, the
-	# document the client is generated from, and the Fractal module's client
-	# with the fragment it is generated from.
-	packages/typescript/* | packages/svelte/src/slots/* | packages/svelte/src/i18n/locale.svelte.ts | \
+	# document the client is generated from, the Fractal module's client
+	# with the fragment it is generated from, and the setpoint bounds the
+	# component library holds its editors to.
+	packages/typescript/* | internal/printer/profile/bounds.json | packages/svelte/src/slots/* | packages/svelte/src/i18n/locale.svelte.ts | \
 		packages/svelte/locales/en.printerCode.json | \
 		packages/fractal/client/* | packages/fractal/openapi.json | \
 		packages/svelte/src/styles/tokens.css | examples/* | extensions/* | \
