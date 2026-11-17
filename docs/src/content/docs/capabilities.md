@@ -443,7 +443,7 @@ A verb accepts exactly the arguments for which the descriptor carries an argumen
 - **required** yes
 - **default** none
 - **min** `0`
-- **limit** `80`
+- **limit** `60`
 - **supported** any
 
 ### `core.command.set_enclosure_enabled` {#core-command-set-enclosure-enabled}

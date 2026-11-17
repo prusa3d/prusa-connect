@@ -472,12 +472,32 @@ Depending on printer family:
 - enclosure block may be present on XL enclosure setups
 - chamber block is present on CoreOne / CoreOneL style platforms
 
-Both arrive in full telemetry frames only. The driver writes the chamber's
-`temp` to `/temperature/chamber` and its `target_temp` to
-`/temperature/chamber_target`. An XL enclosure's `temp` also lands at
-`/temperature/chamber`, and the XL has no chamber target. The firmware sends 0
-for a reading it does not have, so a reading of 0 removes the node. A target
-of 0 means no target and stays 0.
+Both arrive in full telemetry frames only. The driver writes them to the
+state tree:
+
+| key | state path | notes |
+|---|---|---|
+| `chamber.temp` | `/temperature/chamber` | one decimal; 0 is no reading and removes the node |
+| `chamber.target_temp` | `/temperature/chamber_target` | whole degrees; 0 is no target |
+| `chamber.fan_pwm_target` | `/chamber/fan_pwm_target` | percent; -1 while the fans run on their own |
+| `chamber.fan_1_rpm`, `chamber.fan_2_rpm` | `/chamber/fan_1_rpm`, `/chamber/fan_2_rpm` | |
+| `chamber.led_intensity` | `/chamber/led_intensity` | percent |
+| `enclosure.temp` | `/temperature/chamber` | XL with its enclosure on; whole degrees |
+
+The chamber has fans and no heater. A target is the temperature the fans hold
+the air under, and only while they run on their own. A CORE One takes a
+target up to 55 C and a CORE One L up to 60 C. The firmware cuts a higher
+one down without saying so, so the host refuses it. A negative fan target
+hands the fans back to their own control, and the firmware holds the rest to
+0 to 100. The light is kept on a 0 to 255 scale, so a light of 50 is reported
+as 49. A value outside 0 to 100 wraps around in the firmware, so the host
+refuses it. An XL takes the light and never reports it. It has no chamber
+target and no chamber fan setter.
+
+The chamber is not part of what makes the firmware send a full frame, apart
+from the fan speeds. A new target or light reaches telemetry after up to five
+minutes. So when the printer finishes one of the three setters, the driver
+writes the value the firmware will report.
 
 Example chamber object:
 

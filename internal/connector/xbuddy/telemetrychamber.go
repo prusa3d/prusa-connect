@@ -2,6 +2,9 @@ package xbuddy
 
 import (
 	"encoding/json"
+	"math"
+	"slices"
+	"strconv"
 
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
@@ -13,8 +16,20 @@ const (
 	chamberTargetPath = "/temperature/chamber_target"
 )
 
+// chamberPaths is where the rest of a chamber block lands. Each key keeps the
+// firmware's name, which is also the argument its setter takes. A fan target
+// of -1 means the fans run on their own, and the light is a percentage.
+//
+//nolint:gochecknoglobals // a lookup table, read-only after init.
+var chamberPaths = map[string]string{
+	"fan_pwm_target": "/chamber/fan_pwm_target",
+	"fan_1_rpm":      "/chamber/fan_1_rpm",
+	"fan_2_rpm":      "/chamber/fan_2_rpm",
+	"led_intensity":  "/chamber/led_intensity",
+}
+
 // reportChamber writes what one telemetry frame says about the air inside the
-// printer.
+// printer, its fans and its light.
 //
 // Two blocks carry it (Prusa-Firmware-Buddy, src/connect/render.cpp). A CORE
 // One and a CORE One L send a chamber block in every full frame, with the
@@ -39,6 +54,19 @@ func (s *Session) reportChamber(fields map[string]json.RawMessage) {
 
 		if target, said := block["target_temp"]; said {
 			s.report(connectorapi.StatePatch{Path: chamberTargetPath, Value: target})
+		}
+
+		keys := make([]string, 0, len(chamberPaths))
+		for key := range chamberPaths {
+			keys = append(keys, key)
+		}
+
+		slices.Sort(keys)
+
+		for _, key := range keys {
+			if value, said := block[key]; said {
+				s.report(connectorapi.StatePatch{Path: chamberPaths[key], Value: value})
+			}
 		}
 
 		return
@@ -79,3 +107,62 @@ func readingOrNull(value json.RawMessage) json.RawMessage {
 
 	return value
 }
+
+// reportChamberSetter writes the value a chamber setter the printer finished
+// left behind.
+//
+// The firmware leaves the chamber out of what decides that a telemetry frame is
+// a full one (src/connect/printer.cpp), and only a full frame carries the
+// chamber block. A new target or light shows up in telemetry when something
+// else moves, or after five minutes at the latest. So the value is written
+// here, the way the firmware will report it.
+func (s *Session) reportChamberSetter(cmd connectorapi.Command) {
+	var (
+		path  string
+		arg   string
+		value func(int) int
+	)
+
+	switch cmd.Verb {
+	case VerbSetChamberTemp:
+		path, arg, value = chamberTargetPath, "chamber.target_temp", func(v int) int { return v }
+	case VerbSetChamberFan:
+		path, arg, value = chamberPaths["fan_pwm_target"], "chamber.fan_pwm_target", reportedFanTarget
+	case VerbSetChamberLED:
+		path, arg, value = chamberPaths["led_intensity"], "chamber.led_intensity", reportedLight
+	default:
+		return
+	}
+
+	sent, err := strconv.Atoi(cmd.Args[arg])
+	if err != nil {
+		return
+	}
+
+	s.report(connectorapi.StatePatch{Path: path, Value: json.RawMessage(strconv.Itoa(value(sent)))})
+}
+
+// reportedFanTarget is the fan target the firmware reports after it was sent
+// percent. A negative one hands the fans back to their own control, and the
+// rest is held to 0 to 100 and goes through the 0 to 255 PWM scale both ways
+// (src/common/pwm_utils.hpp).
+func reportedFanTarget(percent int) int {
+	if percent < 0 {
+		return fanAutomatic
+	}
+
+	pwm := math.Round(float64(min(percent, percentLimit)) * pwmScale / percentLimit)
+
+	return int(math.Round(pwm * percentLimit / pwmScale))
+}
+
+// reportedLight is the light the firmware reports after it was sent percent.
+// It stores percent * 255 / 100 and reports stored * 100 / 255, both in whole
+// numbers, so 50 comes back as 49 (src/connect/planner.cpp,
+// src/connect/marlin_printer.cpp).
+func reportedLight(percent int) int {
+	return percent * pwmScale / percentLimit * percentLimit / pwmScale
+}
+
+// pwmScale is the top of the firmware's PWM and brightness scale.
+const pwmScale = 255

@@ -599,6 +599,10 @@ func (s *Session) Do(ctx context.Context, cmd connectorapi.Command) (connectorap
 				s.requestJobRefresh()
 			}
 
+			if answer.err == nil && answer.result.OK {
+				s.reportChamberSetter(cmd)
+			}
+
 			return answer.result, answer.err
 		case <-ctx.Done():
 			pending.settle(outcome{err: fmt.Errorf("xbuddy: waiting for %s: %w", cmd.Verb, ctx.Err())})

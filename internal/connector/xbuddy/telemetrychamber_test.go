@@ -13,7 +13,11 @@ func TestAChamberBlockLandsAtTheChamberPaths(t *testing.T) {
 
 	printer.text(t, `{"state":"PRINTING","temp_bed":100.0,"chamber":{"temp":38.4,"target_temp":45,`+
 		`"fan_1_rpm":3200,"fan_2_rpm":3100,"fan_pwm_target":-1,"led_intensity":100}}`)
-	printer.awaitDialogTree(t, map[string]string{chamberTempPath: "38.4", chamberTargetPath: "45"})
+	printer.awaitDialogTree(t, map[string]string{
+		chamberTempPath: "38.4", chamberTargetPath: "45",
+		"/chamber/fan_pwm_target": "-1", "/chamber/fan_1_rpm": "3200", "/chamber/fan_2_rpm": "3100",
+		"/chamber/led_intensity": "100",
+	})
 
 	// A reduced frame has no chamber block, and the reading stands.
 	printer.text(t, `{"state":"PRINTING","progress":12}`)
@@ -67,5 +71,24 @@ func TestAMalformedChamberBlockIsSkipped(t *testing.T) {
 
 	if got := printer.dialogPatchCount(chamberTempPath); got != 0 {
 		t.Errorf("%d patches arrived at %s from blocks with no numeric reading", got, chamberTempPath)
+	}
+}
+
+// The values a chamber setter leaves behind are the ones the firmware reports
+// after it: the fan target goes through the 0 to 255 PWM scale both ways and
+// comes back whole, and the light is rounded down on the way.
+func TestTheChamberSettersReportWhatTheFirmwareKeeps(t *testing.T) {
+	t.Parallel()
+
+	for sent, want := range map[int]int{-5: -1, -1: -1, 0: 0, 37: 37, 100: 100} {
+		if got := reportedFanTarget(sent); got != want {
+			t.Errorf("a fan target of %d reports %d, want %d", sent, got, want)
+		}
+	}
+
+	for sent, want := range map[int]int{0: 0, 1: 0, 10: 9, 50: 49, 99: 98, 100: 100} {
+		if got := reportedLight(sent); got != want {
+			t.Errorf("a light of %d reports %d, want %d", sent, got, want)
+		}
 	}
 }

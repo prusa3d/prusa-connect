@@ -43,10 +43,17 @@
     },
     {
       "argument": "core.command.set_chamber_target_temp#chamber.target_temp",
-      "models": ["CoreOne", "CoreOneL", "CoreOneL_INDX", "CoreOne_INDX"],
+      "models": ["CoreOne", "CoreOne_INDX"],
       "min": 0,
-      "max": 80,
-      "source": "the four enclosed models are the only ones whose profile carries the chamber setter; the true firmware ceiling is not recorded anywhere this file could read, so this row repeats the driver baseline rather than guessing a tighter one"
+      "max": 55,
+      "source": "Prusa-Firmware-Buddy src/feature/chamber/chamber.cpp: a CORE One's chamber tops out at 60 C less a 5 C safety margin, and the firmware cuts a higher target down to 55 without saying so; zero is no target. The INDX build is the same printer type"
+    },
+    {
+      "argument": "core.command.set_chamber_target_temp#chamber.target_temp",
+      "models": ["CoreOneL", "CoreOneL_INDX"],
+      "min": 0,
+      "max": 60,
+      "source": "Prusa-Firmware-Buddy src/feature/chamber/chamber.cpp: a CORE One L's chamber tops out at 65 C less a 5 C safety margin, and the firmware cuts a higher target down to 60 without saying so; zero is no target. The INDX build is the same printer type"
     }
   ]
 }

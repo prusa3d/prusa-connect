@@ -130,6 +130,9 @@ type Config struct {
 	// with no filament sensor reports it, so the host keeps what a person said
 	// is loaded. Zero reports PLA.
 	NoMaterial bool
+	// Enclosure fits an XL with its enclosure, switched on. Such a machine
+	// sends an enclosure block in its telemetry, and one without sends none.
+	Enclosure bool
 	// TransferRate is how many bytes a second this printer fetches a file at.
 	// It asks for the next block once the last one would have taken that long
 	// to arrive. Zero fetches as fast as the server answers. A real board fetches

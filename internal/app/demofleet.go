@@ -136,6 +136,9 @@ func newDemoFleet(opts DemoOptions) (*demoFleet, error) {
 			// The demo's MK4S carries an MMU3, so the fleet shows a printer
 			// with filament slots beside the XL with its toolheads.
 			MMU: strings.EqualFold(name, demoMMUModel),
+			// The demo's XL has its enclosure on, so the fleet shows a
+			// chamber reading on a machine that cannot heat it.
+			Enclosure: strings.EqualFold(name, demoEnclosureModel),
 			// A file that takes seconds to reach a printer is one a person
 			// can watch on its way.
 			TransferRate: opts.TransferRate,

@@ -1,5 +1,7 @@
 package simulator
 
+import "math"
+
 // The chamber of an enclosed machine, as its telemetry reports it.
 //
 // A CORE One and a CORE One L send a chamber block in every full telemetry
@@ -20,6 +22,11 @@ const (
 	chamberLightFull = 100
 	// chamberFanRPM is what each fan reports while it runs.
 	chamberFanRPM = 3000
+	// enclosureFanRPM is what an XL enclosure's filtration fan reports.
+	enclosureFanRPM = 1500
+	// enclosureFilterSeconds is how long the filter has run. It is fixed, as
+	// every reading here is.
+	enclosureFilterSeconds = 3600
 )
 
 // chamber is what a machine with one holds of it. A target of 0 is the
@@ -43,8 +50,14 @@ func (p *Printer) hasChamber() bool {
 	return declared
 }
 
-// setChamber applies one of the three chamber setters. The caller holds the
-// lock, and the arguments have passed the model's checks.
+// setChamber applies one of the three chamber setters the way the firmware
+// does (src/connect/planner.cpp). The caller holds the lock.
+//
+// The firmware cuts a target above the model's ceiling down to it without a
+// word (src/feature/chamber/chamber.cpp). It takes a negative fan target as
+// automatic and holds the rest to 0 to 100 (src/common/pwm_utils.hpp). It keeps
+// the light on a 0 to 255 scale, so the percentage that comes back is rounded
+// down.
 func (p *Printer) setChamber(command string, kwargs map[string]any) {
 	number := func(name string) (int, bool) {
 		value, ok := kwargs[name].(float64)
@@ -55,32 +68,55 @@ func (p *Printer) setChamber(command string, kwargs map[string]any) {
 	switch command {
 	case chamberSetter:
 		if target, ok := number("chamber.target_temp"); ok {
-			p.chamber.target = target
+			p.chamber.target = min(max(target, 0), p.chamberCeiling())
 		}
 	case "SET_CHAMBER_FAN_TARGET":
 		if fan, ok := number("chamber.fan_pwm_target"); ok {
-			p.chamber.fan = fan
+			p.chamber.fan = chamberFanAutomatic
+			if fan >= 0 {
+				p.chamber.fan = min(fan, chamberLightFull)
+			}
 		}
 	case "SET_CHAMBER_LED_INTENSITY":
 		if light, ok := number("chamber.led_intensity"); ok {
-			p.chamber.light = light
+			p.chamber.light = light * pwmTop / chamberLightFull * chamberLightFull / pwmTop
 		}
 	}
 }
 
+// pwmTop is the top of the firmware's 0 to 255 PWM and brightness scale.
+const pwmTop = 255
+
+// chamberCeiling is the highest target the model's chamber takes. The profile
+// records the firmware's ceiling as the bound of the setter's argument.
+func (p *Printer) chamberCeiling() int {
+	command, declared := p.model.Command(chamberSetter)
+	if !declared {
+		return 0
+	}
+
+	if value, ok := command.Arguments["chamber.target_temp"]; ok && value.HasLimit {
+		return int(value.Limit)
+	}
+
+	return math.MaxInt
+}
+
 // chamberFields is the chamber block of one frame, in the firmware's keys.
 //
-// The air reads the target once one is set, and the warmth of a print or the
-// room otherwise. The reading is fixed rather than climbing, for the reason
-// every reading here is.
+// The chamber has fans and no heater, so a target is a ceiling the fans hold
+// the air under, and only while they run on their own: a fan target set by
+// hand turns that off (src/feature/xbuddy_extension). A print warms the air
+// and the room is the floor. The reading is fixed rather than climbing, for
+// the reason every reading here is.
 func (p *Printer) chamberFields(printing bool) map[string]any {
 	temp := ambientTemp
 	if printing {
 		temp = printingChamberTemp
 	}
 
-	if p.chamber.target > 0 {
-		temp = float64(p.chamber.target)
+	if target := float64(p.chamber.target); target > 0 && p.chamber.fan == chamberFanAutomatic && temp > target {
+		temp = max(target, ambientTemp)
 	}
 
 	rpm := chamberFanRPM
@@ -95,5 +131,21 @@ func (p *Printer) chamberFields(printing bool) map[string]any {
 		"fan_2_rpm":      rpm,
 		"fan_pwm_target": p.chamber.fan,
 		"led_intensity":  p.chamber.light,
+	}
+}
+
+// enclosureFields is the enclosure block of an XL with one, in the firmware's
+// keys (src/connect/render.cpp). The firmware writes the temperature as a
+// whole number, and the time the filter has run in seconds.
+func (p *Printer) enclosureFields(printing bool) map[string]any {
+	temp := int(ambientTemp)
+	if printing {
+		temp = int(printingChamberTemp)
+	}
+
+	return map[string]any{
+		"temp":        temp,
+		"fan_rpm":     enclosureFanRPM,
+		"time_in_use": enclosureFilterSeconds,
 	}
 }

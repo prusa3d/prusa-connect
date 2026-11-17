@@ -2,6 +2,7 @@ package xbuddy_test
 
 import (
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -234,6 +235,39 @@ func TestEverySetpointArgumentIsBounded(t *testing.T) {
 	for key := range unboundedOnPurpose {
 		if !unbounded[key] {
 			t.Errorf("%s is recorded as deliberately unbounded and it is bounded, so the record is stale", key)
+		}
+	}
+}
+
+// A chamber target is held to the ceiling the model's firmware has: 55 C on a
+// CORE One and 60 C on a CORE One L, each with its INDX build. The firmware
+// cuts a higher target down without a word, so the host refuses it rather than
+// report a target the chamber will not keep.
+func TestAChamberTargetIsHeldToTheModelsCeiling(t *testing.T) {
+	t.Parallel()
+
+	profiles, err := profile.Builtin()
+	if err != nil {
+		t.Fatalf("loading the built-in profiles: %v", err)
+	}
+
+	resolver := capability.NewResolver(profiles, slog.New(slog.DiscardHandler))
+	chamber := connectorapi.Capability("core.command.set_chamber_target_temp")
+
+	for model, ceiling := range map[string]int{
+		"CoreOne": 55, "CoreOne_INDX": 55, "CoreOneL": 60, "CoreOneL_INDX": 60,
+	} {
+		resolution := resolver.Resolve(t.Context(), driverBaseline(), identityOf(model), nil, 1)
+
+		for value, refused := range map[int]bool{0: false, ceiling: false, ceiling + 1: true, -1: true} {
+			_, validateErr := resolution.Capabilities.Validate(connectorapi.Command{
+				Verb: chamber,
+				Args: map[string]string{"chamber.target_temp": strconv.Itoa(value)},
+			})
+			if (validateErr != nil) != refused {
+				t.Errorf("%s: chamber target %d refused = %v, want %v (%v)",
+					model, value, validateErr != nil, refused, validateErr)
+			}
 		}
 	}
 }

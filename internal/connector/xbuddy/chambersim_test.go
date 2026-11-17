@@ -5,12 +5,41 @@ import (
 	"testing/synctest"
 
 	"github.com/prusa3d/prusa-connect/internal/connector/xbuddy"
+	"github.com/prusa3d/prusa-connect/internal/printer/simulator"
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
 
-// A CORE One reports its chamber, and a target set through the verb comes
-// back in the next frame, as it does from the firmware.
-func TestACoreOneReportsItsChamberAndTakesATarget(t *testing.T) {
+// stateWatch reads a session's patches and remembers the last value of each
+// path.
+type stateWatch struct {
+	rig     *rig
+	session interface {
+		State() <-chan connectorapi.StatePatch
+	}
+	seen map[string]string
+}
+
+// await reads patches until path reads want.
+func (w *stateWatch) await(t *testing.T, path, want string) {
+	t.Helper()
+
+	for w.seen[path] != want {
+		select {
+		case patch, open := <-w.session.State():
+			if !open {
+				t.Fatal("the state channel closed")
+			}
+
+			w.seen[patch.Path] = string(patch.Value)
+		case <-w.rig.ctx.Done():
+			t.Fatalf("%s never read %s; it reads %q", path, want, w.seen[path])
+		}
+	}
+}
+
+// A CORE One reports its chamber, its fans and its light, and each of the three
+// setters comes back in the next frame, as it does from the firmware.
+func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
@@ -18,37 +47,59 @@ func TestACoreOneReportsItsChamberAndTakesATarget(t *testing.T) {
 		defer rig.stop(t)
 
 		session := rig.connect(t)
+		watch := &stateWatch{rig: rig, session: session, seen: map[string]string{}}
 
-		seen := map[string]string{}
-		await := func(path, want string) {
-			for seen[path] != want {
-				select {
-				case patch, open := <-session.State():
-					if !open {
-						t.Fatal("the state channel closed")
-					}
+		watch.await(t, "/temperature/chamber", "25")
+		watch.await(t, "/temperature/chamber_target", "0")
+		watch.await(t, "/chamber/fan_pwm_target", "-1")
+		watch.await(t, "/chamber/led_intensity", "100")
 
-					seen[patch.Path] = string(patch.Value)
-				case <-rig.ctx.Done():
-					t.Fatalf("%s never read %s; it reads %q", path, want, seen[path])
-				}
+		for _, set := range []struct {
+			verb       connectorapi.Capability
+			arg, value string
+			path, want string
+		}{
+			{xbuddy.VerbSetChamberTemp, "chamber.target_temp", "45", "/temperature/chamber_target", "45"},
+			{xbuddy.VerbSetChamberFan, "chamber.fan_pwm_target", "40", "/chamber/fan_pwm_target", "40"},
+			// The firmware keeps the light on a 0 to 255 scale, so 50 comes
+			// back as 49.
+			{xbuddy.VerbSetChamberLED, "chamber.led_intensity", "50", "/chamber/led_intensity", "49"},
+		} {
+			result, err := session.Do(rig.ctx, connectorapi.Command{
+				Verb: set.verb, Args: map[string]string{set.arg: set.value},
+			})
+			if err != nil || !result.OK {
+				t.Fatalf("the CORE One refused %s=%s: %v %s", set.arg, set.value, err, result.Raw)
 			}
+
+			watch.await(t, set.path, set.want)
 		}
 
-		await("/temperature/chamber", "25")
-		await("/temperature/chamber_target", "0")
+		// The chamber has no heater: a target above the air leaves the air
+		// where it is.
+		watch.await(t, "/temperature/chamber", "25")
+	})
+}
 
-		result, err := session.Do(rig.ctx, connectorapi.Command{
-			Verb: xbuddy.VerbSetChamberTemp, Args: map[string]string{"chamber.target_temp": "45"},
-		})
-		if err != nil || !result.OK {
-			t.Fatalf("the CORE One refused a chamber target: %v %s", err, result.Raw)
+// An XL with its enclosure on reports the enclosure's air at the chamber
+// reading, and nothing at the chamber target.
+func TestAnXLWithItsEnclosureReportsTheChamberReading(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "XL", withAutoRegistration, withPrinter(func(cfg *simulator.Config) {
+			cfg.Enclosure = true
+		}))
+		defer rig.stop(t)
+
+		session := rig.connect(t)
+		watch := &stateWatch{rig: rig, session: session, seen: map[string]string{}}
+
+		watch.await(t, "/temperature/chamber", "25")
+
+		if target, written := watch.seen["/temperature/chamber_target"]; written {
+			t.Errorf("an XL wrote a chamber target of %s, and it has none", target)
 		}
-
-		await("/temperature/chamber_target", "45")
-		await("/temperature/chamber", "45")
-
-		t.Logf("observed: chamber %s, target %s", seen["/temperature/chamber"], seen["/temperature/chamber_target"])
 	})
 }
 
@@ -67,7 +118,7 @@ func TestAnMK4ReportsNoChamber(t *testing.T) {
 			select {
 			case patch := <-session.State():
 				switch patch.Path {
-				case "/temperature/chamber", "/temperature/chamber_target":
+				case "/temperature/chamber", "/temperature/chamber_target", "/chamber/fan_pwm_target":
 					t.Fatalf("an MK4 wrote %s = %s", patch.Path, patch.Value)
 				case "/temperature/bed":
 					frames++
