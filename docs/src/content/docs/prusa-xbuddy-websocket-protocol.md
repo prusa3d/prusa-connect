@@ -485,19 +485,26 @@ state tree:
 | `enclosure.temp` | `/temperature/chamber` | XL with its enclosure on; whole degrees |
 
 The chamber has fans and no heater. A target is the temperature the fans hold
-the air under, and only while they run on their own. A CORE One takes a
-target up to 55 C and a CORE One L up to 60 C. The firmware cuts a higher
-one down without saying so, so the host refuses it. A negative fan target
-hands the fans back to their own control, and the firmware holds the rest to
-0 to 100. The light is kept on a 0 to 255 scale, so a light of 50 is reported
-as 49. A value outside 0 to 100 wraps around in the firmware, so the host
-refuses it. An XL takes the light and never reports it. It has no chamber
-target and no chamber fan setter.
+the air under, and only while they run on their own. Firmware 7.0.0 and later
+drop a target sent while the fans are set by hand and still answer that the
+command finished; older firmware keeps it. A print warms the chamber from the
+bed, and `M191` waits for the air to reach the target, so a target is also
+the temperature a print waits for. A CORE One takes a target up to 55 C and
+a CORE One L up to 60 C. The firmware cuts a higher one down without saying
+so, so the host refuses it. A negative fan target hands the fans back to their
+own control, and the firmware holds the rest to 0 to 100. The light is kept on
+a 0 to 255 scale, so a light of 50 is reported as 49. A value outside 0 to 100
+wraps around in the firmware, so the host refuses it. An XL takes the light
+and never reports it. It has no chamber target and no chamber fan setter.
 
-The chamber is not part of what makes the firmware send a full frame, apart
-from the fan speeds. A new target or light reaches telemetry after up to five
-minutes. So when the printer finishes one of the three setters, the driver
-writes the value the firmware will report.
+The fan speeds are part of what makes the firmware send a full frame, and from
+7.0.0 so are the target, the fan target and the light. A setter shows in
+telemetry within seconds on that firmware. Older firmware reports a new target
+or light with the next full frame, after up to five minutes. The driver writes
+only what the printer reports.
+
+An XL sends the enclosure block only while the enclosure is on. A full frame,
+one that carries `temp_bed`, with neither block removes the chamber reading.
 
 Example chamber object:
 

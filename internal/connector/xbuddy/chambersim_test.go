@@ -38,7 +38,7 @@ func (w *stateWatch) await(t *testing.T, path, want string) {
 }
 
 // A CORE One reports its chamber, its fans and its light, and each of the three
-// setters comes back in the next frame, as it does from the firmware.
+// setters comes back in the next frame, as it does from firmware 7.0.0 on.
 func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 	t.Parallel()
 
@@ -73,6 +73,29 @@ func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 			}
 
 			watch.await(t, set.path, set.want)
+		}
+
+		// With the fans set by hand the firmware drops a new target and
+		// still answers that it finished, so the 45 stands.
+		result, err := session.Do(rig.ctx, connectorapi.Command{
+			Verb: xbuddy.VerbSetChamberTemp, Args: map[string]string{"chamber.target_temp": "50"},
+		})
+		if err != nil || !result.OK {
+			t.Fatalf("the CORE One refused a target with its fans set by hand: %v %s", err, result.Raw)
+		}
+
+		// The light moves the block, so the frame after it carries the target
+		// the printer holds.
+		if _, err := session.Do(rig.ctx, connectorapi.Command{
+			Verb: xbuddy.VerbSetChamberLED, Args: map[string]string{"chamber.led_intensity": "100"},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		watch.await(t, "/chamber/led_intensity", "100")
+
+		if target := watch.seen["/temperature/chamber_target"]; target != "45" {
+			t.Errorf("the chamber target reads %s after a target sent with the fans set by hand, want 45", target)
 		}
 
 		// The chamber has no heater: a target above the air leaves the air

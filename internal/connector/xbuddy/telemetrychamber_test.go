@@ -74,21 +74,50 @@ func TestAMalformedChamberBlockIsSkipped(t *testing.T) {
 	}
 }
 
-// The values a chamber setter leaves behind are the ones the firmware reports
-// after it: the fan target goes through the 0 to 255 PWM scale both ways and
-// comes back whole, and the light is rounded down on the way.
-func TestTheChamberSettersReportWhatTheFirmwareKeeps(t *testing.T) {
+// An XL whose enclosure is switched off stops sending the block. The next full
+// frame, the one with temp_bed, has none, and the reading goes. A reduced frame
+// in between leaves it standing.
+func TestAnEnclosureSwitchedOffTakesItsReadingAway(t *testing.T) {
 	t.Parallel()
 
-	for sent, want := range map[int]int{-5: -1, -1: -1, 0: 0, 37: 37, 100: 100} {
-		if got := reportedFanTarget(sent); got != want {
-			t.Errorf("a fan target of %d reports %d, want %d", sent, got, want)
-		}
-	}
+	printer := standHostile(t)
 
-	for sent, want := range map[int]int{0: 0, 1: 0, 10: 9, 50: 49, 99: 98, 100: 100} {
-		if got := reportedLight(sent); got != want {
-			t.Errorf("a light of %d reports %d, want %d", sent, got, want)
-		}
+	printer.text(t, `{"state":"IDLE","temp_bed":25.0,"enclosure":{"temp":31,"fan_rpm":1500,"time_in_use":3600}}`)
+	printer.awaitDialogTree(t, map[string]string{chamberTempPath: "31"})
+
+	printer.text(t, `{"state":"IDLE","progress":0}`)
+	printer.text(t, `{"state":"IDLE","temp_bed":24.0}`)
+	printer.awaitDialogTree(t, map[string]string{bedPath: "24.0", chamberTempPath: "null"})
+}
+
+// A machine with no chamber gets no chamber node from its full frames.
+func TestAFullFrameWithNoChamberWritesNothingThere(t *testing.T) {
+	t.Parallel()
+
+	printer := standHostile(t)
+
+	printer.text(t, `{"state":"IDLE","temp_bed":25.0}`)
+	printer.text(t, `{"state":"IDLE","temp_bed":26.0}`)
+	printer.awaitDialogTree(t, map[string]string{bedPath: "26.0"})
+
+	if got := printer.dialogPatchCount(chamberTempPath); got != 0 {
+		t.Errorf("%d patches arrived at %s from a machine with no chamber", got, chamberTempPath)
+	}
+}
+
+// A null in the block is no value, so it writes nothing.
+func TestANullInTheChamberBlockIsSkipped(t *testing.T) {
+	t.Parallel()
+
+	printer := standHostile(t)
+
+	printer.text(t, `{"state":"IDLE","chamber":{"temp":24.0,"target_temp":40}}`)
+	printer.awaitDialogTree(t, map[string]string{chamberTempPath: "24.0", chamberTargetPath: "40"})
+
+	printer.text(t, `{"state":"IDLE","chamber":{"temp":25.0,"target_temp":null}}`)
+	printer.awaitDialogTree(t, map[string]string{chamberTempPath: "25.0"})
+
+	if held := printer.dialogValue(chamberTargetPath); held != "40" {
+		t.Errorf("%s reads %s after a null target, want 40", chamberTargetPath, held)
 	}
 }

@@ -237,6 +237,9 @@ type Session struct {
 	// answered one. The firmware volunteers an INFO when a USB drive is put in
 	// or pulled out, and a FILE_CHANGED carries the drive's free space.
 	storages []connectorapi.Storage
+	// chamberReported is whether the chamber reading in the tree is one this
+	// session wrote. Only the telemetry dispatch reads and writes it.
+	chamberReported bool
 	// storagesReported is whether the connection held now has answered an
 	// INFO, and storagesChanged wakes a reader when an INFO moves either.
 	storagesReported bool
@@ -597,10 +600,6 @@ func (s *Session) Do(ctx context.Context, cmd connectorapi.Command) (connectorap
 			// is a pair of frames spent to be told what the tree already holds.
 			if movesThePrint(cmd.Verb) && answer.err == nil && answer.result.OK {
 				s.requestJobRefresh()
-			}
-
-			if answer.err == nil && answer.result.OK {
-				s.reportChamberSetter(cmd)
 			}
 
 			return answer.result, answer.err

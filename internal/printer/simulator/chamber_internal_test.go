@@ -49,8 +49,8 @@ func TestAChamberTargetCoolsAndCannotHeat(t *testing.T) {
 	}
 }
 
-// The firmware cuts a target over the model's ceiling down to it, takes a
-// negative fan target as automatic, and rounds the light down on its 0 to 255
+// The firmware cuts a target over the model's ceiling down to it, drops one
+// while the fans are set by hand, takes a negative fan target as automatic, and rounds the light down on its 0 to 255
 // scale.
 func TestTheChamberSettersActAsTheFirmwareDoes(t *testing.T) {
 	t.Parallel()
@@ -59,6 +59,14 @@ func TestTheChamberSettersActAsTheFirmwareDoes(t *testing.T) {
 		if got := chamberAfter(t, model, map[string]any{"chamber.target_temp": 70.0})["target_temp"]; got != ceiling {
 			t.Errorf("%s: a target of 70 reads %v, want %d", model, got, ceiling)
 		}
+	}
+
+	// A target sent while the fans are set by hand is dropped, and the one
+	// before it stands.
+	dropped := chamberAfter(t, "CoreOne", map[string]any{"chamber.target_temp": 45.0},
+		map[string]any{"chamber.fan_pwm_target": 40.0}, map[string]any{"chamber.target_temp": 50.0})
+	if got := dropped["target_temp"]; got != 45 {
+		t.Errorf("a target sent with the fans set by hand reads %v, want the 45 before it", got)
 	}
 
 	if got := chamberAfter(t, "CoreOne", map[string]any{"chamber.fan_pwm_target": -7.0})["fan_pwm_target"]; got != -1 {

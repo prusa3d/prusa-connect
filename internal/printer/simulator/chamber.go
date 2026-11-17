@@ -57,10 +57,12 @@ func (p *Printer) hasChamber() bool {
 // does (src/connect/planner.cpp). The caller holds the lock.
 //
 // The firmware cuts a target above the model's ceiling down to it without a
-// word (src/feature/chamber/chamber.cpp). It takes a negative fan target as
-// automatic and holds the rest to 0 to 100 (src/common/pwm_utils.hpp). It keeps
-// the light on a 0 to 255 scale, so the percentage that comes back is rounded
-// down.
+// word (src/feature/chamber/chamber.cpp). From 7.0.0 it also drops a target
+// while the fans are set by hand, because only fans on auto act on one, and
+// still answers that it finished (M141_M191.cpp). It takes a negative fan
+// target as automatic and holds the rest to 0 to 100
+// (src/common/pwm_utils.hpp). It keeps the light on a 0 to 255 scale, so the
+// percentage that comes back is rounded down.
 func (p *Printer) setChamber(command string, kwargs map[string]any) {
 	number := func(name string) (int, bool) {
 		value, ok := kwargs[name].(float64)
@@ -70,7 +72,7 @@ func (p *Printer) setChamber(command string, kwargs map[string]any) {
 
 	switch command {
 	case chamberSetter:
-		if target, ok := number("chamber.target_temp"); ok {
+		if target, ok := number("chamber.target_temp"); ok && p.chamber.fan == chamberFanAutomatic {
 			p.chamber.target = min(max(target, 0), p.chamberCeiling())
 		}
 	case "SET_CHAMBER_FAN_TARGET":
@@ -157,10 +159,12 @@ func (p *Printer) enclosureFields(printing bool) map[string]any {
 // connection last carried. The caller holds the lock.
 //
 // The firmware sends the chamber and enclosure blocks in full telemetry only:
-// the first frame of a connection, a frame after a fan speed or the enclosure
-// moved, and one every five minutes (src/connect/planner.cpp). A reduced
-// frame leaves them out. Sending a block when it changed and on a new
-// connection is that cadence without the clock.
+// the first frame of a connection, a frame after something in the fingerprint
+// moved, and one every five minutes (src/connect/planner.cpp). From 7.0.0 the
+// fingerprint holds the chamber's target, fan target and light beside its fan
+// speeds (src/connect/printer.cpp), so a setter shows within seconds. A
+// reduced frame leaves the blocks out. Sending a block when it changed and on
+// a new connection is that cadence without the clock.
 func (p *Printer) sendChanged(fields map[string]any, key string, block map[string]any) {
 	if p.blocksSession != p.sessions || p.blocksSent == nil {
 		p.blocksSent = map[string]string{}
