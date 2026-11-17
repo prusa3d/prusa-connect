@@ -9,7 +9,7 @@ name: Container image
 # the repository but one.
 #
 # Docker Hub gets the same image, at the same digest, when the repository
-# variable DOCKERHUB_IMAGE names it, such as prusa3d/prusa-connect. The
+# variable DOCKERHUB_IMAGE names it, such as prusaresearch/prusa-connect. The
 # variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN, an access token
 # that may push to that repository, sign in. Without DOCKERHUB_IMAGE the job
 # pushes to ghcr.io alone.
