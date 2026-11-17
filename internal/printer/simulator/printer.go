@@ -206,6 +206,10 @@ type Printer struct {
 	asked map[string]int
 	// chamber is the enclosure of a machine with one. See chamber.go.
 	chamber chamber
+	// blocksSent is the chamber and enclosure blocks as last sent, and
+	// blocksSession the connection they were sent on. See sendChanged.
+	blocksSent    map[string]string
+	blocksSession uint64
 	// filamentToLoad is the name the last M701 carried, and filamentAsked is
 	// whether one arrived at all. See FilamentToLoad.
 	filamentToLoad string

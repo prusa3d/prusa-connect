@@ -69,3 +69,43 @@ func TestTheChamberSettersActAsTheFirmwareDoes(t *testing.T) {
 		t.Errorf("a light of 50 reads %v, want 49", got)
 	}
 }
+
+// The chamber block rides only the frames the firmware sends it in: the first
+// one of a connection and the next one after the block changed.
+func TestTheChamberBlockIsSentWhenItChanges(t *testing.T) {
+	t.Parallel()
+
+	printer, err := New(Config{Model: "CoreOne", Serial: "SIM-1", BaseURL: "http://127.0.0.1:1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	printer.mu.Lock()
+	defer printer.mu.Unlock()
+
+	sent := func() bool {
+		_, present := printer.telemetryFields()["chamber"]
+
+		return present
+	}
+
+	if !sent() {
+		t.Error("the first frame carries no chamber block")
+	}
+
+	if sent() {
+		t.Error("a frame after an unchanged chamber carries the block again")
+	}
+
+	printer.setChamber("SET_CHAMBER_LED_INTENSITY", map[string]any{"chamber.led_intensity": 20.0})
+
+	if !sent() {
+		t.Error("the frame after the light changed carries no chamber block")
+	}
+
+	printer.sessions++
+
+	if !sent() {
+		t.Error("the first frame of a new connection carries no chamber block")
+	}
+}

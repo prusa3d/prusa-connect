@@ -1,6 +1,9 @@
 package simulator
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // The chamber of an enclosed machine, as its telemetry reports it.
 //
@@ -148,4 +151,27 @@ func (p *Printer) enclosureFields(printing bool) map[string]any {
 		"fan_rpm":     enclosureFanRPM,
 		"time_in_use": enclosureFilterSeconds,
 	}
+}
+
+// sendChanged puts a block into the frame when it differs from the one this
+// connection last carried. The caller holds the lock.
+//
+// The firmware sends the chamber and enclosure blocks in full telemetry only:
+// the first frame of a connection, a frame after a fan speed or the enclosure
+// moved, and one every five minutes (src/connect/planner.cpp). A reduced
+// frame leaves them out. Sending a block when it changed and on a new
+// connection is that cadence without the clock.
+func (p *Printer) sendChanged(fields map[string]any, key string, block map[string]any) {
+	if p.blocksSession != p.sessions || p.blocksSent == nil {
+		p.blocksSent = map[string]string{}
+		p.blocksSession = p.sessions
+	}
+
+	encoded := fmt.Sprint(block)
+	if p.blocksSent[key] == encoded {
+		return
+	}
+
+	p.blocksSent[key] = encoded
+	fields[key] = block
 }

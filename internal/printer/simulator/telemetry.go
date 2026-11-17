@@ -225,11 +225,11 @@ func (p *Printer) telemetryFields() map[string]any {
 	}
 
 	if p.hasChamber() {
-		fields["chamber"] = p.chamberFields(printing)
+		p.sendChanged(fields, "chamber", p.chamberFields(printing))
 	}
 
 	if p.cfg.Enclosure {
-		fields["enclosure"] = p.enclosureFields(printing)
+		p.sendChanged(fields, "enclosure", p.enclosureFields(printing))
 	}
 
 	switch {
