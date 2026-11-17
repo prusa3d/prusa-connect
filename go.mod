@@ -3,7 +3,6 @@ module github.com/prusa3d/prusa-connect
 go 1.26.11
 
 require (
-	github.com/prusa3d/prusa-connect/sdk v0.0.0
 	github.com/danielgtaylor/huma/v2 v2.40.0
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/expr-lang/expr v1.17.8
@@ -17,10 +16,11 @@ require (
 	github.com/pion/webrtc/v4 v4.2.26
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
+	github.com/prusa3d/prusa-connect/sdk v0.0.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.58.0
-	golang.org/x/mod v0.42.0
+	golang.org/x/crypto v0.59.0
+	golang.org/x/mod v0.43.0
 	golang.org/x/net v0.62.0
 	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.50.0
