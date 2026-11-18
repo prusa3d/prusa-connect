@@ -540,7 +540,7 @@
     {
       "summary": "Publishes domain events to an MQTT broker on the frozen v1 topic namespace.",
       "description": "The broker is external and the topic patterns, their QoS and their retain flags are frozen by the shipping AsyncAPI document. It does not wait for the broker: a sink that refused to start because a broker is down would turn an optional integration into a boot dependency, so the connection is retried in the background for as long as the process runs.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "contract": "1.1.0",
       "stability": "stable",
       "publishes": [
@@ -588,6 +588,21 @@
           "address": "v1/devices/printers/{printerId}/data/tools/{toolId}/temp/nozzle/target",
           "version": "1.2.0",
           "summary": "Not retained. A head's nozzle target in whole degrees, 0 while the heater is off and empty while not known."
+        },
+        {
+          "address": "v1/devices/printers/{printerId}/data/temp/heatbed/current",
+          "version": "1.3.0",
+          "summary": "Not retained. The bed temperature in whole degrees, empty while not known."
+        },
+        {
+          "address": "v1/devices/printers/{printerId}/data/temp/heatbed/target",
+          "version": "1.3.0",
+          "summary": "Not retained. The bed target in whole degrees, 0 while the heater is off and empty while not known."
+        },
+        {
+          "address": "v1/devices/printers/{printerId}/data/temp/chamber/current",
+          "version": "1.3.0",
+          "summary": "Not retained. The chamber temperature in whole degrees, on a printer that reports a chamber, empty while not known."
         },
         {
           "address": "v1/events/{origin}/{eventType}",

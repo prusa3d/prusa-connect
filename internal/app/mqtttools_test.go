@@ -227,8 +227,9 @@ func TestASimulatedPrintersToolsReachTheBrokerPerHeadAndPerSlot(t *testing.T) {
 	require.LessOrEqual(t, loaded, 1, "one slot at most is loaded into the head")
 
 	for topic, payload := range got {
-		require.True(t, strings.HasPrefix(topic, "tools/") || !strings.Contains(topic, "/"),
-			"%s is not a tool channel and not a printer channel", topic)
+		require.True(t, strings.HasPrefix(topic, "tools/") || strings.HasPrefix(topic, "temp/") ||
+			!strings.Contains(topic, "/"),
+			"%s is not a tool channel, a temperature channel or a printer channel", topic)
 		require.NotContains(t, topic, "slot/", "a retired slot channel was published")
 		require.NotEqual(t, "material", topic, "the retired printer-wide material channel was published")
 		require.NotEqual(t, "null", payload, "%s carries the string null", topic)

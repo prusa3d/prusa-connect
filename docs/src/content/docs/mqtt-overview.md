@@ -77,11 +77,14 @@ A value is published when it changes and not on a timer.
 | `v1/devices/printers/{uuid}/data/tools/{tool_id}/material` | 1 | yes | when the material in the tool changes, empty when nothing is loaded or not known |
 | `v1/devices/printers/{uuid}/data/tools/{tool_id}/temp/nozzle/current` | 0 | no | when a head's nozzle moves by a whole degree |
 | `v1/devices/printers/{uuid}/data/tools/{tool_id}/temp/nozzle/target` | 1 | no | when a head's nozzle target changes, `0` when the heater is off |
+| `v1/devices/printers/{uuid}/data/temp/heatbed/current` | 0 | no | when the bed moves by a whole degree |
+| `v1/devices/printers/{uuid}/data/temp/heatbed/target` | 1 | no | when the bed target changes, `0` when the heater is off |
+| `v1/devices/printers/{uuid}/data/temp/chamber/current` | 0 | no | when the chamber moves by a whole degree, on a printer that reports a chamber |
 | `v1/events/{origin}/{event type}` | 1 | no | once for each durable event |
 
-The other topics of the frozen namespace are not published. They are the bed
-and chamber temperatures, the axis positions and the speed. They are also the
-job progress, the time remaining, the dialog and the blocking reasons. A client
+The other topics of the frozen namespace are not published. They are the axis
+positions and the speed. They are also the job progress, the time remaining,
+the dialog and the blocking reasons. The chamber target has no topic. A client
 reads those values from the HTTP API or from the event stream.
 
 ## Tool topics

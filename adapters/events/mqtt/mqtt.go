@@ -47,7 +47,7 @@ func doc() extension.Doc {
 			"frozen by the shipping AsyncAPI document. It does not wait for the broker: a sink that refused " +
 			"to start because a broker is down would turn an optional integration into a boot dependency, " +
 			"so the connection is retried in the background for as long as the process runs.",
-		Version:   "1.2.0",
+		Version:   "1.3.0",
 		Contract:  eventsapi.Contract,
 		Stability: extension.StabilityStable,
 		Publishes: []extension.Destination{
@@ -95,6 +95,21 @@ func doc() extension.Doc {
 				Address: ToolNozzleTarget.Pattern,
 				Version: "1.2.0",
 				Summary: "Not retained. A head's nozzle target in whole degrees, 0 while the heater is off and empty while not known.",
+			},
+			{
+				Address: BedTemperature.Pattern,
+				Version: "1.3.0",
+				Summary: "Not retained. The bed temperature in whole degrees, empty while not known.",
+			},
+			{
+				Address: BedTarget.Pattern,
+				Version: "1.3.0",
+				Summary: "Not retained. The bed target in whole degrees, 0 while the heater is off and empty while not known.",
+			},
+			{
+				Address: ChamberTemperature.Pattern,
+				Version: "1.3.0",
+				Summary: "Not retained. The chamber temperature in whole degrees, on a printer that reports a chamber, empty while not known.",
 			},
 			{
 				Address: FactObserved.Pattern,
@@ -223,10 +238,14 @@ func (p *Processor) PrinterStateChanged(e eventsapi.PrinterState) {
 
 var _ eventsapi.SampleObserver = (*Processor)(nil)
 
-// SamplesObserved publishes the nodes under /tools/ on their tool channels. A
-// whole tree fills every retained channel and clears the channels of a tool
-// that is gone from it.
+// SamplesObserved publishes the nodes under /tools/ on their tool channels,
+// and the bed and chamber temperatures on theirs. A whole tree fills every
+// retained channel and clears the channels of a tool that is gone from it.
 func (p *Processor) SamplesObserved(samples eventsapi.Samples) {
+	for _, node := range samples.Nodes {
+		p.PublishTemperatureSample(samples.DeviceID, node.Path, node.Value)
+	}
+
 	if samples.Whole {
 		p.PublishToolTree(samples.DeviceID, samples.Nodes)
 

@@ -258,7 +258,7 @@ Publishes domain events to an MQTT broker on the frozen v1 topic namespace.
 - **config name** `mqtt`
 - **qualified name** `core/mqtt`
 - **module** `github.com/prusa3d/prusa-connect`
-- **version** 1.2.0
+- **version** 1.3.0
 - **contract** 1.1.0
 - **stability** stable
 
@@ -289,6 +289,9 @@ The broker is external and the topic patterns, their QoS and their retain flags 
 - **`v1/devices/printers/{printerId}/data/tools/{toolId}/material`** version 1.2.0. Retained. The material loaded in the tool, empty while nothing is loaded or it is not known.
 - **`v1/devices/printers/{printerId}/data/tools/{toolId}/temp/nozzle/current`** version 1.2.0. Not retained. A head's nozzle temperature in whole degrees, empty while not known.
 - **`v1/devices/printers/{printerId}/data/tools/{toolId}/temp/nozzle/target`** version 1.2.0. Not retained. A head's nozzle target in whole degrees, 0 while the heater is off and empty while not known.
+- **`v1/devices/printers/{printerId}/data/temp/heatbed/current`** version 1.3.0. Not retained. The bed temperature in whole degrees, empty while not known.
+- **`v1/devices/printers/{printerId}/data/temp/heatbed/target`** version 1.3.0. Not retained. The bed target in whole degrees, 0 while the heater is off and empty while not known.
+- **`v1/devices/printers/{printerId}/data/temp/chamber/current`** version 1.3.0. Not retained. The chamber temperature in whole degrees, on a printer that reports a chamber, empty while not known.
 - **`v1/events/{origin}/{eventType}`** version 1.1.0. Not retained. One durable bus event per message, the envelope as its JSON body.
 
 ### `core/webhook` {#core-webhook}

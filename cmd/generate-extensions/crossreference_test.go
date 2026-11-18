@@ -48,6 +48,9 @@ func TestEveryShippedSinkPublishesTheAddressesItsWireCarries(t *testing.T) {
 			"v1/devices/printers/{printerId}/data/tools/{toolId}/material",
 			"v1/devices/printers/{printerId}/data/tools/{toolId}/temp/nozzle/current",
 			"v1/devices/printers/{printerId}/data/tools/{toolId}/temp/nozzle/target",
+			"v1/devices/printers/{printerId}/data/temp/heatbed/current",
+			"v1/devices/printers/{printerId}/data/temp/heatbed/target",
+			"v1/devices/printers/{printerId}/data/temp/chamber/current",
 			"v1/events/{origin}/{eventType}",
 		}},
 	} {

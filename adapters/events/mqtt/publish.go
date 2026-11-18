@@ -28,26 +28,6 @@ func (p *Publisher) PublishSpeed(printerID string, speed int) {
 	p.offer(Speed, Speed.For(printerID), strconv.Itoa(speed))
 }
 
-// PublishBedTemperature publishes the heatbed pair. A target of zero or less
-// is not published: a heater that is off has no target.
-func (p *Publisher) PublishBedTemperature(printerID string, current, target float64) {
-	p.PublishTemperature(printerID, BedTemperature, current)
-
-	if target > 0 {
-		p.PublishTemperature(printerID, BedTarget, target)
-	}
-}
-
-// PublishChamberTemperature publishes the chamber reading.
-func (p *Publisher) PublishChamberTemperature(printerID string, current float64) {
-	p.PublishTemperature(printerID, ChamberTemperature, current)
-}
-
-// PublishTemperature publishes one temperature channel in whole degrees.
-func (p *Publisher) PublishTemperature(printerID string, topic Topic, celsius float64) {
-	p.offer(topic, topic.For(printerID), temperaturePayload(celsius))
-}
-
 // PublishAxis publishes one carriage position in millimetres.
 func (p *Publisher) PublishAxis(printerID string, axis Topic, millimetres float64) {
 	p.offer(axis, axis.For(printerID), strconv.FormatFloat(millimetres, 'f', 2, 64))
