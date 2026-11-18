@@ -10,6 +10,8 @@
   import {
     BED_PATH,
     BED_TARGET_PATH,
+    CHAMBER_PATH,
+    CHAMBER_TARGET_PATH,
     NOZZLE_PATH,
     NOZZLE_TARGET_PATH,
   } from '../../../domain';
@@ -47,12 +49,14 @@
   const PATHS: Readonly<Record<Heater, { reading: string; target: string }>> = {
     nozzle: { reading: NOZZLE_PATH, target: NOZZLE_TARGET_PATH },
     bed: { reading: BED_PATH, target: BED_TARGET_PATH },
+    chamber: { reading: CHAMBER_PATH, target: CHAMBER_TARGET_PATH },
   };
 
   /** The line of each heater's target, beside the line of its reading. */
   const TARGET_KEY: Readonly<Record<Heater, string>> = {
     nozzle: 'dashboard.temperature.nozzleTarget',
     bed: 'dashboard.temperature.bedTarget',
+    chamber: 'dashboard.temperature.chamberTarget',
   };
 
   // The id alone, so a fleet update that leaves the printer the same does
@@ -101,22 +105,30 @@
     const id = followed;
     if (id === undefined) return [];
 
-    return settings.heaters.flatMap((heater) => [
-      {
-        id: heater,
-        label: t(HEATER[heater]),
-        points: telemetry
-          .points(id, PATHS[heater].reading)
-          .filter((point) => point.at >= since),
-      },
-      {
-        id: `${heater}-target`,
-        label: t(TARGET_KEY[heater]),
-        points: telemetry
-          .points(id, PATHS[heater].target)
-          .filter((point) => point.at >= since),
-      },
-    ]);
+    return settings.heaters.flatMap((heater) => {
+      const lines = [
+        {
+          id: heater,
+          label: t(HEATER[heater]),
+          points: telemetry
+            .points(id, PATHS[heater].reading)
+            .filter((point) => point.at >= since),
+        },
+        {
+          id: `${heater}-target`,
+          label: t(TARGET_KEY[heater]),
+          points: telemetry
+            .points(id, PATHS[heater].target)
+            .filter((point) => point.at >= since),
+        },
+      ];
+      // A printer with no chamber never reports one, so it gets no chamber
+      // lines and no chamber entry in the legend.
+      return heater === 'chamber' &&
+        lines.every((line) => line.points.length === 0)
+        ? []
+        : lines;
+    });
   });
 
   const empty = $derived(series.every((line) => line.points.length === 0));

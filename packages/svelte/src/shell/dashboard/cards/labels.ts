@@ -53,6 +53,7 @@ export const SIZE: Readonly<Record<Size, string>> = {
 export const HEATER: Readonly<Record<Heater, string>> = {
   nozzle: 'dashboard.temperature.nozzle',
   bed: 'dashboard.temperature.bed',
+  chamber: 'dashboard.temperature.chamber',
 };
 
 export const NOTE_SIZE: Readonly<Record<NoteSize, string>> = {

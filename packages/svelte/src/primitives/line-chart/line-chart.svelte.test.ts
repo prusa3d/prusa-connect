@@ -45,6 +45,25 @@ describe('LineChart', () => {
     ).toHaveLength(2);
   });
 
+  // The temperature chart draws three heaters and the target of each.
+  it('gives each of six lines its own colour', async () => {
+    const { container } = await render(LineChart, {
+      props: {
+        label: 'Temperatures',
+        series: ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({
+          id,
+          label: id,
+          points,
+        })),
+      },
+    });
+
+    const strokes = [
+      ...container.querySelectorAll('path[data-slot="line-chart-series"]'),
+    ].map((path) => path.getAttribute('class'));
+    expect(new Set(strokes).size).toBe(6);
+  });
+
   it('draws no line for a series with no points, and does not throw', async () => {
     const { container } = await render(LineChart, {
       props: {

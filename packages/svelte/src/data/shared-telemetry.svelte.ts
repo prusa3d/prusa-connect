@@ -18,6 +18,8 @@ import type { EventSubscription, StreamEvent } from '@prusa/connect';
 import {
   BED_PATH,
   BED_TARGET_PATH,
+  CHAMBER_PATH,
+  CHAMBER_TARGET_PATH,
   mergeSeries,
   NOZZLE_PATH,
   NOZZLE_TARGET_PATH,
@@ -42,6 +44,8 @@ export const CHARTED_PATHS: readonly string[] = [
   NOZZLE_TARGET_PATH,
   BED_PATH,
   BED_TARGET_PATH,
+  CHAMBER_PATH,
+  CHAMBER_TARGET_PATH,
 ];
 
 /** How many live points each path keeps: an hour of a reading every two seconds. */

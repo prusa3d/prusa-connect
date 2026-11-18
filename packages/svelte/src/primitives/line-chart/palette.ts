@@ -23,4 +23,9 @@ export const chartPalette = [
     fill: 'fill-destructive-text',
     swatch: 'bg-destructive-text',
   },
+  {
+    stroke: 'stroke-muted-foreground',
+    fill: 'fill-muted-foreground',
+    swatch: 'bg-muted-foreground',
+  },
 ];

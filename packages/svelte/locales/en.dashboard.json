@@ -217,6 +217,8 @@
   "dashboard.switcher.open": "Dashboards, now {name}",
   "dashboard.temperature.bed": "Bed",
   "dashboard.temperature.bedTarget": "Bed target",
+  "dashboard.temperature.chamber": "Chamber",
+  "dashboard.temperature.chamberTarget": "Chamber target",
   "dashboard.temperature.full": "Too many live charts on this page",
   "dashboard.temperature.fullNote": "A page follows at most {most} printers at once. Put this chart on another dashboard.",
   "dashboard.temperature.label": "Temperatures of {name} over the last {minutes} minutes",
