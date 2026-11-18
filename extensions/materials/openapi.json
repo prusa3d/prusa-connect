@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "materials",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "description": "The routes materials serves. Every path is relative to the mount the host assigns, and the host serves this document rebased under it at <mount>/openapi.json. Every answer is JSON with snake_case fields and RFC 3339 times; a refusal is application/problem+json."
   },
   "paths": {

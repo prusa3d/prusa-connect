@@ -15,7 +15,7 @@ name: fleet-stats
 # The one kind this module is declared under: a directory of files the host
 # verifies against a digest and serves, and never runs.
 kind: asset
-version: 0.3.3
+version: 0.3.4
 license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
 # The core the bundle is built for. It reads the prints the core keeps, with
 # how each one ended and narrowed by when it ended, which 0.0.1-alpha.8 is the

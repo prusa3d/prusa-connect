@@ -7,6 +7,12 @@ Write the entry in the same change as the code. One bullet per behaviour a
 person outside this repository can observe: a route, a setting, a screen, a
 refusal. Name the route and the setting key, never a function or a file.
 
+## 0.3.4 - 2026-11-17
+
+### Changed
+
+- The build tooling takes minimatch 11 for GHSA-g3hv-75wg-m249. Nothing the extension ships changes.
+
 ## 0.3.3 - 2026-11-16
 
 ### Changed

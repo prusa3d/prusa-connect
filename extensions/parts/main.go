@@ -88,7 +88,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "parts"
-	release = extension.Version("0.3.7")
+	release = extension.Version("0.3.8")
 )
 
 // openAPI is the fragment describing the routes, with every path relative to

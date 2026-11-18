@@ -19,6 +19,9 @@ verifyDepsBeforeRun: error
 # `file:` copy is not refreshed by `pnpm install` alone: an edit to standards
 # needs `rm -rf node_modules && pnpm install` here to reach this module.
 overrides:
+  # minimatch 10 has GHSA-g3hv-75wg-m249 and no fixed 10.x. ESLint calls only
+  # minimatch() and new Minimatch(), which 11 keeps.
+  'minimatch@10': '^11.0.8'
   '@prusa/connect': 'link:../../../packages/typescript'
   '@prusa/connect-ui': 'link:../../../packages/svelte'
   '@prusa/frontend-standards': 'file:../../../packages/standards'
