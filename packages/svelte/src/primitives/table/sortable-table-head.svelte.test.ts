@@ -42,4 +42,34 @@ describe('SortableTableHead', () => {
 
     expect(onSort).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [undefined, 'asc'],
+    ['ascending', 'desc'],
+    ['descending', 'asc'],
+  ] as const)('sorted %s, asks for %s on a press', async (direction, order) => {
+    const { onSort } = draw(direction);
+
+    await page.getByRole('button', { name: 'Name' }).click();
+
+    expect(onSort).toHaveBeenCalledWith(order);
+  });
+
+  // WCAG 2.5.8: never under 24px under a mouse.
+  it('stands its button on the 24px floor', async () => {
+    draw(undefined);
+    await expect
+      .element(page.getByRole('button', { name: 'Name' }))
+      .toBeVisible();
+
+    // Earlier tests leave their tables in the page, so this one is the last.
+    const box = page
+      .getByRole('button', { name: 'Name' })
+      .elements()
+      .at(-1)!
+      .getBoundingClientRect();
+
+    expect(box.height).toBeGreaterThanOrEqual(24);
+    expect(box.width).toBeGreaterThanOrEqual(24);
+  });
 });

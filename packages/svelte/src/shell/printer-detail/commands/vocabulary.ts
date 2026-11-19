@@ -177,7 +177,9 @@ export const spellOut = (verb: string): string => {
 };
 
 /** The verb's name as a person reads it. */
-export const verbText = (verb: string): string => {
+export const verbText = (verb: string, compact = false): string => {
+  if (compact && verb === 'core.command.disable_steppers')
+    return t('printerDetailControls.disableSteppers.label');
   const key = labelKeyOf(verb);
 
   return key === undefined ? spellOut(verb) : t(key);

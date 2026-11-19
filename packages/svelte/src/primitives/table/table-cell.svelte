@@ -2,13 +2,19 @@
 <script lang="ts">
   import type { TableCellProps } from './types';
 
-  let { class: className, children, ...rest }: TableCellProps = $props();
+  let {
+    roomy = false,
+    class: className,
+    children,
+    ...rest
+  }: TableCellProps = $props();
 </script>
 
 <td
   data-slot="table-cell"
   class={[
-    'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+    'px-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-checkbox-baseline',
+    roomy ? 'py-4' : 'py-2',
     className,
   ]}
   {...rest}

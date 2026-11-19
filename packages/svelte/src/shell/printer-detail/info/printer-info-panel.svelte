@@ -41,6 +41,9 @@
     onRemoved,
     onPickCommand,
     access,
+    telemetry,
+    commands,
+    material,
   }: PrinterInfoPanelProps = $props();
 
   // A caller the record says may not administer the printer is offered no
@@ -231,14 +234,14 @@
       <CardContent
         class="grid grid-cols-1 gap-6 @2xl/card:grid-cols-2 @2xl/card:gap-0"
       >
-        <section class="flex flex-col gap-4 @2xl/card:pe-6">
+        <section class="flex flex-col gap-4 @2xl/card:pe-panel-padding">
           <h3 class="text-sm font-medium text-foreground">
             {t('printerDetail.info.specification')}
           </h3>
           <KeyValueList rows={specification} />
         </section>
         <section
-          class="flex flex-col gap-4 border-t border-border pt-6 @2xl/card:border-s @2xl/card:border-t-0 @2xl/card:ps-6 @2xl/card:pt-0"
+          class="flex flex-col gap-4 border-t border-border pt-6 @2xl/card:border-s @2xl/card:border-t-0 @2xl/card:ps-panel-padding @2xl/card:pt-0"
         >
           <h3 class="text-sm font-medium text-foreground">
             {t('printerDetail.info.instance')}
@@ -262,7 +265,12 @@
 
   <!-- What the machine is fitted with, next to what it is. -->
   {#if device !== undefined}
-    <PrinterTools tools={device.tools} buildVolume={device.build_volume} />
+    <PrinterTools
+      tools={device.tools}
+      buildVolume={device.build_volume}
+      live={telemetry ? { device, telemetry, commands } : undefined}
+      {material}
+    />
   {/if}
 
   <!-- The prints stand between the record and the diagnostics. -->

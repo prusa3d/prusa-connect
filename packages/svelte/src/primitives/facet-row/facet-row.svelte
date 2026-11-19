@@ -45,23 +45,25 @@
   aria-pressed={checked}
   onclick={onToggle}
   class={[
-    'flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none disabled:cursor-default',
+    'flex w-full cursor-pointer items-center rounded-md px-1.5 py-1 text-left outline-none disabled:cursor-default',
     'hover:not-disabled:bg-accent',
     'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
     'disabled:pointer-events-none disabled:opacity-35',
+    'min-h-control-height gap-4 @max-3xl/app-shell:min-h-touch-target pointer-coarse:min-h-touch-target',
     className,
   ]}
 >
   <!-- A square box, matched to the radius the rest of the interface uses. -->
   <span
     aria-hidden="true"
+    data-slot="facet-row-indicator"
     data-on={checked || undefined}
     class={[
-      'grid size-4 flex-none place-items-center rounded-sm border border-border bg-card text-transparent',
-      'data-on:border-transparent data-on:bg-selected data-on:text-selected-foreground',
+      'grid flex-none place-content-center place-items-center border bg-card text-transparent',
+      'size-checkbox rounded-checkbox border-input data-on:border-checkbox-on data-on:bg-checkbox-on data-on:text-control-on-foreground',
     ]}
   >
-    <CheckIcon class="size-3" strokeWidth={3} />
+    <CheckIcon class="size-checkbox-mark stroke-2" strokeWidth={3} />
   </span>
   <!-- Wraps rather than truncating: a value that does not fit stays readable on
        a second line, and the panel never scrolls sideways to reach it.

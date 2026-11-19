@@ -3,6 +3,9 @@ package hostfake
 import (
 	"context"
 	"fmt"
+	"path"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/prusa3d/prusa-connect/sdk/storageapi"
@@ -26,8 +29,22 @@ type Files struct {
 	Fail func(params storageapi.StatParams) error
 }
 
-// Put places one file in a storage.
-func (f *Files) Put(storage, path string, size int64, sha256 string) {
+// Put places one file in a storage. A print file carries a picture, as the
+// host reports one it found; PutBare places one that carries none.
+func (f *Files) Put(storage, file string, size int64, sha256 string) {
+	f.put(storage, file, size, sha256, true)
+}
+
+// PutBare places a file the way the host describes a print file with neither
+// details nor a picture: Print is left out.
+func (f *Files) PutBare(storage, file string, size int64, sha256 string) {
+	f.put(storage, file, size, sha256, false)
+}
+
+// thumbnailSide is any non-zero size: a test only asks whether a picture exists.
+const thumbnailSide = 16
+
+func (f *Files) put(storage, file string, size int64, sha256 string, picture bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -35,9 +52,12 @@ func (f *Files) Put(storage, path string, size int64, sha256 string) {
 		f.rows = map[string]storageapi.FileInfo{}
 	}
 
-	f.rows[storage+"\x00"+path] = storageapi.FileInfo{
-		Name: path, Path: path, Size: size, SHA256: sha256,
+	row := storageapi.FileInfo{Name: file, Path: file, Size: size, SHA256: sha256}
+	if picture && slices.Contains([]string{".bgcode", ".gcode", ".3mf"}, strings.ToLower(path.Ext(file))) {
+		row.Print = &storageapi.PrintInfo{ThumbnailWidth: thumbnailSide, ThumbnailHeight: thumbnailSide}
 	}
+
+	f.rows[storage+"\x00"+file] = row
 }
 
 // Stat answers one file the test put in a storage.

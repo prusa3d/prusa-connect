@@ -169,7 +169,9 @@ it('takes a file from the storage page onto a printer', async () => {
   await sheet.getByRole('checkbox', { name: new RegExp(deviceName) }).check();
   say(`${deviceName} is ticked in the sheet`);
 
-  await sheet.getByRole('button', { name: 'Print', exact: true }).click();
+  await sheet
+    .getByRole('button', { name: 'Print on 1 printer', exact: true })
+    .click();
 
   // ── The printer's page ───────────────────────────────────────────
   await expect
@@ -213,18 +215,19 @@ it('takes a file from the storage page onto a printer', async () => {
   await progress.waitFor({ timeout: 60_000 });
 
   // The bar reads a number rather than sitting indeterminate, and the figure
-  // beside it says the same. Both are read in one pass, because the print
+  // over it says the same. Both are read in one pass, because the print
   // advances while the page is open.
   await expect
     .poll(
       () =>
         progress.evaluate((bar: Element) => {
           const now = bar.getAttribute('aria-valuenow') ?? '';
-          // The figure is formatted with a space before the unit.
-          const figure = (bar.nextElementSibling?.textContent ?? '').replace(
-            /\s/g,
-            '',
-          );
+          // A running print sets its figure large at the end of the row above
+          // the bar, formatted with a space before the unit.
+          const figure = (
+            bar.parentElement?.previousElementSibling?.lastElementChild
+              ?.textContent ?? ''
+          ).replace(/\s/g, '');
 
           return /^\d+$/.test(now) && figure === `${now}%`;
         }),

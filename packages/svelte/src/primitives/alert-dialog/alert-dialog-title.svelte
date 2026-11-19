@@ -24,7 +24,7 @@
   bind:ref
   data-slot="alert-dialog-title"
   class={[
-    'text-lg font-semibold wrap-anywhere sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2',
+    'text-lg font-semibold wrap-anywhere sm:group-size-default/alert-dialog-content:group-has-slot-alert-dialog-media/alert-dialog-content:col-start-2',
     className,
   ]}
   {...rest}

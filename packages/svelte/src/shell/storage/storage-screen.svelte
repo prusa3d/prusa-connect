@@ -2,14 +2,11 @@
   import { untrack } from 'svelte';
 
   import DownloadIcon from '@lucide/svelte/icons/download';
-  import FileIcon from '@lucide/svelte/icons/file';
-  import FileCode2Icon from '@lucide/svelte/icons/file-code-2';
-  import FolderIcon from '@lucide/svelte/icons/folder';
   import FolderInputIcon from '@lucide/svelte/icons/folder-input';
   import FolderPlusIcon from '@lucide/svelte/icons/folder-plus';
   import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
 
-  import { newestFirst } from '../../domain';
+  import { compareFiles } from '../../primitives/table/ordering';
   import { describeFault, t } from '../../i18n';
   import {
     BulkBar,
@@ -35,6 +32,7 @@
     SelectTrigger,
     SelectValue,
     Skeleton,
+    Slider,
     type ListField,
     toast,
     viewModes,
@@ -48,6 +46,8 @@
     splitName,
     trailOf,
   } from './presentation';
+  import rowsIcon from './assets/rows.svg';
+  import tilesIcon from './assets/tiles.svg';
   import StorageListing from './storage-listing.svelte';
   import StorageFolderDialog from './storage-folder-dialog.svelte';
   import StorageUploads from './storage-uploads.svelte';
@@ -60,14 +60,16 @@
   } from './types';
 
   /** The split, at the one tier where both columns fit side by side. */
+  let thumbnailSize = $state(0);
+
   const SPLIT_ROW =
     'flex flex-col @4xl/storage:flex-row @4xl/storage:items-stretch';
 
   const SPLIT_LEADING =
-    'flex flex-col gap-6 border-b border-border pb-6 @4xl/storage:order-first @4xl/storage:w-1/3 @4xl/storage:min-w-64 @4xl/storage:border-b-0 @4xl/storage:pb-0 @4xl/storage:pe-6';
+    'flex flex-col gap-0 border-b border-border pb-6 @4xl/storage:order-first @4xl/storage:w-(--file-upload-pane-width) @4xl/storage:min-w-0 @4xl/storage:max-w-2/5 @4xl/storage:border-b-0 @4xl/storage:pb-0 @4xl/storage:pe-panel-padding';
 
   const SPLIT_TRAILING =
-    'border-border pt-6 @4xl/storage:border-s @4xl/storage:pt-0 @4xl/storage:ps-6';
+    'border-border pt-6 @4xl/storage:border-s @4xl/storage:pt-0 @4xl/storage:ps-panel-padding';
 
   let {
     storage,
@@ -101,6 +103,9 @@
     { id: 'size', label: t('storage.column.size') },
     { id: 'modified', label: t('storage.column.modified') },
   ];
+  // The table draws Modified only where its pane has room, which the picker
+  // cannot see from its popover, so the table offers no toggle for it.
+  const TABLE_FIELDS = FIELDS.filter((field) => field.id !== 'modified');
 
   // Reads nothing reactive, so it runs once when the screen mounts. The store
   // hands back a read already in flight instead of starting a second one.
@@ -170,7 +175,7 @@
       : storage.entries,
   );
 
-  const listing = new ListingState<StorageRow>({
+  const listing: ListingState<StorageRow> = new ListingState<StorageRow>({
     id: 'storage',
     viewSetting: 'files',
     fields: FIELDS,
@@ -183,9 +188,12 @@
       },
     },
     rows: () => matching,
-    // The core answers in the order the storage walked.
-    compare: newestFirst((row) => row.name),
+    compare: (a, b) => compareFiles(a, b, a.name, b.name, listing.sort),
   });
+
+  const offered = $derived(
+    listing.view.value === 'table' ? TABLE_FIELDS : FIELDS,
+  );
 
   const selection = new Selection<string>({
     rows: () => listing.rows.map((entry) => entry.path),
@@ -193,14 +201,6 @@
 
   const shows = (field: StorageFieldId): boolean =>
     listing.fields.visible.includes(field);
-
-  // The entry says only whether it is a folder, so the name tells a print
-  // file from any other file.
-  const glyphOf = (entry: StorageRow) => {
-    if (entry.folder) return FolderIcon;
-
-    return isPrintFile(entry.name) ? FileCode2Icon : FileIcon;
-  };
 
   const under = (directory: string, name: string): string =>
     directory === '' ? name : `${directory}/${name}`;
@@ -481,10 +481,17 @@
   {:else}
     <FaultAlert {fault} />
 
-    <Card>
-      <CardContent class={SPLIT_ROW}>
+    <Card density="panel">
+      <CardContent
+        class={[SPLIT_ROW, 'pt-section-block pb-panel-padding-mobile']}
+      >
         <div class={SPLIT_LEADING}>
           {#if writable}
+            <h2 class="mb-3 text-sm font-medium">
+              {t('storage.upload.heading', {
+                name: chosen?.display_name ?? storage.storage,
+              })}
+            </h2>
             <FileDropzone {accept} onFiles={receive} />
           {/if}
 
@@ -497,7 +504,12 @@
           />
         </div>
 
-        <div class={[SPLIT_TRAILING, 'flex min-w-0 flex-1 flex-col gap-4']}>
+        <div
+          class={[
+            SPLIT_TRAILING,
+            '@container/storage-files flex min-w-0 flex-1 flex-col gap-section-inline',
+          ]}
+        >
           <BulkBar
             count={pickedRows.length}
             label={t('storage.bulk.selected', { count: pickedRows.length })}
@@ -515,11 +527,36 @@
             {idle}
           />
 
-          <FolderTrail
-            crumbs={trail}
-            label={t('storage.trail.label')}
-            onOpen={openFolder}
-          />
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <FolderTrail
+              crumbs={trail}
+              label={t('storage.trail.label')}
+              onOpen={openFolder}
+            />
+            <!-- Same width as the one that hides a list preview. -->
+            <div
+              class={[
+                'ms-auto flex items-center gap-3',
+                listing.view.value === 'table' &&
+                  '@max-sm/storage-files:hidden',
+              ]}
+            >
+              <span class="text-xs text-muted-foreground"
+                >{t('storage.thumbnail.size')}</span
+              >
+              <div class="w-28 shrink-0">
+                <Slider
+                  type="single"
+                  bind:value={thumbnailSize}
+                  min={0}
+                  max={3}
+                  step={1}
+                  aria-label={t('storage.thumbnail.size')}
+                  class="h-8 [&_[data-slot=slider-track]]:bg-input"
+                />
+              </div>
+            </div>
+          </div>
 
           {#if searching}
             <ListingSearchSummary
@@ -534,6 +571,7 @@
 
           <StorageListing
             {listing}
+            {thumbnailSize}
             {filesFault}
             loading={storage.filesLoading}
             {emptyFolder}
@@ -543,7 +581,6 @@
             {printable}
             {selection}
             {shows}
-            {glyphOf}
             thumbnailOf={(entry: StorageRow) =>
               describedOf(entry)?.thumbnailUrl}
             fileHref={rowHref}
@@ -672,13 +709,28 @@
 {#snippet idle()}
   {@const listed = storage.filesLoaded && filesFault === undefined}
   <ListingToolbar
-    fields={listed ? FIELDS : undefined}
+    class="w-full"
+    fields={listed ? offered : undefined}
     fieldState={listed ? listing.fields : undefined}
-    view={listed ? listing.view : undefined}
-    search={searchBox}
-    {afterFacets}
+    view={listed
+      ? {
+          ...listing.view,
+          options: listing.view.options.map((option) => ({
+            ...option,
+            iconSrc: option.value === 'table' ? rowsIcon : tilesIcon,
+          })),
+        }
+      : undefined}
+    afterFacets={narrowing}
     {trailing}
   />
+{/snippet}
+
+{#snippet narrowing()}
+  {@render afterFacets()}
+  <div class="min-w-0 grow basis-28">
+    {@render searchBox()}
+  </div>
 {/snippet}
 
 {#snippet searchBox()}
@@ -726,7 +778,7 @@
   {#if writable}
     <Button
       variant="secondary"
-      size="sm"
+      size="field"
       class="shrink-0"
       onclick={() => {
         creating = true;

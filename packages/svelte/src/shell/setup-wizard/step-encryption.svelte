@@ -111,7 +111,7 @@
   disabled: boolean,
   change: (next: boolean) => void,
 )}
-  <SettingsRow {label} description={hint}>
+  <SettingsRow layout="switch" {label} description={hint}>
     {#snippet control()}
       <Switch
         aria-label={label}

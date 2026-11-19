@@ -54,7 +54,7 @@
       </ul>
       <div class="flex flex-col gap-2">
         <h3 class="font-medium">{t('addPrinter.help.status.heading')}</h3>
-        <dl class="flex flex-col gap-2 rounded-sm border border-border p-3">
+        <dl class="flex flex-col gap-2 rounded-md border border-border p-3">
           {#each statuses as status (status.word)}
             <div class="flex flex-wrap gap-x-4 gap-y-0.5">
               <dt class="w-28 shrink-0 font-mono font-semibold">

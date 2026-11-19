@@ -256,12 +256,15 @@ describe('the application boundary', () => {
       await expect
         .element(page.getByRole('button', { name: 'Restart in safe mode' }))
         .toBeVisible();
-      const tabs = page.getByRole('navigation', { name: 'Server settings' });
       await expect
-        .element(tabs.getByText('Overview', { exact: true }))
+        .element(page.getByRole('tab', { name: 'Overview', exact: true }))
         .toBeVisible();
-      expect(tabs.getByText('Updates', { exact: true }).elements()).toEqual([]);
-      expect(tabs.getByText('Backups', { exact: true }).elements()).toEqual([]);
+      expect(
+        page.getByRole('tab', { name: 'Updates', exact: true }).elements(),
+      ).toEqual([]);
+      expect(
+        page.getByRole('tab', { name: 'Backups', exact: true }).elements(),
+      ).toEqual([]);
       expect(
         asked().filter(
           (path) =>
@@ -286,5 +289,24 @@ describe('the application boundary', () => {
         ).not.toBeNull();
       },
     );
+  });
+});
+
+describe('the skin', () => {
+  afterEach(() => {
+    localStorage.removeItem('skin');
+  });
+
+  it('forgets a skin an older build stored', async () => {
+    localStorage.setItem('skin', 'slicer');
+    history.pushState(null, '', '/printers/one');
+    const { default: App } = await import('./app.svelte');
+
+    await render(App, { props: { useServerAppearance: true } });
+    await expect
+      .element(page.getByTestId('counting-screen'))
+      .toBeInTheDocument();
+
+    expect(localStorage.getItem('skin')).toBeNull();
   });
 });

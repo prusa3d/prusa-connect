@@ -81,7 +81,7 @@
      label by the width of the pane it sits in. -->
 <section
   {id}
-  class="@container/pane flex flex-col gap-2 rounded-md border border-border bg-surface px-4 py-2"
+  class="@container/pane flex flex-col gap-2 rounded-md border-0 bg-secondary p-control-inline"
   aria-label={t('app.settings.extensions.marketplace.settings')}
   data-part="marketplace"
 >
@@ -91,6 +91,7 @@
     </p>
   {:else}
     <SettingsRow
+      layout="switch"
       label={t('app.settings.extensions.marketplace.enabled.label')}
       description={t('app.settings.extensions.marketplace.enabled.note', {
         url: marketplace.url,
@@ -111,6 +112,7 @@
 
     {#if marketplace.enabled}
       <SettingsRow
+        layout="switch"
         label={t('app.settings.extensions.marketplace.community.label')}
         description={t('app.settings.extensions.marketplace.community.note')}
       >

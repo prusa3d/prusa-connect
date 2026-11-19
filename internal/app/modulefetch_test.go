@@ -212,15 +212,19 @@ func TestAnUpdateStopsTheRunningProcessBeforeItReplacesTheFiles(t *testing.T) {
 	install("0.1.0")
 	require.Empty(t, plane.stopped, "a first install stopped something")
 
+	instance, err := ref.New(ref.KindSink, "spools")
+	require.NoError(t, err)
+	require.Empty(t, plane.restarted, "a first install restarted something")
+
 	// The same version again writes the same declaration, which the store
-	// plans as nothing, so the running process is left alone.
+	// plans as nothing, so the running process is left alone. Its files were
+	// replaced, so it is rebuilt to open them.
 	install("0.1.0")
 	require.Empty(t, plane.stopped, "reinstalling the same release stopped the process")
+	require.Equal(t, []ref.Ref{instance}, plane.restarted)
 
 	install("0.2.0")
 
-	instance, err := ref.New(ref.KindSink, "spools")
-	require.NoError(t, err)
 	require.Equal(t, []ref.Ref{instance}, plane.stopped)
 	require.True(t, plane.held, "the process was stopped after its files were already gone")
 

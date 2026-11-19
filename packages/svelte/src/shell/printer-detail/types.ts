@@ -1,5 +1,7 @@
 import type { Snippet } from 'svelte';
 
+import type { SendOutcome } from '../../data';
+
 import type {
   Device,
   HomePreference,
@@ -56,7 +58,11 @@ export interface CommandPort {
   pending?: string | undefined;
   /** The printer is reading its drive, and answers nothing else until it ends. */
   readingDrive?: boolean | undefined;
-  onCommand: (verb: string, args?: Readonly<Record<string, string>>) => void;
+  onCommand: (
+    verb: string,
+    args?: Readonly<Record<string, string>>,
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- Local story ports can omit acknowledgements.
+  ) => void | Promise<SendOutcome>;
 }
 
 /**
@@ -96,6 +102,8 @@ export interface PrinterDetailScreenProps {
   moduleTabs?: readonly DetailTab[] | undefined;
   /** The header's action menu, drawn only once a manifest declares an entry. */
   actions?: Snippet | undefined;
+  /** The material positions supplied by an installed extension. */
+  filamentPositions?: Snippet<[Snippet]> | undefined;
   /** The printer's own question, drawn under the subject block. */
   prompt?: Snippet | undefined;
   /** What the server refused with. Rendered by `describeFault`. */

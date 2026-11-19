@@ -30,6 +30,7 @@
     label,
     unit,
     minStep,
+    zeroBaseline,
     threshold,
     markers,
     regions,
@@ -53,7 +54,16 @@
   const drawn = $derived(drawnOf(series));
 
   const plot = $derived(
-    plotOf({ drawn, unit, minStep, threshold, markers, regions, xDomain }),
+    plotOf({
+      drawn,
+      unit,
+      minStep,
+      zeroBaseline,
+      threshold,
+      markers,
+      regions,
+      xDomain,
+    }),
   );
   const xTicks = $derived(timeTicks(plot.xRange[0], plot.xRange[1]));
 
@@ -81,7 +91,7 @@
     class="flex h-64 w-full text-xs text-muted-foreground"
   >
     {#if drawn.length > 0}
-      <div class="grid flex-none pe-2 pbs-2 pbe-6">
+      <div class="grid flex-none pe-2 pbs-4 pbe-8">
         {#each plot.yScale.ticks as tick (tick)}
           <span
             data-slot="line-chart-value"
@@ -93,7 +103,7 @@
         {/each}
       </div>
     {/if}
-    <div class="@container min-w-0 flex-1 pbs-2 pbe-6">
+    <div class="@container min-w-0 flex-1 pbs-4 pbe-8">
       <div class="relative size-full">
         <svg
           aria-hidden="true"
@@ -221,7 +231,7 @@
               type="button"
               aria-pressed={!off}
               title={off ? toggleLabels?.hidden : toggleLabels?.shown}
-              class="flex items-center gap-1.5 rounded-sm px-1 py-0.5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+              class="flex min-h-control-height items-center gap-1.5 rounded-sm px-1 py-0.5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none @max-3xl/app-shell:min-h-touch-target pointer-coarse:min-h-touch-target"
               onclick={() => onToggle(one.id)}
             >
               <span

@@ -43,4 +43,5 @@ export default defineModule((host) => {
   host.register.settings('catalogue', CatalogueSettings);
   host.register.settings('locations', LocationsSettings);
   host.register.deviceTab('tools', PrinterMaterial);
+  host.register.component('printer-positions', PrinterMaterial);
 });

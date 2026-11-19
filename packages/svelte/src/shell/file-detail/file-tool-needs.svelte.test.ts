@@ -53,10 +53,10 @@ describe('FileToolNeeds', () => {
   it('draws one row per tool and says which the print uses', async () => {
     await render(FileToolNeeds, { props: { details: xl } });
 
-    const second = await rowText(/T1/);
+    const second = await rowText(/Tool 2/);
     expect(second).toMatch(/PETG/);
     expect(second).toMatch(/250\s*°C/);
-    expect(await rowText(/T2/)).toMatch(/Not used/);
+    expect(await rowText(/Tool 3/)).toMatch(/Not used/);
     await expectNoViolations(page.getByRole('table').element());
   });
 

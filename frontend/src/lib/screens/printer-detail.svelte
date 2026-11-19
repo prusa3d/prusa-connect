@@ -1,6 +1,6 @@
 <!-- This product's printer page. -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, type Component, type Snippet } from 'svelte';
 
   import {
     AccessGrants,
@@ -34,7 +34,6 @@
     CommandLog,
     DropChoice,
     isPrinterDetailTab,
-    PrinterCommandsPanel,
     PrinterControlsPanel,
     PrinterDetailScreen,
     PrinterFilesPanel,
@@ -67,6 +66,17 @@
   const deviceId = $derived(ctx.params.id ?? '');
 
   const slots = getSlotContext();
+  const materialsNamespace = 'com.github.aux.prusa3d.materials';
+  const MaterialsPositions = $derived(
+    slots?.registry.component(materialsNamespace, 'printer-positions') as
+      | Component<{
+          deviceId: string;
+          compact: boolean;
+          toolId?: string;
+          fallback: Snippet;
+        }>
+      | undefined,
+  );
   // A deep link to a module tab never mounts the Status panel, so its own
   // `SlotOutlet` never calls this; this screen must call it itself, or the
   // tab strip would never learn what a module declared.
@@ -170,6 +180,9 @@
   });
 
   $effect(() => telemetry.listen());
+  $effect(() => {
+    void ctx.deviceIssues.read();
+  });
 
   $effect(() => {
     void detail.load();
@@ -521,8 +534,11 @@
     void detail.readStorages({ refresh: true });
   };
 
-  // The chip on the Printer tab names a command and the Advanced tab marks it.
-  let picked = $state<string>();
+  // The chip on the Printer tab locates the command panel for this printer.
+  let picked = $state<{ deviceId: string; verb: string }>();
+  const pickedVerb = $derived(
+    picked?.deviceId === deviceId ? picked.verb : undefined,
+  );
 
   const peer = $derived(
     fleet.devices.length === 2
@@ -568,7 +584,21 @@
   }}
 />
 
+{#snippet materialHeader(fallback: Snippet)}
+  {#if MaterialsPositions}
+    <svelte:boundary>
+      <div data-module={materialsNamespace} class="contents">
+        <MaterialsPositions {deviceId} compact {fallback} />
+      </div>
+      {#snippet failed()}
+        {@render fallback()}
+      {/snippet}
+    </svelte:boundary>
+  {/if}
+{/snippet}
+
 <PrinterDetailScreen
+  filamentPositions={MaterialsPositions ? materialHeader : undefined}
   {deviceId}
   {device}
   {telemetry}
@@ -588,6 +618,7 @@
   }}
   {tab}
   onTabChange={(next: string) => {
+    picked = undefined;
     ctx.go(printerHref(deviceId, next));
   }}
   fault={fleet.error ?? (listed === undefined ? detail.recordError : undefined)}
@@ -601,7 +632,6 @@
     cameras: camerasTab ? camerasPanel : undefined,
     info,
     history: historyPanel,
-    commands: commandsPanel,
   }}
   moduleTabs={tabsForModules}
   actions={headerActions}
@@ -616,6 +646,8 @@
         {telemetry}
         commands={port}
         camera={feed}
+        issues={ctx.deviceIssues}
+        problemHref={printerHref(deviceId, 'history')}
         history={detail}
         recent={detail.recent}
         files={detail}
@@ -642,12 +674,20 @@
 {/snippet}
 
 {#snippet controls()}
-  <PrinterControlsPanel
-    {device}
-    {telemetry}
-    commands={port}
-    loading={!fleet.loaded}
-  />
+  {#key deviceId}
+    <PrinterControlsPanel
+      {device}
+      {telemetry}
+      commands={port}
+      loading={!fleet.loaded}
+      material={MaterialsPositions ? materialCell : undefined}
+      advanced={{
+        commands,
+        requested: tab === 'commands',
+        highlight: pickedVerb,
+      }}
+    />
+  {/key}
 {/snippet}
 
 {#snippet files()}
@@ -684,11 +724,28 @@
     }}
     jobsHref={jobsOfPrinterHref(deviceId)}
     onPickCommand={(verb: string) => {
-      picked = verb;
+      picked = { deviceId, verb };
       ctx.go(printerHref(deviceId, 'commands'));
     }}
     access={accessCard}
+    {telemetry}
+    commands={port}
+    material={MaterialsPositions ? materialCell : undefined}
   />
+{/snippet}
+
+<!-- The Tools table assigns a material through the picker of the header chip. -->
+{#snippet materialCell(toolId: string, fallback: Snippet)}
+  {#if MaterialsPositions}
+    <svelte:boundary>
+      <div data-module={materialsNamespace} class="contents">
+        <MaterialsPositions {deviceId} compact {toolId} {fallback} />
+      </div>
+      {#snippet failed()}
+        {@render fallback()}
+      {/snippet}
+    </svelte:boundary>
+  {/if}
 {/snippet}
 
 {#snippet camerasPanel()}
@@ -771,16 +828,6 @@
   {/key}
 {/snippet}
 
-{#snippet commandsPanel()}
-  <PrinterCommandsPanel
-    {device}
-    {commands}
-    highlight={picked}
-    loading={!fleet.loaded}
-    readingDrive={detail.readingDrive}
-  />
-{/snippet}
-
 {#snippet headerActions()}
   <SlotActions
     name="device-action"
@@ -791,11 +838,13 @@
 {/snippet}
 
 {#snippet moduleTab()}
-  <SlotOutlet
-    screen="printer-detail"
-    name="device-tab"
-    {deviceId}
-    device={slotDevice}
-    entry={tab}
-  />
+  {#key deviceId}
+    <SlotOutlet
+      screen="printer-detail"
+      name="device-tab"
+      {deviceId}
+      device={slotDevice}
+      entry={tab}
+    />
+  {/key}
 {/snippet}

@@ -1,7 +1,7 @@
 <!--
-  What every story is drawn inside: the theme and the skin on the document
-  element. Nothing is wrapped around the story itself, so a screen measures the
-  width Storybook says it runs at.
+  What every story is drawn inside: the theme on the document element.
+  Nothing is wrapped around the story itself, so a screen measures the width
+  Storybook says it runs at.
 
   The theme is a class and an attribute. `tokens.css` selects `.dark`, which is
   what `ThemeToggle` writes on a real page, and `data-theme` is written beside
@@ -10,28 +10,31 @@
   `preview.css` imports.
 -->
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { untrack, type Snippet } from 'svelte';
 
-  import { applySkin } from '../src/styles/skin';
+  import { applyTheme, theme } from '../src/styles/theme.svelte';
 
   interface Props {
     /** Whether the dark side of the theme is on. */
     dark: boolean;
-    /** Which skin the theme is drawn in. */
-    skin: string;
     children?: Snippet;
   }
 
-  const { dark, skin, children }: Props = $props();
+  const { dark, children }: Props = $props();
 
   $effect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', dark);
-    root.dataset.theme = dark ? 'dark' : 'light';
+    const selected = dark;
+    untrack(() => {
+      if (theme.dark !== selected)
+        theme.preference = selected ? 'dark' : 'light';
+    });
   });
 
   $effect(() => {
-    applySkin(skin);
+    const actual = theme.dark;
+    applyTheme(actual);
+    const root = document.documentElement;
+    root.dataset.theme = actual ? 'dark' : 'light';
   });
 </script>
 

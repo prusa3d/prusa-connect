@@ -15,6 +15,8 @@ type trialModules map[ref.Ref]httpapi.ResourceStatus
 
 func (m trialModules) Stop(ref.Ref) bool { return false }
 
+func (m trialModules) Restart(ref.Ref) bool { return false }
+
 func (m trialModules) Status(instance ref.Ref) (httpapi.ResourceStatus, bool) {
 	status, found := m[instance]
 

@@ -226,8 +226,9 @@ const moduleEntry = (page: AnnouncedPage): NavItem => ({
 /**
  * One rail entry per page an installed module declares. A module showing
  * several pages gets one row under its own title, so its pages read as one
- * product among the other modules. The row opens the first of them, as
- * Settings opens its first section.
+ * product among the other modules. In the open rail the row folds its pages
+ * under it, and a collapsed rail lists them in a menu. The row's own address
+ * is the first page's, as Settings' is its first section's.
  */
 export const moduleNav = (pages: readonly AnnouncedPage[]): RailNavItem[] => {
   const byModule = new Map<string, AnnouncedPage[]>();

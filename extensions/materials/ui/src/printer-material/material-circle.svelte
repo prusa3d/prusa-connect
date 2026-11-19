@@ -50,8 +50,8 @@
 
 <style>
   .halo {
-    --size: calc(var(--spacing) * 11);
-    --cap: var(--text-sm);
+    --size: calc(var(--spacing) * 30);
+    --cap: 1.25rem;
     position: relative;
     display: inline-flex;
     border-radius: 50%;
@@ -59,7 +59,7 @@
 
   .halo[data-size='large'] {
     --size: calc(var(--spacing) * 30);
-    --cap: var(--text-2xl);
+    --cap: 1.5rem;
   }
 
   .halo:not([data-ring='none']) {
@@ -110,7 +110,7 @@
     background: var(--colour);
     /* Black on a light colour, white on a dark one. */
     color: oklch(from var(--colour) clamp(0, (0.62 - l) * 1000, 1) 0 0);
-    font-size: min(var(--cap), calc(var(--size) / (1.6 + var(--chars) * 0.45)));
+    font-size: min(var(--cap), calc(var(--size) / (2.4 + var(--chars) * 0.45)));
     line-height: 1;
     white-space: nowrap;
   }

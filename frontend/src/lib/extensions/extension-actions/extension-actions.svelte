@@ -37,7 +37,9 @@
     go,
     ask,
     notes = true,
+    showSwitch = true,
   }: {
+    showSwitch?: boolean;
     row: ExtensionRow;
     catalogue: ModuleCatalogue;
     /** Moves the app to one of its own addresses, without a reload. */
@@ -49,6 +51,8 @@
   } = $props();
 
   const t = translateFor(APP_NAMESPACE);
+
+  const updateLabel = $derived(t('app.settings.extensions.offer.updateShort'));
 
   const busy = $derived(catalogue.acting === row.module);
   // One act at a time on the whole server, so every row waits for the one
@@ -79,11 +83,12 @@
   };
 </script>
 
-<div class="flex items-center justify-end gap-1">
-  <ExtensionSwitch {row} {catalogue} {ask} {notes} />
+<div class="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
+  {#if showSwitch}<ExtensionSwitch {row} {catalogue} {ask} {notes} />{/if}
   {#if installable && row.state === 'available' && !switched}
     <Button
       size="sm"
+      class="min-h-7 max-w-full min-w-0 py-1.5"
       disabled={blocked}
       data-part="install"
       onclick={() => {
@@ -91,13 +96,16 @@
       }}
     >
       <DownloadIcon aria-hidden="true" />
-      {busy
-        ? t('app.settings.extensions.offer.working')
-        : t('app.settings.extensions.offer.install')}
+      <span class="min-w-0 text-start break-all whitespace-normal">
+        {busy
+          ? t('app.settings.extensions.offer.working')
+          : t('app.settings.extensions.offer.install')}
+      </span>
     </Button>
   {:else if installable && row.state === 'update'}
     <Button
       size="sm"
+      class="min-h-7 max-w-full min-w-0 py-1.5"
       disabled={blocked}
       data-part="update"
       onclick={() => {
@@ -105,9 +113,9 @@
       }}
     >
       <RefreshCwIcon aria-hidden="true" />
-      {busy
-        ? t('app.settings.extensions.offer.working')
-        : t('app.settings.extensions.offer.update', { version: row.version })}
+      <span class="min-w-0 text-start break-all whitespace-normal">
+        {busy ? t('app.settings.extensions.offer.working') : updateLabel}
+      </span>
     </Button>
   {/if}
 
@@ -132,7 +140,7 @@
         {t('app.settings.extensions.openPage', { page: page.title })}
       </DropdownMenuItem>
     {/each}
-    {#if row.pageUrl}
+    {#if row.pageUrl && (row.instance === undefined || !row.namespace)}
       <DropdownMenuItem
         onSelect={() => {
           if (row.pageUrl) openOutside(row.pageUrl);

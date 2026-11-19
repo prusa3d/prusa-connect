@@ -47,7 +47,7 @@
   <!-- Capped, so ten files scroll inside it rather than stretching the column. -->
   <section
     aria-label={t('printerDetailFiles.transfers.heading')}
-    class="flex max-h-64 flex-col gap-3 overflow-y-auto rounded-sm bg-surface p-3"
+    class="flex max-h-64 flex-col gap-3 overflow-y-auto rounded-md bg-surface p-3"
   >
     <h2 class="text-xs font-medium text-muted-foreground">
       {t('printerDetailFiles.transfers.heading')}
@@ -69,7 +69,8 @@
               aria-label={t('printerDetailFiles.transfers.uploadLabel', {
                 name: upload.name,
               })}
-              class="h-1 flex-1"
+              size="sm"
+              class="flex-1"
             />
             {#if percent !== null}
               <span
@@ -109,7 +110,8 @@
               <Progress
                 value={percent}
                 aria-label={t('printerDetailFiles.transfers.label', { name })}
-                class="h-1 flex-1"
+                size="sm"
+                class="flex-1"
               />
               {#if percent !== null}
                 <span

@@ -99,15 +99,13 @@
     <span class={NAME}>{t('materials.column.spools')}</span>
     <span class="inline-flex items-center gap-2 whitespace-nowrap">
       <span>{row.spools}</span>
-      <!-- In brackets, so it reads as part of the total and not beside it. -->
       {#if row.assigned_spools > 0}
         <TapTooltip
           class={[ABOVE_ROW_LINK, 'gap-0.5 text-muted-foreground']}
           text={t('materials.row.assigned', { n: row.assigned_spools })}
         >
-          <span aria-hidden="true">(</span>
           <PrinterGlyphIcon aria-hidden="true" class="size-4 shrink-0" />
-          <span aria-hidden="true">{row.assigned_spools})</span>
+          <span aria-hidden="true">{row.assigned_spools}</span>
         </TapTooltip>
       {/if}
     </span>

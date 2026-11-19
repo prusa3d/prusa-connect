@@ -135,7 +135,6 @@
             {...props}
             variant="ghost"
             size="icon-md"
-            class="size-11"
             label={triggerName}
             {disabled}
           >

@@ -8,7 +8,7 @@
   default of the role, so saying it again adds nothing.
 
   The thickness comes from the orientation on the element itself, through the
-  two `data-[orientation=*]` pairs, so one class string covers both ways.
+  two `orientation-*` pairs, so one class string covers both ways.
 -->
 <script lang="ts">
   import type { SeparatorProps } from './types';
@@ -32,7 +32,7 @@
   role={decorative ? 'none' : 'separator'}
   aria-orientation={announced}
   class={[
-    'shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
+    'shrink-0 bg-border orientation-horizontal:h-px orientation-horizontal:w-full orientation-vertical:h-full orientation-vertical:w-px',
     className,
   ]}
 ></div>

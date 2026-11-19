@@ -244,10 +244,6 @@ func (f Frontend) withDefaults(defaults Frontend) Frontend {
 		f.Theme = defaults.Theme
 	}
 
-	if f.Skin == "" {
-		f.Skin = defaults.Skin
-	}
-
 	return f
 }
 

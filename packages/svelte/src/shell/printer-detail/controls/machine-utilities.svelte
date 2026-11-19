@@ -1,11 +1,16 @@
 <!-- The commands with no reading of their own. -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { t } from '../../../i18n';
-  import { Button, MeshBedLevelingIcon } from '../../../primitives';
+  import {
+    Button,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+  } from '../../../primitives';
   import {
     blocked,
     groupReason,
-    SECTION_TITLE,
     VERBS,
     type SectionProps,
   } from './machine-controls';
@@ -16,140 +21,157 @@
     busy,
     onCommand,
     ready,
-  }: Omit<SectionProps, 'reading'> & { ready: boolean } = $props();
+    motionActions,
+    motionReason,
+    resetAction,
+  }: Omit<SectionProps, 'reading'> & {
+    ready: boolean;
+    motionActions?: Snippet | undefined;
+    motionReason?: string | undefined;
+    resetAction?: Snippet | undefined;
+  } = $props();
 
   const readyVerb = $derived(
     ready ? VERBS.cancelPrinterReady : VERBS.setPrinterReady,
   );
   const readyProjection = $derived(resolve(readyVerb));
   const idle = $derived(resolve(VERBS.setIdle));
-  const levelling = $derived(resolve(VERBS.meshBedLevelling));
   const beep = $derived(resolve(VERBS.beep));
   const hostname = $derived(resolve(VERBS.hostname));
   const systemDrawn = $derived(
-    beep.kind !== 'absent' || hostname.kind !== 'absent',
+    beep.kind !== 'absent' ||
+      hostname.kind !== 'absent' ||
+      resetAction !== undefined,
   );
 
+  const motionDrawn = $derived(
+    motionActions !== undefined || motionReason !== undefined,
+  );
   const stateDrawn = $derived(
     readyProjection.kind !== 'absent' || idle.kind !== 'absent',
   );
-  const drawn = $derived(
-    stateDrawn || levelling.kind !== 'absent' || systemDrawn,
-  );
 
-  const plateReason = $derived(groupReason([readyProjection, idle, levelling]));
-  const systemReason = $derived(groupReason([beep, hostname]));
+  const stateReason = $derived(groupReason([readyProjection, idle]));
+  const systemReason = $derived(
+    groupReason([beep, hostname]) ??
+      (resetAction ? groupReason([resolve(VERBS.resetPrinter)]) : undefined),
+  );
 
   const uid = $props.id();
 </script>
 
 {#snippet subLabel(id: string, text: string)}
-  <span {id} class="text-xs font-medium text-muted-foreground">{text}</span>
+  <span
+    {id}
+    class="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase"
+    >{text}</span
+  >
 {/snippet}
 
-{#if drawn}
-  <section
-    class="flex flex-col gap-3 border-t border-border pt-6 @2xl:col-start-1 @2xl:row-start-2"
-  >
-    <h3 class={SECTION_TITLE}>
-      {t('printerDetailControls.utilities.heading')}
-    </h3>
+{#snippet stateActions()}
+  <div role="group" aria-labelledby="{uid}-state" class="flex flex-wrap gap-2">
+    {#if readyProjection.kind !== 'absent'}
+      <Button
+        variant="secondary"
+        size="compact"
+        disabled={blocked(readyProjection, busy)}
+        onclick={() => onCommand(readyVerb)}
+      >
+        {ready
+          ? t('printerDetailControls.unmarkReady')
+          : t('printerDetailControls.markReady')}
+      </Button>
+    {/if}
+    {#if idle.kind !== 'absent'}
+      <Button
+        variant="secondary"
+        size="compact"
+        disabled={blocked(idle, busy)}
+        onclick={() => onCommand(VERBS.setIdle)}
+      >
+        {t('printerDetailControls.exitIdle')}
+      </Button>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet systemActions()}
+  {#if beep.kind !== 'absent'}
+    <Button
+      variant="secondary"
+      size="md"
+      disabled={blocked(beep, busy)}
+      onclick={() => onCommand(VERBS.beep)}
+    >
+      {t('printerDetailControls.beep')}
+    </Button>
+  {/if}
+  {#if hostname.kind !== 'absent'}
+    <MachineHostname projection={hostname} {busy} {onCommand} />
+  {/if}
+{/snippet}
+
+{#if motionDrawn || stateDrawn || systemDrawn}
+  <div class="divide-y divide-border rounded-sm bg-surface px-3">
+    {#if motionDrawn}
+      <div class="flex flex-col gap-2 py-3">
+        {#if motionActions}
+          <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+            {@render subLabel(
+              `${uid}-axes`,
+              t('printerDetailControls.utilities.axes'),
+            )}
+            <div
+              role="group"
+              aria-labelledby="{uid}-axes"
+              class="ms-auto flex flex-wrap justify-end gap-x-1 gap-y-2"
+            >
+              {@render motionActions()}
+            </div>
+          </div>
+        {/if}
+        {#if motionReason}
+          <p class="text-xs text-muted-foreground">{motionReason}</p>
+        {/if}
+      </div>
+    {/if}
 
     {#if stateDrawn}
-      <div class="flex flex-col gap-1">
-        {@render subLabel(
-          `${uid}-state`,
-          t('printerDetailControls.utilities.state'),
-        )}
+      <div class="flex flex-col gap-2 py-3">
         <div
-          role="group"
-          aria-labelledby="{uid}-state"
-          class="flex flex-wrap gap-2"
+          class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
         >
-          {#if readyProjection.kind !== 'absent'}
-            <Button
-              variant="secondary"
-              size="lg"
-              disabled={blocked(readyProjection, busy)}
-              onclick={() => onCommand(readyVerb)}
-            >
-              {ready
-                ? t('printerDetailControls.unmarkReady')
-                : t('printerDetailControls.markReady')}
-            </Button>
-          {/if}
-          {#if idle.kind !== 'absent'}
-            <Button
-              variant="secondary"
-              size="lg"
-              disabled={blocked(idle, busy)}
-              onclick={() => onCommand(VERBS.setIdle)}
-            >
-              {t('printerDetailControls.exitIdle')}
-            </Button>
-          {/if}
+          {@render subLabel(
+            `${uid}-state`,
+            t('printerDetailControls.utilities.printerState'),
+          )}
+          {@render stateActions()}
         </div>
+        {#if stateReason}
+          <p class="text-xs text-muted-foreground">{stateReason}</p>
+        {/if}
       </div>
-    {/if}
-
-    {#if levelling.kind !== 'absent'}
-      <div class="flex flex-col gap-1">
-        {@render subLabel(
-          `${uid}-calibration`,
-          t('printerDetailControls.utilities.calibration'),
-        )}
-        <div
-          role="group"
-          aria-labelledby="{uid}-calibration"
-          class="flex flex-wrap gap-2"
-        >
-          <Button
-            variant="secondary"
-            size="lg"
-            disabled={blocked(levelling, busy)}
-            onclick={() => onCommand(VERBS.meshBedLevelling)}
-          >
-            <MeshBedLevelingIcon aria-hidden="true" />
-            {t('printerDetailControls.meshBedLevelling')}
-          </Button>
-        </div>
-      </div>
-    {/if}
-
-    {#if plateReason}
-      <p class="text-xs text-muted-foreground">{plateReason}</p>
     {/if}
 
     {#if systemDrawn}
-      <div class="flex flex-col gap-1">
-        {@render subLabel(
-          `${uid}-system`,
-          t('printerDetailControls.utilities.system'),
-        )}
-        <div
-          role="group"
-          aria-labelledby="{uid}-system"
-          class="flex flex-wrap gap-2"
-        >
-          {#if beep.kind !== 'absent'}
-            <Button
-              variant="secondary"
-              size="lg"
-              disabled={blocked(beep, busy)}
-              onclick={() => onCommand(VERBS.beep)}
-            >
-              {t('printerDetailControls.beep')}
-            </Button>
+      <Collapsible class="py-1">
+        <CollapsibleTrigger variant="inline">
+          {t('printerDetailControls.utilities.maintenance')}
+        </CollapsibleTrigger>
+        <CollapsibleContent class="pt-2 pb-3">
+          <div class="flex flex-wrap gap-2">
+            {@render systemActions()}
+            {#if resetAction}
+              <div class="ms-auto">
+                {@render resetAction()}
+              </div>
+            {/if}
+          </div>
+          {#if systemReason}
+            <p class="mt-2 text-xs text-muted-foreground">{systemReason}</p>
           {/if}
-          {#if hostname.kind !== 'absent'}
-            <MachineHostname projection={hostname} {busy} {onCommand} />
-          {/if}
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     {/if}
-
-    {#if systemReason}
-      <p class="text-xs text-muted-foreground">{systemReason}</p>
-    {/if}
-  </section>
+  </div>
 {/if}

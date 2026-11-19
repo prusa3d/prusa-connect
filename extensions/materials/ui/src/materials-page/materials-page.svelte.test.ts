@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
@@ -91,6 +91,13 @@ const lastList = (stub: Stub): URL =>
   );
 
 describe('the materials page', () => {
+  // The extension's sheet carries the library's container queries, which fold
+  // the toolbar's facets into one Filters button below 28rem. The default
+  // 414px page is under that, and these cases drive the facets themselves.
+  beforeEach(async () => {
+    await page.viewport(1280, 800);
+  });
+
   it('shows Add material to a person who may operate and hides it from one who may not', async () => {
     const yes = started(listing([row('a')]));
     await draw(yes);
@@ -143,15 +150,12 @@ describe('the materials page', () => {
     await expect.poll(() => lastList(stub).searchParams.get('q')).toBe('pet');
 
     await page.getByRole('button', { name: 'Favourites' }).click();
-    await page.getByRole('button', { name: 'In stock' }).click();
-    await expect
-      .poll(() => lastList(stub).searchParams.get('in_stock'))
-      .toBe('true');
     await page.getByRole('button', { name: 'On a printer' }).click();
     await expect
       .poll(() => lastList(stub).searchParams.get('assigned'))
       .toBe('true');
     expect(lastList(stub).searchParams.get('favourites')).toBe('true');
+    expect(lastList(stub).searchParams.get('in_stock')).toBe('true');
     expect(lastList(stub).searchParams.get('class')).toBe('SLA');
     expect(lastList(stub).searchParams.get('q')).toBe('pet');
   });
@@ -274,11 +278,18 @@ describe('the materials page', () => {
       .toBe(JSON.stringify({ favourites: true, in_stock: true }));
   });
 
-  it('opens unfiltered for a person who kept nothing', async () => {
+  it('opens on the shelf for a person who kept nothing and has spools', async () => {
     const stub = started(listing([row('a')]));
     await draw(stub);
     await expect.element(page.getByText('PLA a')).toBeInTheDocument();
-    expect(lastList(stub).search).toBe('');
+    expect(lastList(stub).searchParams.get('in_stock')).toBe('true');
+  });
+
+  it('opens on the catalogue for a person who kept nothing and has no spools', async () => {
+    const stub = started(listing([row('a')], { stock_g: 0, stock_spools: 0 }));
+    await draw(stub);
+    await expect.element(page.getByText('PLA a')).toBeInTheDocument();
+    await expect.poll(() => lastList(stub).search).toBe('');
   });
 
   it('makes a custom material from Custom material and reads the list again', async () => {
@@ -386,7 +397,9 @@ describe('the materials page', () => {
   });
 
   it('offers no add action in the empty state to a person who may not write', async () => {
-    const stub = started(listing([]), { mayOperate: false });
+    const stub = started(listing([], { stock_g: 0, stock_spools: 0 }), {
+      mayOperate: false,
+    });
     await draw(stub);
     await expect.element(page.getByText('No spools yet')).toBeInTheDocument();
     expect(page.getByRole('button', { name: 'Add material' }).query()).toBe(

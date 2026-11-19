@@ -1,5 +1,5 @@
 import { createRawSnippet } from 'svelte';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
@@ -9,7 +9,8 @@ const children = createRawSnippet(() => ({
   render: () => '<div data-testid="content"></div>',
 }));
 
-test('marks the route-driven tab, with Overview first', async () => {
+test('marks the open tab, with Overview first, and opens the address of a pressed one', async () => {
+  const onNavigate = vi.fn();
   await render(ServerSettingsShell, {
     props: {
       active: 'backups',
@@ -18,17 +19,21 @@ test('marks the route-driven tab, with Overview first', async () => {
       updatesHref: '/settings/server/updates',
       backupsHref: '/settings/server/backups',
       networkHref: '/settings/server/network',
+      onNavigate,
       children,
     },
   });
 
   await expect
-    .element(page.getByRole('link', { name: 'Backups' }))
-    .toHaveAttribute('aria-current', 'page');
+    .element(page.getByRole('tab', { name: 'Backups' }))
+    .toHaveAttribute('aria-selected', 'true');
   await expect
-    .element(page.getByRole('link').first())
+    .element(page.getByRole('tab').first())
     .toHaveAccessibleName('Overview');
   await expect.element(page.getByTestId('content')).toBeInTheDocument();
+
+  await page.getByRole('tab', { name: 'Network' }).click();
+  expect(onNavigate).toHaveBeenCalledWith('/settings/server/network');
 });
 
 test('draws no Updates and no Backups tab where the server prepares no upgrade', async () => {
@@ -38,23 +43,14 @@ test('draws no Updates and no Backups tab where the server prepares no upgrade',
       overviewHref: '/settings/server/overview',
       healthHref: '/settings/server/health',
       networkHref: '/settings/server/network',
+      onNavigate: () => undefined,
       children,
     },
   });
 
-  // A tab drawn without an address is not a link, so the tabs are read by
-  // their text.
-  const tabs = page.getByRole('navigation', { name: 'Server settings' });
   await expect
-    .element(tabs.getByText('Network', { exact: true }))
+    .element(page.getByRole('tab', { name: 'Network' }))
     .toBeVisible();
-  expect(tabs.getByText('Updates', { exact: true }).elements()).toEqual([]);
-  expect(tabs.getByText('Backups', { exact: true }).elements()).toEqual([]);
-  await expect
-    .element(
-      page.getByText(
-        'Whether this server is ready to work, and how it appears on the local network.',
-      ),
-    )
-    .toBeVisible();
+  expect(page.getByRole('tab', { name: 'Updates' }).elements()).toEqual([]);
+  expect(page.getByRole('tab', { name: 'Backups' }).elements()).toEqual([]);
 });

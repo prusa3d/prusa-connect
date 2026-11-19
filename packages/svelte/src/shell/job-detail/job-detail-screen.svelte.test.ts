@@ -14,6 +14,9 @@ import { fakeDevice } from '../../test/fakes';
 import JobDetailScreen from './job-detail-screen.svelte';
 import type { JobDetailScreenProps, JobRow, JobSource } from './types';
 
+/** The send button, which names how many printers it sends to once one is ticked. */
+const PRINT = /^Print( on \d+ printers?)?$/;
+
 const JOB_ID = '0199e3a4-5bb5-7aac-8a2c-9c3982e6373f';
 
 const finished: JobRow = {
@@ -92,6 +95,20 @@ describe('JobDetailScreen', () => {
 
     await expect.element(page.getByText('Finished')).toBeVisible();
     await expect.element(page.getByText('MK4S #1042')).toBeVisible();
+  });
+
+  // The printer had gone back to idle when the print ended, and the outcome
+  // says how it ended, the same as the Jobs list reads it.
+  it('reads an ended print by its recorded outcome', async () => {
+    await render(JobDetailScreen, {
+      props: props({
+        source: answered({ ...finished, state: 'IDLE', outcome: 'failed' }),
+      }),
+    });
+
+    await expect
+      .element(page.getByText('Error', { exact: true }))
+      .toBeVisible();
   });
 
   // The job record holds no serial or firmware, and the printer's current
@@ -283,10 +300,7 @@ describe('JobDetailScreen', () => {
       }),
     });
     await page.getByRole('button', { name: 'Print again' }).click();
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Print' })
-      .click();
+    await page.getByRole('dialog').getByRole('button', { name: PRINT }).click();
 
     expect(sent).toEqual([
       { deviceId: 'printer-1', path: '/usb/examples/bracket.bgcode' },
@@ -306,7 +320,7 @@ describe('JobDetailScreen', () => {
       .element(dialog.getByText('This printer is printing.'))
       .toBeVisible();
     await expect
-      .element(dialog.getByRole('button', { name: 'Print' }))
+      .element(dialog.getByRole('button', { name: PRINT }))
       .toBeDisabled();
     expect(onPrint).not.toHaveBeenCalled();
   });

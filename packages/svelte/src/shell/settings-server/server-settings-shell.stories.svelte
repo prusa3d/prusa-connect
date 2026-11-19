@@ -17,6 +17,7 @@
     updatesHref="/settings/server/updates"
     backupsHref="/settings/server/backups"
     networkHref="/settings/server/network"
+    onNavigate={() => undefined}
   >
     <div></div>
   </ServerSettingsShell>
@@ -28,6 +29,7 @@
     overviewHref="/settings/server/overview"
     healthHref="/settings/server/health"
     networkHref="/settings/server/network"
+    onNavigate={() => undefined}
   >
     <div></div>
   </ServerSettingsShell>

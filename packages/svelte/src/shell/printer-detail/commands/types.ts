@@ -1,8 +1,12 @@
+import type { Snippet } from 'svelte';
+import type { StatusJob } from '../status/types';
+import type { TelemetrySource } from '../types';
 import type { DeviceCommands } from '../../../data';
 import type {
   CommandProjection,
   Device,
   StateTransition,
+  PrinterState,
 } from '../../../domain';
 
 /** What this tab reads of the command store. */
@@ -37,6 +41,7 @@ export interface CommandVerb {
 const IRREVERSIBLE: ReadonlySet<string> = new Set([
   'core.command.delete_file',
   'core.command.delete_folder',
+  'core.command.factory_reset',
   'core.command.flash',
   'core.command.reset',
   'core.command.reset_printer',
@@ -74,7 +79,11 @@ export const verbsOf = (
   }));
 };
 
+export type TuningArgument = 'speed' | 'flow';
+export type TuningReadings = Record<TuningArgument, number | undefined>;
+
 export interface CommandRowProps {
+  tuning?: TuningReadings | undefined;
   entry: CommandVerb;
   projection: CommandProjection;
   /** The row the reader came here to find, while the mark lasts. */
@@ -89,6 +98,9 @@ export interface CommandRowProps {
 }
 
 export interface PrinterCommandsPanelProps {
+  /** The commands already available in the Controls panel above this one. */
+  basicCommands?: ReadonlySet<string> | undefined;
+  telemetry?: TelemetrySource;
   commands: CommandsSource;
   /** The record, once it has arrived. Its `capabilities` is the verb list. */
   device?: Device | undefined;
@@ -110,6 +122,11 @@ export interface CommandListing {
 }
 
 export interface CommandCatalogueProps {
+  embedded?: boolean;
+  tuning?: TuningReadings | undefined;
+  printerState?: PrinterState;
+  activeJob?: Pick<StatusJob, 'name' | 'path' | 'progress'> | undefined;
+  motion?: Snippet | undefined;
   rows: readonly CommandListing[];
   /** The verb whose row is lit, while the mark lasts. */
   marked: string | undefined;

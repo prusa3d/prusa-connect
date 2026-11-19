@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { capabilityFor, LIFECYCLE_VERBS, type Device } from '../../../domain';
@@ -391,6 +391,80 @@ describe('PrinterStatusPanel', () => {
     expect(container.textContent).not.toContain('Live');
   });
 
+  // A printer asking for a person between prints has nothing to put beside
+  // the camera, so no second column waits there empty.
+  it('gives the card to the camera when no print is on record', async () => {
+    const rule = '[class*="@2xl/now:border-s"]';
+    const { container, rerender } = await render(PrinterStatusPanel, {
+      props: props({ device: device('ATTENTION'), camera: FEED }),
+    });
+    await expect.poll(() => container.querySelector('img')).not.toBeNull();
+    expect(container.querySelector(rule)).not.toBeNull();
+
+    await rerender({
+      device: { ...idle(), state: { '/state': 'ATTENTION' } },
+    });
+    await expect.poll(() => container.querySelector(rule)).toBeNull();
+    expect(container.querySelector('img')).not.toBeNull();
+  });
+
+  // The camera opens at the page's size, on its live view when it has one,
+  // and takes that view over from the column, so the camera streams once.
+  // One Escape closes it.
+  it('enlarges the camera in a dialog on its live view, and closes on Escape', async () => {
+    const { container } = await render(PrinterStatusPanel, {
+      props: props({ camera: FEED }),
+    });
+    await page.getByRole('button', { name: 'Play bed-cam live' }).click();
+    await expect.element(page.getByText('Live')).toBeVisible();
+
+    const open = page.getByRole('button', {
+      name: 'Open camera stream on MK4S #1042',
+    });
+    (open.element() as HTMLElement).focus();
+    await userEvent.keyboard('{Enter}');
+
+    const dialog = page.getByRole('dialog', { name: 'Camera on MK4S #1042' });
+    await expect
+      .element(dialog.getByRole('button', { name: 'Close' }))
+      .toHaveFocus();
+    await expect
+      .element(dialog.getByRole('button', { name: 'Stop bed-cam' }))
+      .toBeVisible();
+    await expect
+      .poll(() => dialog.element().querySelector('img[src$="#live"]'))
+      .not.toBeNull();
+    expect(container.querySelector('img[src$="#live"]')).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    await expect.element(open).toHaveFocus();
+    await expect
+      .element(page.getByRole('button', { name: 'Play bed-cam live' }))
+      .toBeVisible();
+  });
+
+  it('offers a camera with no live view as a snapshot', async () => {
+    await render(PrinterStatusPanel, {
+      props: props({
+        camera: {
+          camera: { ...FEED.camera, stream: false },
+          pictures: { still: FEED.pictures.still },
+        },
+      }),
+    });
+
+    await page
+      .getByRole('button', { name: 'Open snapshot from MK4S #1042' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Camera on MK4S #1042' });
+    await expect
+      .poll(() => dialog.element().querySelector('img'))
+      .not.toBeNull();
+    expect(dialog.getByRole('button', { name: /bed-cam/ }).query()).toBe(null);
+    await expectNoViolations(dialog.element());
+  });
+
   it('starts another camera on its still frame', async () => {
     const { rerender } = await render(PrinterStatusPanel, {
       props: props({ camera: FEED }),
@@ -651,6 +725,36 @@ describe('PrinterStatusPanel', () => {
 
   // A stopped send leaves the machine naming a file it removed (CL-275).
   // The card says so in place of Print again, and the row refuses it.
+  // A printer back in Idle still names the print it ran last, on one line
+  // with Print again, and the line is only as tall as its file box.
+  it('keeps the print an idle printer ran last on a line of its own height', async () => {
+    const { container } = await render(PrinterStatusPanel, {
+      props: props({
+        device: device('IDLE', {
+          job: {
+            display_name: 'ball-holder.bgcode',
+            id: '0b6f2f4e-1d7c-4f61-9a43-5e2a1c9d8b70',
+            device_job_id: '15',
+            path: 'usb/ball-holder.bgcode',
+            progress: 0,
+            running: false,
+            state: 'IDLE',
+            time_remaining_ms: 0,
+          },
+        }),
+      }),
+    });
+
+    const name = container.querySelector('[data-slot="clipped-name"]');
+    const plate = container.querySelector('[data-slot="file-thumbnail"]');
+    if (name?.parentElement == null || plate === null) {
+      throw new Error('no print line rendered');
+    }
+    expect(name.parentElement.getBoundingClientRect().height).toBe(
+      plate.getBoundingClientRect().height,
+    );
+  });
+
   it('offers no Print again for a file the printer no longer holds', async () => {
     const checked: string[][] = [];
     const files = {

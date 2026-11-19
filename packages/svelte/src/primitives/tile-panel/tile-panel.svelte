@@ -12,6 +12,7 @@
     fallback,
     subline,
     trailing,
+    gap = 'sm',
     children,
     class: className,
   }: TilePanelProps = $props();
@@ -21,10 +22,17 @@
 
 <div
   data-slot="tile-panel"
-  class={['flex min-h-0 flex-1 flex-col gap-2', className]}
+  class={[
+    'flex min-h-0 flex-1 flex-col',
+    gap === 'sm' && 'gap-2',
+    gap === 'md' && 'gap-dashboard-heading-gap',
+    className,
+  ]}
 >
   {#if shown !== '' || trailing}
-    <div class="flex min-w-0 items-center justify-between gap-2">
+    <div
+      class="flex min-h-dashboard-heading min-w-0 items-center justify-between gap-2"
+    >
       <div class="min-w-0">
         {#if shown !== ''}
           <h2 class="min-w-0 truncate text-sm font-semibold">{shown}</h2>

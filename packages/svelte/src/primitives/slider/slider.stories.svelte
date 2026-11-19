@@ -24,6 +24,9 @@
 
 <Story name="Disabled" args={{ disabled: true }} />
 
+<!-- `primary` is for a value that sets the machine, such as a print speed. -->
+<Story name="Primary Tone" args={{ tone: 'primary', 'aria-label': 'Speed' }} />
+
 <Story
   name="Arrow Keys Move The Thumb And Aria Valuenow Follows"
   tags={['!dev', '!autodocs']}

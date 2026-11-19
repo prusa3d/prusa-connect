@@ -90,6 +90,30 @@ mqtt:
 			line:  "line 1",
 			names: []string{"fractal", "resources.link.<name>.enabled"},
 		},
+		"the skin, which nothing replaces": {
+			file: `core:
+  frontend:
+    skin: slicer
+`,
+			line:  "line 3",
+			names: []string{"core.frontend.skin", "one appearance", "Delete the line"},
+		},
+		"the skin with no value": {
+			file: `core:
+  frontend:
+    skin:
+`,
+			line:  "line 3",
+			names: []string{"core.frontend.skin", "one appearance", "Delete the line"},
+		},
+		"the skin no build ever drew": {
+			file: `core:
+  frontend:
+    skin: neon
+`,
+			line:  "line 3",
+			names: []string{"core.frontend.skin", "one appearance", "Delete the line"},
+		},
 	}
 
 	for name, testCase := range cases {
@@ -105,6 +129,23 @@ mqtt:
 			}
 		})
 	}
+}
+
+// TestARetiredKeyInTheSetupFileNamesThatFile is the deployment whose operator
+// never wrote the key: the first-run wizard did, into its own file in the
+// overlay folder. A refusal that named only the operator's file would send them
+// looking for a line that is not there.
+func TestARetiredKeyInTheSetupFileNamesThatFile(t *testing.T) {
+	t.Parallel()
+
+	path := write(t, "core:\n  principal: operator\n")
+	setup := writeSetup(t, path, "core:\n  frontend:\n    skin: slicer\n")
+
+	_, err := config.Load(path)
+	require.ErrorIs(t, err, config.ErrInvalid)
+	require.Contains(t, err.Error(), setup)
+	require.Contains(t, err.Error(), "line 3")
+	require.Contains(t, err.Error(), "core.frontend.skin")
 }
 
 // TestAnUnknownKeyInsideTheCoreBlockIsRefusedWithItsLineNumber is the typo an

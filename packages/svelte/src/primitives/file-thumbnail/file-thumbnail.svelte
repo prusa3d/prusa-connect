@@ -16,15 +16,19 @@
   import Popover from '../popover/popover.svelte';
   import PopoverContent from '../popover/popover-content.svelte';
   import PopoverTrigger from '../popover/popover-trigger.svelte';
+  import { cancelUnanswered } from './cancel-unanswered';
   import { takeThumbnailSlot } from './slots';
   import type { FileThumbnailProps } from './types';
-  import { THUMBNAIL_BASE, THUMBNAIL_BOX, THUMBNAIL_GLYPH } from './variants';
+  import { radii, sizes, THUMBNAIL_BASE, THUMBNAIL_GLYPH } from './variants';
 
   let {
     name,
     thumbnailUrl,
     glyph: Glyph,
+    glyphSrc,
     open = $bindable(false),
+    size = 'md',
+    radius = 'sm',
     class: className,
   }: FileThumbnailProps = $props();
 
@@ -42,9 +46,12 @@
 
   // The picture is asked for once the box comes into view and a slot in the
   // page's thumbnail queue is free (`slots.ts` says why there is a queue). The
-  // glyph stands in until then. A box scrolled away before its turn leaves
-  // the queue; one that started keeps its slot until the picture answers, so
-  // a slow printer is never asked twice. Unmounting gives the slot back.
+  // fallback, the artwork or else the icon, stands in until then. A box
+  // scrolled away before its turn leaves the queue; one that started keeps its
+  // slot until the picture answers, so a slow printer is never asked twice, or
+  // until the queue's bound runs out, when the request is cancelled and the
+  // fallback stays. Unmounting gives the slot back and cancels a picture that
+  // has not answered.
   let src = $state<string | undefined>(undefined);
   let giveBack: (() => void) | undefined;
 
@@ -58,9 +65,15 @@
       const observer = new IntersectionObserver((entries) => {
         const seen = entries.some((entry) => entry.isIntersecting);
         if (seen) {
-          giveBack ??= takeThumbnailSlot(() => {
-            src = url;
-          });
+          giveBack ??= takeThumbnailSlot(
+            () => {
+              src = url;
+            },
+            () => {
+              // The picture leaves, and `cancelUnanswered` takes its request.
+              src = undefined;
+            },
+          );
         } else if (src !== url) {
           giveBack?.();
           giveBack = undefined;
@@ -128,15 +141,23 @@
   };
 </script>
 
-{#if thumbnailUrl === undefined || broken}
-  <div
-    data-slot="file-thumbnail"
-    class={[THUMBNAIL_BASE, THUMBNAIL_BOX, className]}
-  >
+{#snippet fallback()}
+  {#if glyphSrc}
+    <img src={glyphSrc} alt="" class="opacity-75 invert dark:invert-0" />
+  {:else if Glyph}
     <Glyph
       class={[THUMBNAIL_GLYPH, 'text-muted-foreground']}
       aria-hidden="true"
     />
+  {/if}
+{/snippet}
+
+{#if thumbnailUrl === undefined || broken}
+  <div
+    data-slot="file-thumbnail"
+    class={[THUMBNAIL_BASE, sizes[size], radii[radius], className]}
+  >
+    {@render fallback()}
   </div>
 {:else}
   <Popover bind:open>
@@ -163,7 +184,8 @@
           {@attach loadWhenSeen(thumbnailUrl)}
           class={[
             THUMBNAIL_BASE,
-            THUMBNAIL_BOX,
+            sizes[size],
+            radii[radius],
             'cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
             className,
           ]}
@@ -180,12 +202,10 @@
                 done();
                 brokenUrl = thumbnailUrl;
               }}
+              {@attach cancelUnanswered}
             />
           {:else}
-            <Glyph
-              class={[THUMBNAIL_GLYPH, 'text-muted-foreground']}
-              aria-hidden="true"
-            />
+            {@render fallback()}
           {/if}
         </button>
       {/snippet}
@@ -203,7 +223,7 @@
       side="right"
       align="start"
       sideOffset={8}
-      class="w-auto max-w-[min(20rem,var(--radix-popper-available-width))]"
+      class="w-auto max-w-thumbnail-popover"
       trapFocus={false}
       onOpenAutoFocus={keepFocus}
       onCloseAutoFocus={keepFocus}
@@ -216,9 +236,10 @@
       />
       <!-- Wraps rather than truncates. The row above already truncates, and
            what tells two of these names apart is almost always the tail, which
-           is exactly what a truncation eats. `break-all` because a file name is
-           one unbroken token, so nothing else would wrap it. -->
-      <p class="mt-2 font-mono text-xs break-all text-muted-foreground">
+           is exactly what a truncation eats. The name keeps its width until a
+           single unbroken run exceeds the popover, so a short name is never
+           cut inside a word to fit a small picture. -->
+      <p class="mt-2 font-mono text-xs break-words text-muted-foreground">
         {name}
       </p>
     </PopoverContent>

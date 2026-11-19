@@ -9,6 +9,7 @@
   let {
     ref = $bindable(null),
     value = $bindable(''),
+    gap = 'md',
     class: className,
     ...rest
   }: RadioGroupProps = $props();
@@ -18,6 +19,11 @@
   bind:ref
   bind:value
   data-slot="radio-group"
-  class={['grid gap-3', className]}
+  class={[
+    'grid',
+    gap === 'md' && 'gap-3',
+    gap === 'section' && 'gap-section-block',
+    className,
+  ]}
   {...rest}
 />

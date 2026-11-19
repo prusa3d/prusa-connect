@@ -1,11 +1,12 @@
 <!--
   What a listing's row can do, behind the one glyph every listing uses for it.
 
-  The touch floor is decided here, once: `icon-lg`, 44px, this tree's size for
-  a control operated with a gloved hand on a wall tablet. Six listings had
-  built this by hand and ended with three different hit boxes for one control.
-  The items' own height belongs to the menu and is settled there, so no screen
-  writes a `min-h-11` of its own per menu.
+  The touch floor is decided here, once: `icon-lg`, which reaches 44px, this
+  tree's size for a control operated with a gloved hand on a wall tablet, under
+  a finger or in a narrow shell. Six listings had built this by hand and ended
+  with three different hit boxes for one control. The items' own height
+  belongs to the menu and is settled there, so no screen writes a floor of its
+  own per menu.
 
   The accessible name is `Actions for {name}`. It is what a screen reader user
   hears once per row, and one listing calling it something else would make the
@@ -21,12 +22,17 @@
   import DropdownMenuTrigger from '../dropdown-menu/dropdown-menu-trigger.svelte';
   import type { RowActionsProps } from './types';
 
-  let { name, children, class: className }: RowActionsProps = $props();
+  let {
+    name,
+    children,
+    class: className,
+    onOpenChange,
+  }: RowActionsProps = $props();
 
   const label = $derived(t('primitives.rowActions.label', { name }));
 </script>
 
-<DropdownMenu>
+<DropdownMenu onOpenChange={(open: boolean) => onOpenChange?.(open)}>
   <DropdownMenuTrigger>
     {#snippet child({ props })}
       <Button

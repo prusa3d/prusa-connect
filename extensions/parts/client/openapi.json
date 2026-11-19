@@ -220,6 +220,10 @@
           "sha256": {
             "type": "string",
             "description": "The digest the storage took, and absent where it keeps none."
+          },
+          "thumbnail": {
+            "type": "boolean",
+            "description": "Whether the storage reported a picture inside the file when the version was written. false means it has none, and absent means the storage did not say."
           }
         },
         "required": [

@@ -3,9 +3,6 @@
   work together, and a test cannot write markup of its own.
 
   The action shuts the panel here, because bits-ui leaves that to the caller.
-
-  This file holds no class of its own, so it adds nothing to what
-  classes.test.ts compares.
 -->
 <script lang="ts">
   import {

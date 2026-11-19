@@ -27,6 +27,7 @@ export type Detail = components['schemas']['Detail'];
 export type MaterialFields = components['schemas']['MaterialFields'];
 
 /** One spool as the person typed it, and how many of it to add. */
+export type SpoolsAdded = components['schemas']['SpoolsAdded'];
 export type SpoolsDraft = components['schemas']['SpoolsDraft'];
 
 /** One spool of a material, as the module keeps it. */
@@ -121,7 +122,7 @@ export interface MaterialsService {
   ): Promise<void>;
   deleteCustom(uuid: string, signal?: AbortSignal): Promise<void>;
   /** Adds the spools and answers how many were added. */
-  addSpools(draft: SpoolsDraft, signal?: AbortSignal): Promise<number>;
+  addSpools(draft: SpoolsDraft, signal?: AbortSignal): Promise<SpoolsAdded>;
   /** The printers with these ids that the caller may observe, by name. */
   printers(
     ids: readonly string[],
@@ -223,7 +224,7 @@ export const materialsOn = (host: ModuleHost): MaterialsService => {
       await routes.deleteSpools({ body: { ids: [...ids] } }, ended(signal));
     },
     addSpools: async (draft, signal) =>
-      (await routes.addSpools({ body: draft }, ended(signal))).added,
+      routes.addSpools({ body: draft }, ended(signal)),
     printers: async (ids, signal) =>
       (await routes.listPrinters({ query: { id: [...ids] } }, ended(signal)))
         .printers,

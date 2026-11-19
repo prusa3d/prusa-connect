@@ -44,9 +44,7 @@
 <Icon {...props} {icon} />
 
 <style>
-  /* The current navigation entry is drawn in the primary colour, where the
-     accent would vanish; there it takes the entry's text colour instead. */
-  :global([aria-current='page'] .materials-glyph-accent) {
+  :global(.materials-glyph-accent) {
     stroke: currentColor;
   }
 </style>

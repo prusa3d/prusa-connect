@@ -26,11 +26,45 @@
     'destructive',
     'link',
   ];
-  const sizes: ButtonTextSize[] = ['sm', 'md', 'lg'];
+  const sizes: ButtonTextSize[] = ['sm', 'compact', 'md', 'lg'];
   const iconSizes: ButtonIconSize[] = ['icon-sm', 'icon-md', 'icon-lg'];
 </script>
 
 <Story name="Default">Print</Story>
+
+<Story name="Slicer Reference" asChild>
+  <div
+    class="flex w-button-wide max-w-full flex-col items-start gap-control-inline"
+  >
+    <Button size="sm" variant="secondary">Label</Button>
+    <Button size="sm" variant="secondary" disabled>Label</Button>
+    <Button
+      size="sm"
+      variant="secondary"
+      data-reference-state="hover"
+      class="reference-state-hover:bg-secondary-hovered dark:reference-state-hover:bg-button-neutral-hovered"
+      >Label</Button
+    >
+    <Button size="sm">Label</Button>
+    <Button
+      size="sm"
+      data-reference-state="hover"
+      class="reference-state-hover:bg-button-accent-hovered">Label</Button
+    >
+    <Button size="md">Label</Button>
+    <Button
+      size="md"
+      data-reference-state="hover"
+      class="reference-state-hover:bg-button-accent-hovered">Label</Button
+    >
+    <Button size="lg">Label</Button>
+    <Button
+      size="lg"
+      data-reference-state="hover"
+      class="reference-state-hover:bg-button-accent-hovered">Label</Button
+    >
+  </div>
+</Story>
 
 <Story name="All Variants" asChild>
   <div class="flex flex-wrap gap-3">
@@ -81,7 +115,7 @@
   </div>
 </Story>
 
-<Story name="Touch Sizes Measure Forty Four Pixels" asChild>
+<Story name="Touch Sizes Measure Forty Four Pixels Under A Finger" asChild>
   <div class="flex items-center gap-3">
     <Button size="lg">Print</Button>
     <Button size="icon-lg" label="Print once more">
@@ -178,4 +212,27 @@
       A guide whose title is long enough to wrap onto a second line
     </Button>
   </div>
+</Story>
+
+<!-- `sm` in the body size, for an action standing among settings. -->
+<Story name="Control Size" asChild>
+  <Button size="control" variant="secondary">Save</Button>
+</Story>
+
+<!-- `md` at the height of the text field it stands beside. -->
+<Story name="Field Size" asChild>
+  <Button size="field" variant="secondary">New folder</Button>
+</Story>
+
+<!-- A person's picture that is pressed. -->
+<Story name="Avatar Size" asChild>
+  <Button size="avatar" variant="ghost" radius="full" label="Edit photo">
+    <span aria-hidden="true">AB</span>
+  </Button>
+</Story>
+
+<Story name="Round" asChild>
+  <Button size="icon-lg" variant="secondary" radius="full" label="Edit photo">
+    <span aria-hidden="true">+</span>
+  </Button>
 </Story>

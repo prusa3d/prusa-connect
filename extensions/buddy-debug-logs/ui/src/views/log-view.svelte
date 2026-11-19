@@ -241,20 +241,21 @@
             {/each}
           </SelectContent>
         </Select>
-        <Input
-          aria-label={t('buddyDebugLogs.filter.component')}
-          size="sm"
-          class="w-36"
-          maxlength={64}
-          placeholder={t('buddyDebugLogs.filter.componentPlaceholder')}
-          value={component}
-          oninput={(event: Event) => {
-            component = (event.currentTarget as HTMLInputElement).value;
-          }}
-          onchange={() => {
-            narrow({ component });
-          }}
-        />
+        <div class="w-56">
+          <Input
+            aria-label={t('buddyDebugLogs.filter.component')}
+            size="sm"
+            maxlength={64}
+            placeholder={t('buddyDebugLogs.filter.componentPlaceholder')}
+            value={component}
+            oninput={(event: Event) => {
+              component = (event.currentTarget as HTMLInputElement).value;
+            }}
+            onchange={() => {
+              narrow({ component });
+            }}
+          />
+        </div>
       {/snippet}
       {#snippet trailing()}
         <div class="flex h-8 items-center gap-2">
@@ -345,15 +346,21 @@
                 data-part="log-address">{line.ip ?? ''}</TableCell
               >
               <TableCell>
-                <Badge variant={severityVariant(line.severity)}>
-                  {t(`buddyDebugLogs.severity.${line.severity}`)}
-                </Badge>
+                {#if severityVariant(line.severity) === 'outline'}
+                  <span class="text-sm text-muted-foreground"
+                    >{t(`buddyDebugLogs.severity.${line.severity}`)}</span
+                  >
+                {:else}
+                  <Badge variant={severityVariant(line.severity)}>
+                    {t(`buddyDebugLogs.severity.${line.severity}`)}
+                  </Badge>
+                {/if}
               </TableCell>
               <TableCell class="font-mono text-xs"
                 >{line.component ?? ''}</TableCell
               >
               <TableCell
-                class="font-mono text-xs break-all whitespace-pre-wrap"
+                class="min-w-64 font-mono text-xs break-all whitespace-pre-wrap"
               >
                 {line.text}
               </TableCell>

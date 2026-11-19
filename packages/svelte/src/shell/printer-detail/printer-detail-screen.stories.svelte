@@ -260,7 +260,7 @@
     {telemetry}
     {commands}
     printerCount={1}
-    tab="commands"
+    tab="status"
     {onTabChange}
     printersHref="/printers"
   />

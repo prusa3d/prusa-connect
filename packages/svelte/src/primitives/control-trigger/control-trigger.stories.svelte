@@ -2,7 +2,12 @@
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
-  import { CONTROL_SIZES, CONTROL_TRIGGER } from './control-trigger';
+  import {
+    CONTROL_FILL,
+    CONTROL_RING,
+    CONTROL_SIZES,
+    CONTROL_TRIGGER,
+  } from './control-trigger';
   import type { ControlSize } from './types';
 
   const { Story } = defineMeta({
@@ -21,7 +26,15 @@
 <Story name="Sizes" asChild>
   <div class="flex flex-wrap items-center gap-4">
     {#each SIZES as size (size)}
-      <button type="button" class={[CONTROL_TRIGGER, CONTROL_SIZES[size]]}>
+      <button
+        type="button"
+        class={[
+          CONTROL_TRIGGER,
+          CONTROL_FILL,
+          CONTROL_RING,
+          CONTROL_SIZES[size],
+        ]}
+      >
         <span>Model: {size}</span>
         <ChevronDownIcon />
       </button>
@@ -30,7 +43,11 @@
 </Story>
 
 <Story name="Disabled" asChild>
-  <button type="button" disabled class={[CONTROL_TRIGGER, CONTROL_SIZES.md]}>
+  <button
+    type="button"
+    disabled
+    class={[CONTROL_TRIGGER, CONTROL_FILL, CONTROL_RING, CONTROL_SIZES.md]}
+  >
     <span>Model</span>
     <ChevronDownIcon />
   </button>

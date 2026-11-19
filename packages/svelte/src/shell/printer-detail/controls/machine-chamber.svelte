@@ -81,9 +81,9 @@
 
   const chooseMode = (next: FanMode) => {
     mode = next;
-    if (next === 'off') sendFan(FAN_OFF);
-    else if (next === 'auto') sendFan(FAN_AUTOMATIC);
-    else sendFan(fanPercent);
+    if (next === 'off') void sendFan(FAN_OFF);
+    else if (next === 'auto') void sendFan(FAN_AUTOMATIC);
+    else void sendFan(fanPercent);
   };
 
   // The group hands back a string.
@@ -96,12 +96,12 @@
   const commitFan = (next: number) => {
     if (next > FAN_OFF) lastSpeed = next;
     fanPercent = next;
-    sendFan(next);
+    void sendFan(next);
   };
 
   const commitLight = (next: number) => {
     lightPercent = next;
-    onCommand(VERBS.chamberLight, {
+    void onCommand(VERBS.chamberLight, {
       'chamber.led_intensity': String(Math.round(next)),
     });
   };
@@ -122,6 +122,7 @@
         <ToggleGroup
           type="single"
           variant="outline"
+          tone="primary"
           size="lg"
           value={mode}
           onValueChange={onMode}

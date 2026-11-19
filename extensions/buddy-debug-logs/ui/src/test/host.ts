@@ -178,7 +178,6 @@ export const stubHost = (options: StubOptions = {}): Stub => {
         title: 'Prusa Connect',
         default_language: 'en',
         theme: 'system',
-        skin: 'default',
         printer_address: 'https://192.168.1.5:8443',
         printer_admission: 'approval',
         printer_custom_ca: false,

@@ -51,6 +51,8 @@ export interface AccessRowProps {
 }
 
 export interface AccessListProps {
+  /** Uses the settings panel frame on a person's access page. */
+  settingsPanel?: boolean | undefined;
   title: string;
   description: string;
   rows: readonly AccessRow[];

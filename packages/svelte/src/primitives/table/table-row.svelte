@@ -6,7 +6,7 @@
   falls back to `currentColor`, which is the text colour of whatever it sits
   in.
 
-  A selected row takes the muted fill. `data-[state=selected]:hover:bg-accent`
+  A selected row takes the muted fill. `state-selected:hover:bg-accent`
   is a compound selector, so a selected row under the pointer still reads as
   hovered: a plain `hover:bg-accent` ties with the selected rule on specificity
   and loses on order.
@@ -20,7 +20,7 @@
 <tr
   data-slot="table-row"
   class={[
-    'border-b border-border transition-colors hover:bg-accent has-aria-expanded:bg-accent data-[state=selected]:bg-muted data-[state=selected]:hover:bg-accent',
+    'border-b border-border transition-colors hover:bg-accent has-aria-expanded:bg-accent state-selected:bg-muted state-selected:hover:bg-accent',
     className,
   ]}
   {...rest}

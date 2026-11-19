@@ -1,6 +1,7 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
+  import type { Device } from '../../domain';
   import {
     fakeDevice,
     fakeListing,
@@ -55,6 +56,33 @@
 
   const listingOf = (count: number, total = count) =>
     fakeListing({ ...ADVERTISED, items: devicesOf(count), total });
+
+  const incomplete: readonly Device[] = [
+    ...['PRINTING', 'PAUSED', 'ATTENTION', 'BUSY', 'IDLE', 'UNKNOWN'].map(
+      (state) => ({
+        ...fakeDevice(state, `${state} — no job details`),
+        state: {
+          '/state': state,
+          '/tools/0/nozzle_temp': 180,
+          '/temperature/bed': 60,
+        },
+      }),
+    ),
+    {
+      ...fakeDevice('unnamed', 'PRINTING — unnamed active print'),
+      state: { '/state': 'PRINTING' },
+      job: {
+        id: '',
+        device_job_id: '7',
+        display_name: '',
+        path: '',
+        progress: 0,
+        running: true,
+        state: 'PRINTING',
+        time_remaining_ms: 0,
+      },
+    },
+  ];
 
   const store = fakeListingStore();
 
@@ -128,6 +156,19 @@
   <PrintersScreen
     listing={fakeListing({ loading: true, loaded: false })}
     printerCount={0}
+    {store}
+    {onAdd}
+  />
+</Story>
+
+<Story name="Incomplete Print Data" asChild>
+  <PrintersScreen
+    listing={fakeListing({
+      ...ADVERTISED,
+      items: incomplete,
+      total: incomplete.length,
+    })}
+    printerCount={incomplete.length}
     {store}
     {onAdd}
   />

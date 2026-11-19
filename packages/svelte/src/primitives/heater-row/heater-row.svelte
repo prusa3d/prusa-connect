@@ -28,6 +28,7 @@
     nozzleTemp,
     targetTemp,
     material,
+    materialChip,
     active,
     filamentPositions,
     action,
@@ -122,6 +123,7 @@
     <span
       class={[
         'shrink-0 text-xs',
+        materialChip && 'w-20',
         active
           ? 'font-semibold text-foreground'
           : 'font-medium text-muted-foreground',
@@ -129,7 +131,9 @@
     >
       {label}
     </span>
-    {#if materialLine !== undefined}
+    {#if materialChip}
+      <span class="min-w-0 shrink">{@render materialChip()}</span>
+    {:else if materialLine !== undefined}
       <span class="min-w-0 truncate font-mono text-xs text-muted-foreground">
         {materialLine}
       </span>

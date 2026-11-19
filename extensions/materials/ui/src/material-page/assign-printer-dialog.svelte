@@ -268,7 +268,9 @@
                     onclick={() => void assign(shown.id, tool)}
                   >
                     <span class="flex flex-col">
-                      <span class="font-medium">{toolLabel(t, tool.id)}</span>
+                      <span class="font-medium"
+                        >{toolLabel(t, tool.id, shown.tools.length === 1)}</span
+                      >
                       {#if reason !== undefined}
                         <span class="text-xs text-muted-foreground"
                           >{reason}</span

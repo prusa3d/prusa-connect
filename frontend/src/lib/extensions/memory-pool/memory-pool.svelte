@@ -10,7 +10,11 @@
 -->
 <script lang="ts">
   import { translateFor } from '@prusa/connect-ui/i18n';
-  import { Button, chartPalette } from '@prusa/connect-ui/primitives';
+  import {
+    Button,
+    chartPalette,
+    SettingsPane,
+  } from '@prusa/connect-ui/primitives';
 
   import { APP_NAMESPACE } from '../../i18n';
   import { mibText, type ModuleMemoryPool } from '../memory';
@@ -74,69 +78,76 @@
   );
 </script>
 
+{#snippet headerEnd()}
+  <p class="text-caption text-muted-foreground" data-part="pool-summary">
+    {summary}
+  </p>
+{/snippet}
+
 {#if pool !== undefined}
-  <section
-    class="flex flex-col gap-2 rounded-sm border border-border p-4"
-    data-part="memory-pool"
-    data-over={over > 0 || undefined}
-    aria-label={t(`${KEY}.title`)}
-  >
-    <div class="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">
-      <h2 class="font-semibold">{t(`${KEY}.title`)}</h2>
-      <p data-part="pool-summary">{summary}</p>
-    </div>
-
-    {#if poolBytes === undefined}
-      <p class="text-sm text-muted-foreground" data-part="pool-unknown">
-        {t(`${KEY}.unknown`)}
-      </p>
-    {:else}
+  <div data-part="memory-pool" data-over={over > 0 || undefined}>
+    <SettingsPane title={t(`${KEY}.title`)} {headerEnd}>
       <div
-        role="img"
-        aria-label={summary}
-        class={[
-          'flex h-2 w-full overflow-hidden rounded-sm bg-border',
-          over > 0 && 'outline-2 outline-warning',
-        ]}
-        data-part="pool-bar"
+        class="flex flex-col gap-2 px-panel-padding-mobile py-section-gap @lg/pane:px-panel-padding"
       >
-        {#each segments as segment (segment.key)}
+        {#if poolBytes === undefined}
+          <p
+            class="text-caption text-muted-foreground"
+            data-part="pool-unknown"
+          >
+            {t(`${KEY}.unknown`)}
+          </p>
+        {:else}
           <div
+            role="img"
+            aria-label={summary}
             class={[
-              'h-full border-r border-card last:border-r-0',
-              segment.fill,
+              'flex h-2 w-full overflow-hidden rounded-sm bg-border',
+              over > 0 && 'outline-2 outline-warning',
             ]}
-            style={`width: ${String((segment.bytes / whole) * 100)}%`}
-            data-part="pool-segment"
-            data-other={segment.other || undefined}
-          ></div>
-        {/each}
-      </div>
-      {#if over > 0}
-        <p class="text-sm text-warning-text" data-part="pool-over">
-          {t(`${KEY}.over`, { over: mibText(over, t) })}
-        </p>
-      {/if}
-      <ul class="flex flex-wrap gap-x-4 text-xs text-muted-foreground">
-        {#each segments as segment (segment.key)}
-          <li class="flex items-center gap-1.5" data-part="pool-legend">
-            <span
-              class={['size-2 shrink-0 rounded-xs', segment.fill]}
-              aria-hidden="true"
-              data-part="pool-swatch"
-            ></span>
-            {segment.label}: {mibText(segment.bytes, t)}
-          </li>
-        {/each}
-      </ul>
-    {/if}
+            data-part="pool-bar"
+          >
+            {#each segments as segment (segment.key)}
+              <div
+                class={[
+                  'h-full border-r border-card last:border-r-0',
+                  segment.fill,
+                ]}
+                style={`width: ${String((segment.bytes / whole) * 100)}%`}
+                data-part="pool-segment"
+                data-other={segment.other || undefined}
+              ></div>
+            {/each}
+          </div>
+          {#if over > 0}
+            <p class="text-caption text-warning-text" data-part="pool-over">
+              {t(`${KEY}.over`, { over: mibText(over, t) })}
+            </p>
+          {/if}
+          <ul class="flex flex-wrap gap-x-4 text-caption text-muted-foreground">
+            {#each segments as segment (segment.key)}
+              <li class="flex items-center gap-1.5" data-part="pool-legend">
+                <span
+                  class={['size-2 shrink-0 rounded-xs', segment.fill]}
+                  aria-hidden="true"
+                  data-part="pool-swatch"
+                ></span>
+                {segment.label}: {mibText(segment.bytes, t)}
+              </li>
+            {/each}
+          </ul>
+        {/if}
 
-    {#if configHref !== undefined}
-      <Button variant="link" data-part="pool-config">
-        {#snippet child({ props })}
-          <a {...props} href={configHref}>{t(`${KEY}.configure`)}</a>
-        {/snippet}
-      </Button>
-    {/if}
-  </section>
+        {#if configHref !== undefined}
+          <p class="text-caption">
+            <Button variant="link" data-part="pool-config">
+              {#snippet child({ props })}
+                <a {...props} href={configHref}>{t(`${KEY}.configure`)}</a>
+              {/snippet}
+            </Button>
+          </p>
+        {/if}
+      </div>
+    </SettingsPane>
+  </div>
 {/if}

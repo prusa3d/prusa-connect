@@ -1,13 +1,11 @@
 <script lang="ts">
   import { describeFault, formatDateTime, t } from '../../i18n';
   import {
+    DetailTabs,
     FaultAlert,
+    KeyValueList,
     SettingsPane,
     Skeleton,
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
   } from '../../primitives';
   import OfflineUpdate from './offline-update.svelte';
   import OnlineUpdate from './online-update.svelte';
@@ -23,109 +21,112 @@
   );
 </script>
 
-<SettingsPane
-  class="w-full"
-  title={t('settingsMaintenance.updates.title')}
-  description={t('settingsMaintenance.updates.description')}
->
+{#snippet online()}
+  <OnlineUpdate {source} />
+{/snippet}
+
+{#snippet offline()}
+  <OfflineUpdate {source} />
+{/snippet}
+
+<div class="flex w-full flex-col gap-4">
   {#if !source.loaded}
-    <div
-      class="flex flex-col gap-3 pb-6"
-      aria-busy="true"
-      aria-label={t('settingsMaintenance.loading')}
-    >
-      <Skeleton class="h-24 w-full" />
-      <Skeleton class="h-40 w-full" />
-    </div>
+    <SettingsPane class="w-full" title={t('settingsMaintenance.updates.title')}>
+      <div
+        class="flex flex-col gap-3 p-panel-padding-mobile @lg/pane:p-panel-padding"
+        aria-busy="true"
+        aria-label={t('settingsMaintenance.loading')}
+      >
+        <Skeleton class="h-24 w-full" />
+        <Skeleton class="h-40 w-full" />
+      </div>
+    </SettingsPane>
   {:else}
-    <div class="flex flex-col gap-6 pb-6">
-      <FaultAlert {fault} />
+    <FaultAlert {fault} />
 
-      <UpdateTransaction {source} />
+    <UpdateTransaction {source} />
 
-      {#if source.version}
-        <section
-          class="grid gap-3 border-b border-border pb-6 @md/pane:grid-cols-4"
-          aria-labelledby="version-heading"
+    {#if source.version}
+      <SettingsPane
+        class="w-full"
+        title={t('settingsMaintenance.version.heading')}
+      >
+        <div
+          class="flex flex-col gap-form-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
         >
-          <h3
-            id="version-heading"
-            class="text-sm font-semibold @md/pane:col-span-4"
-          >
-            {t('settingsMaintenance.version.heading')}
-          </h3>
-          <dl class="contents text-sm">
-            <div>
-              <dt class="text-xs text-muted-foreground">
-                {t('settingsMaintenance.version.current')}
-              </dt>
-              <dd class="font-mono font-medium">{source.version.version}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">
-                {t('settingsMaintenance.version.platform')}
-              </dt>
-              <dd class="font-mono">
-                {source.version.goos}/{source.version.goarch}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">
-                {t('settingsMaintenance.version.profile')}
-              </dt>
-              <dd>
-                {source.version.build_profile}/{source.version.build_variant}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">
-                {t('settingsMaintenance.version.management')}
-              </dt>
-              <dd>
-                {source.version.managed_externally
+          <KeyValueList
+            rows={[
+              {
+                id: 'current',
+                label: t('settingsMaintenance.version.current'),
+                value: source.version.version,
+                mono: true,
+              },
+              {
+                id: 'platform',
+                label: t('settingsMaintenance.version.platform'),
+                value: `${source.version.goos}/${source.version.goarch}`,
+                mono: true,
+              },
+              {
+                id: 'profile',
+                label: t('settingsMaintenance.version.profile'),
+                value: `${source.version.build_profile}/${source.version.build_variant}`,
+              },
+              {
+                id: 'management',
+                label: t('settingsMaintenance.version.management'),
+                value: source.version.managed_externally
                   ? t('settingsMaintenance.version.managed')
-                  : t('settingsMaintenance.version.local')}
-              </dd>
-            </div>
-          </dl>
+                  : t('settingsMaintenance.version.local'),
+              },
+            ]}
+          />
           {#if source.version.managed_reason}
-            <p class="rounded-card bg-muted p-3 text-sm @md/pane:col-span-4">
+            <p class="text-body text-muted-foreground">
               {source.version.managed_reason}
             </p>
           {/if}
-        </section>
-      {/if}
+        </div>
+      </SettingsPane>
+    {/if}
 
-      <Tabs bind:value={method}>
-        <TabsList aria-label={t('settingsMaintenance.method.label')}>
-          <TabsTrigger value="online">
-            {t('settingsMaintenance.method.online')}
-          </TabsTrigger>
-          <TabsTrigger value="offline">
-            {t('settingsMaintenance.method.offline')}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="online" class="pt-4">
-          <OnlineUpdate {source} />
-        </TabsContent>
-        <TabsContent value="offline" class="pt-4">
-          <OfflineUpdate {source} />
-        </TabsContent>
-      </Tabs>
+    <DetailTabs
+      tabs={[
+        {
+          id: 'online',
+          label: t('settingsMaintenance.method.online'),
+          panel: online,
+        },
+        {
+          id: 'offline',
+          label: t('settingsMaintenance.method.offline'),
+          panel: offline,
+        },
+      ]}
+      active={method}
+      onChange={(id: string) => {
+        method = id === 'offline' ? 'offline' : 'online';
+      }}
+      segmented
+    />
 
-      <section class="flex flex-col gap-3" aria-labelledby="history-heading">
-        <h3 id="history-heading" class="text-sm font-semibold">
-          {t('settingsMaintenance.history.heading')}
-        </h3>
+    <SettingsPane
+      class="w-full"
+      title={t('settingsMaintenance.history.heading')}
+    >
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+      >
         {#if source.history.length === 0}
-          <p class="text-sm text-muted-foreground">
+          <p class="text-body text-muted-foreground">
             {t('settingsMaintenance.history.empty')}
           </p>
         {:else}
-          <ul class="divide-y divide-border border-y border-border">
+          <ul class="divide-y divide-border">
             {#each source.history as entry (entry.id)}
               <li
-                class="grid gap-1 py-3 text-sm @md/pane:grid-cols-3 @md/pane:items-center"
+                class="text-body grid gap-1 py-3 first:pt-0 last:pb-0 @md/pane:grid-cols-3 @md/pane:items-center"
               >
                 <span>
                   <span class="font-mono">{entry.from_version}</span>
@@ -147,7 +148,7 @@
             {/each}
           </ul>
         {/if}
-      </section>
-    </div>
+      </div>
+    </SettingsPane>
   {/if}
-</SettingsPane>
+</div>

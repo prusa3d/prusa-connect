@@ -198,6 +198,7 @@
     `/storage/local/folder/${encodeURIComponent(path)}`;
 
   const acts = {
+    print: () => undefined,
     downloadHref: '/api/v1/storages/local/content?path=bracket.gcode',
     remove: () => undefined,
     rename: () => undefined,
@@ -455,5 +456,68 @@
       code: 'core.storage/NOT_FOUND',
       message: 'no such path on storage local',
     }}
+  />
+</Story>
+
+<Story name="Printable Without Metadata" asChild>
+  <FileDetailScreen
+    path={onStorage.path}
+    entry={onStorage}
+    rootLabel="Storage"
+    rootHref="/storage/local"
+    {folderHref}
+    {acts}
+    description={unread}
+  />
+</Story>
+
+<Story name="Short Address And Display Name" asChild>
+  <FileDetailScreen
+    path="BRACKE~1.GCO"
+    entry={{
+      name: 'BRACKE~1.GCO',
+      display_name: 'Bracket',
+      path: 'BRACKE~1.GCO',
+      size: 1,
+    }}
+    rootLabel="USB"
+    rootHref="/storage/local"
+    {folderHref}
+    acts={{ print: () => undefined }}
+    description={unread}
+  />
+</Story>
+
+<Story name="Read Refused" asChild>
+  <FileDetailScreen
+    path={onStorage.path}
+    rootLabel="Storage"
+    rootHref="/storage/local"
+    {folderHref}
+    fault={{ code: 'forbidden', message: 'This file is private.', status: 403 }}
+  />
+</Story>
+
+<Story name="Read Failed" asChild>
+  <FileDetailScreen
+    path={onStorage.path}
+    rootLabel="Storage"
+    rootHref="/storage/local"
+    {folderHref}
+    fault={{
+      code: 'internal',
+      message: 'The file listing failed.',
+      status: 500,
+    }}
+  />
+</Story>
+
+<Story name="Connection Failed" asChild>
+  <FileDetailScreen
+    path={onStorage.path}
+    rootLabel="Storage"
+    rootHref="/storage/local"
+    {folderHref}
+    fault={new TypeError('The storage connection failed.')}
   />
 </Story>

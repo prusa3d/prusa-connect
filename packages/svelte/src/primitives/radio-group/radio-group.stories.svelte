@@ -19,6 +19,19 @@
   </RadioGroup>
 </Story>
 
+<Story name="Section Gap" asChild>
+  <RadioGroup value="pla" gap="section" aria-label="Filament type">
+    <div class="flex items-center gap-2">
+      <RadioGroupItem value="pla" id="section-pla" />
+      <label for="section-pla">PLA</label>
+    </div>
+    <div class="flex items-center gap-2">
+      <RadioGroupItem value="petg" id="section-petg" />
+      <label for="section-petg">PETG</label>
+    </div>
+  </RadioGroup>
+</Story>
+
 <Story name="All States" asChild>
   <div class="flex flex-wrap gap-8">
     <RadioGroup value="pla" aria-label="Filament type">

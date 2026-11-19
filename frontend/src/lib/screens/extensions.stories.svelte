@@ -66,7 +66,12 @@
         serving: false,
         state: 'disabled',
       },
-      module: { asked: {}, title: 'Buddy logs', version: '0.3.0' },
+      module: {
+        asked: {},
+        title: 'Buddy logs',
+        summary: 'Collects printer logs to help diagnose problems.',
+        version: '0.3.0',
+      },
     }),
   ];
 
@@ -115,6 +120,64 @@
     (items: unknown[], marketplace: Record<string, unknown> = MARKETPLACE) =>
     () =>
       json(200, { items, marketplace });
+
+  const printHistory = offerOf({
+    module: 'example.com/extensions/print-history',
+    name: 'print-history',
+    title: 'Print history',
+    description: 'Keeps a history of completed print jobs.',
+    author: 'Demo',
+    namespace: 'com.example.extensions.print-history',
+    version: '1.0.0',
+    installed: true,
+    installed_version: '1.0.0',
+    instance: 'driver:print-history',
+  });
+
+  const interactiveMarketplace = (initiallyEnabled: boolean) => {
+    let enabled = initiallyEnabled;
+    const instances = [
+      ...installed,
+      instanceOf({
+        name: 'print-history',
+        uid: 'demo-print-history',
+        namespace: 'com.example.extensions.print-history',
+        version: '1.0.0',
+        module: { asked: {}, title: 'Print history', version: '1.0.0' },
+      }),
+    ].map((instance) => ({ ...instance }));
+    const instanceSwitches = Object.fromEntries(
+      instances.map((instance) => [
+        `PUT /api/v1/resources/${instance.kind}/${instance.name}`,
+        () => {
+          instance.enabled = !instance.enabled;
+          instance.generation += 1;
+          instance.status = {
+            ...instance.status,
+            serving: instance.enabled,
+            state: instance.enabled ? 'ready' : 'disabled',
+            observed_generation: instance.generation,
+          };
+          return json(200, instance);
+        },
+      ]),
+    );
+    const marketplace = () => ({ ...MARKETPLACE, enabled, reachable: enabled });
+    return {
+      ...instanceSwitches,
+      [RESOURCES]: () =>
+        json(200, { items: [...resources.items, ...instances] }),
+      [INDEX]: () =>
+        json(200, {
+          items: enabled ? [spools, nozzle, printHistory] : [],
+          marketplace: marketplace(),
+        }),
+      'PUT /api/v1/modules/marketplace': () => {
+        enabled = !enabled;
+        return json(200, marketplace());
+      },
+    };
+  };
 
   const left = {
     engine: 'sqlite',
@@ -304,8 +367,7 @@
     path={PATH}
     overrides={{
       ...noLeft,
-      [RESOURCES]: withInstalled,
-      [INDEX]: index([spools, nozzle]),
+      ...interactiveMarketplace(true),
     }}
   />
 </Story>

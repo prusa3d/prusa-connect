@@ -15,7 +15,7 @@ name: materials
 # which is what a module with a process needs. The browser half is declared
 # beside it, as `service.assets`.
 kind: sink
-version: 0.2.5
+version: 0.2.6
 license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
 # What a marketplace card prints beside the name: the title a person reads,
 # one sentence about this module, and who answers for it. The install copies
@@ -117,6 +117,8 @@ ui:
   # The range of @prusa/connect-ui this bundle was built against. The app
   # refuses a bundle its own version falls outside of.
   library: ">=0.0.1 <1.0.0"
+  exports:
+    - name: printer-positions
   contributes:
     # The whole of what this bundle may register. A registration the block
     # does not declare is refused at run time and the app drops this module.

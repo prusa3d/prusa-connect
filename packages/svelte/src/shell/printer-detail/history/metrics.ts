@@ -72,7 +72,7 @@ const headReading = (
       match[2] === 'nozzle_temp'
         ? 'printerDetailHistory.metric.headNozzle'
         : 'printerDetailHistory.metric.headNozzleTarget',
-      { n: match[1] },
+      { n: Number(match[1]) + 1 },
     ),
     unit: CELSIUS,
   };

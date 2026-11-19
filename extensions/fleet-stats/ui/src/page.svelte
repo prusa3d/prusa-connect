@@ -47,6 +47,12 @@
   const t = host.t;
   const stats = statsFor(host);
   const metrics = metricsFor(t);
+  // The core's `state.*` words are reachable through `t`. A state it has no
+  // word for is drawn as the printer reported it.
+  const stateLabel = (state: string): string => {
+    const label = t(`state.${state}`);
+    return label === `state.${state}` ? state : label;
+  };
 
   /** Every option of a select that narrows nothing. */
   const ALL = '*';
@@ -181,6 +187,9 @@
     </EmptyState>
   {:else}
     {@const summary = current.stats}
+    {@const failing = summary.byDevice.filter(
+      (row) => row.failed + row.cancelled > 0,
+    )}
     {#if summary.kpis.jobs === 0 && summary.kpis.printHours === 0}
       <EmptyState heading={t('fleet-stats.empty.heading')} headingLevel="h2" />
     {:else}
@@ -190,6 +199,7 @@
           <StatusCard
             title={t(item.label)}
             edge
+            class="border-s-border!"
             value={item.show(summary.kpis)}
             trend={change?.trend}
             trendLabel={change?.label}
@@ -243,54 +253,60 @@
           >{@render heading(t('fleet-stats.failures.heading'))}</CardHeader
         >
         <CardContent class="flex flex-col gap-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('fleet-stats.failures.printer')}</TableHead>
-                <TableHead class="text-end"
-                  >{t('fleet-stats.failures.jobs')}</TableHead
-                >
-                <TableHead class="text-end"
-                  >{t('fleet-stats.failures.success')}</TableHead
-                >
-                <TableHead class="text-end"
-                  >{t('fleet-stats.failures.failed')}</TableHead
-                >
-                <TableHead class="text-end"
-                  >{t('fleet-stats.failures.cancelled')}</TableHead
-                >
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {#each summary.byDevice as row (row.key)}
+          {#if failing.length === 0}
+            <p class="text-sm text-muted-foreground">
+              {t('fleet-stats.cards.failures.none')}
+            </p>
+          {:else}
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    ><a class="hover:underline" href={printerHref(row.key)}
-                      >{row.label}</a
-                    ></TableCell
+                  <TableHead>{t('fleet-stats.failures.printer')}</TableHead>
+                  <TableHead class="text-end"
+                    >{t('fleet-stats.failures.jobs')}</TableHead
                   >
-                  <TableCell class="text-end"
-                    >{formatNumber(row.jobs)}</TableCell
+                  <TableHead class="text-end"
+                    >{t('fleet-stats.failures.success')}</TableHead
                   >
-                  <TableCell class="text-end"
-                    >{rateOf(t, row.successRate)}</TableCell
+                  <TableHead class="text-end"
+                    >{t('fleet-stats.failures.failed')}</TableHead
                   >
-                  <TableCell class="text-end"
-                    >{formatNumber(row.failed)}</TableCell
-                  >
-                  <TableCell class="text-end"
-                    >{formatNumber(row.cancelled)}</TableCell
+                  <TableHead class="text-end"
+                    >{t('fleet-stats.failures.cancelled')}</TableHead
                   >
                 </TableRow>
-              {/each}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {#each failing as row (row.key)}
+                  <TableRow>
+                    <TableCell
+                      ><a class="hover:underline" href={printerHref(row.key)}
+                        >{row.label}</a
+                      ></TableCell
+                    >
+                    <TableCell class="text-end"
+                      >{formatNumber(row.jobs)}</TableCell
+                    >
+                    <TableCell class="text-end"
+                      >{rateOf(t, row.successRate)}</TableCell
+                    >
+                    <TableCell class="text-end"
+                      >{formatNumber(row.failed)}</TableCell
+                    >
+                    <TableCell class="text-end"
+                      >{formatNumber(row.cancelled)}</TableCell
+                    >
+                  </TableRow>
+                {/each}
+              </TableBody>
+            </Table>
+          {/if}
           {#if summary.byMachineState.length > 0}
             <p class="text-sm text-muted-foreground">
               {t('fleet-stats.failures.byState')}
               {#each summary.byMachineState as { state, count } (state)}
                 <Badge variant="secondary" class="ms-2"
-                  ><span class="font-mono">{state}</span>
+                  ><span>{stateLabel(state)}</span>
                   {formatNumber(count)}</Badge
                 >
               {/each}

@@ -45,7 +45,7 @@
     bind:ref
     data-slot="sheet-content"
     class={[
-      'pointer-events-auto fixed z-50 flex flex-col gap-4 overscroll-contain rounded-sm border-border bg-background outline-none',
+      'pointer-events-auto fixed z-50 flex flex-col gap-4 overscroll-contain rounded-md border-border bg-background outline-none',
       sides[side],
       className,
     ]}

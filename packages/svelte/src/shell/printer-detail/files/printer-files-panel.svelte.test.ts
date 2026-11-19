@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import type { SendOutcome } from '../../../data';
@@ -144,17 +144,22 @@ const deleteBoth = async (): Promise<void> => {
 };
 
 describe('PrinterFilesPanel', () => {
+  // Wide enough for every column and every row action; a phone-width pane
+  // folds them, which the narrow cases below set up for themselves.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   it('draws one row per entry, with the size and the date formatted', async () => {
     const { container } = await render(PrinterFilesPanel, { props: props() });
 
     await expect.element(page.getByText('bracket.bgcode')).toBeVisible();
     // 4182016 bytes is four mebibytes, and nothing in the panel writes the unit.
     await expect.element(page.getByText('4.0 MB')).toBeVisible();
-    // The date column folds away in a container this narrow.
     expect(container.textContent).toContain('Sep 12, 2026');
   });
 
-  it('lists the folders first, then the newest file, then the undated', async () => {
+  it('lists the folders first, then the files by name', async () => {
     const files = source({
       entries: [
         {
@@ -184,7 +189,7 @@ describe('PrinterFilesPanel', () => {
 
     expect(
       names.map((text) => /models|z-new|bracket|a-fw/.exec(text)?.[0]),
-    ).toEqual(['models', 'z-new', 'bracket', 'a-fw']);
+    ).toEqual(['models', 'a-fw', 'bracket', 'z-new']);
   });
 
   // The page around the panel already draws a breadcrumb.
@@ -204,6 +209,37 @@ describe('PrinterFilesPanel', () => {
 
     await page.getByRole('button', { name: 'models', exact: true }).click();
     expect(openFolder).toHaveBeenCalledWith('usb/models');
+  });
+
+  // A narrow pane used to pin the preview to one width, so the slider moved
+  // and nothing changed.
+  it('resizes the file previews with the thumbnail slider in a narrow pane', async () => {
+    await page.viewport(640, 900);
+    const { container } = await render(PrinterFilesPanel, { props: props() });
+    const width = () =>
+      container.querySelector('.aspect-video')?.getBoundingClientRect().width ??
+      0;
+    await expect.element(page.getByText('bracket.bgcode')).toBeVisible();
+    const before = width();
+
+    await page.getByRole('slider', { name: 'Thumbnail size' }).click();
+    await userEvent.keyboard('{End}');
+
+    await vi.waitFor(() => {
+      expect(width()).toBeGreaterThan(before);
+    });
+  });
+
+  // A list preview is hidden on a phone-width pane, so the slider that sizes
+  // it goes too.
+  it('hides the thumbnail slider where the list previews are hidden', async () => {
+    await page.viewport(375, 900);
+    const { container } = await render(PrinterFilesPanel, { props: props() });
+    await expect.element(page.getByText('bracket.bgcode')).toBeVisible();
+
+    const slider = container.querySelector('[data-slot="slider"]');
+    expect(slider).not.toBeNull();
+    expect(slider?.getClientRects()).toHaveLength(0);
   });
 
   // The trail is rooted at the drive.
@@ -509,6 +545,56 @@ describe('PrinterFilesPanel', () => {
       .toHaveAttribute('aria-disabled', 'true');
     await expect
       .element(page.getByText(/This works when the printer is/))
+      .toBeVisible();
+  });
+
+  // A phone-width pane has room for one control per row: Print and Flash
+  // fold into the row's menu and the table never scrolls sideways.
+  it('folds Print and Flash into the row menu on a phone-width pane', async () => {
+    await page.viewport(375, 800);
+    const image = entry({
+      name: 'MK4S_firmware_6.3.2.bbf',
+      path: 'usb/MK4S_firmware_6.3.2.bbf',
+    });
+    await render(PrinterFilesPanel, {
+      props: props({
+        device: {
+          ...printer(),
+          capabilities: [
+            'core.command.start_print',
+            'core.command.flash',
+            'core.command.delete_file',
+          ],
+        },
+        files: source({ entries: [PLATE, image] }),
+      }),
+    });
+
+    await expect.element(page.getByRole('table')).toBeVisible();
+    const scroller = page.getByRole('table').element().parentElement!;
+    expect(scroller.scrollWidth).toBeLessThanOrEqual(scroller.clientWidth);
+    expect(
+      page.getByRole('button', { name: /^Print bracket\.bgcode/ }).query(),
+    ).toBeNull();
+    expect(
+      page
+        .getByRole('button', { name: 'Flash MK4S_firmware_6.3.2.bbf' })
+        .query(),
+    ).toBeNull();
+
+    await page
+      .getByRole('button', { name: 'Actions for bracket.bgcode' })
+      .click();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Print' }))
+      .toBeVisible();
+    await userEvent.keyboard('{Escape}');
+
+    await page
+      .getByRole('button', { name: 'Actions for MK4S_firmware_6.3.2.bbf' })
+      .click();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Flash' }))
       .toBeVisible();
   });
 

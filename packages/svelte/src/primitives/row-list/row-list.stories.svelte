@@ -25,3 +25,5 @@
 {#snippet one()}
   <div class="px-4 py-3 text-sm">Original Prusa MK4</div>
 {/snippet}
+
+<Story name="Medium Corner" args={{ radius: 'md' }} />

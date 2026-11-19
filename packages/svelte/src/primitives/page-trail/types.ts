@@ -27,8 +27,8 @@ export interface PageTrailProps {
    */
   page: string;
   /**
-   * Draws the page's own crumb in the value face, for a page named by a file
-   * name.
+   * Sets the page's own crumb in the theme's sans face instead of the face it
+   * inherits, for a page named by a file name.
    */
-  monoPage?: boolean;
+  sansPage?: boolean;
 }

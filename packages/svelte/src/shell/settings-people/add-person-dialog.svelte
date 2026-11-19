@@ -23,6 +23,7 @@
     DialogTitle,
     Field,
     Input,
+    PasswordInput,
     Label,
     Select,
     SelectContent,
@@ -161,9 +162,11 @@
       <Field
         label={t('settingsPeople.add.password')}
         error={passwordError}
-        control={Input}
+        control={PasswordInput}
         controlProps={{
           value: password,
+          label: t('settingsPeople.add.password'),
+          fill: true,
           type: 'password',
           autocomplete: 'new-password',
           oninput: (event: Event & { currentTarget: HTMLInputElement }) => {

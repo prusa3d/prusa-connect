@@ -228,6 +228,28 @@
   />
 </Story>
 
+<Story name="Narrow Update And Install" asChild>
+  <div class="max-w-xs">
+    <ExtensionsListing
+      rows={rows.map((row) => ({
+        ...row,
+        title: `${row.title} for the workshop printers`,
+        author:
+          'WorkshopAutomationAndManufacturingTeamCentralEuropeanOperations',
+        version:
+          row.state === 'update'
+            ? '1.1.0-beta.printerfarm.integration.release-candidate.20261025.124500'
+            : row.version,
+      }))}
+      view="rows"
+      {catalogue}
+      {shows}
+      go={noop}
+      ask={noop}
+    />
+  </div>
+</Story>
+
 <Story name="Row A Link Pointed At" asChild>
   <ExtensionsListing
     {rows}

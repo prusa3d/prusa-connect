@@ -27,7 +27,7 @@
     {#each rows as row (row.id)}
       <div
         data-slot="tag-card"
-        class="flex flex-col gap-2 rounded-sm border border-border p-3"
+        class="flex flex-col gap-2 rounded-md border border-border p-3"
       >
         <p class="min-w-0 text-sm font-medium">{row.tag}</p>
         <div class="flex flex-wrap items-center justify-between gap-2">

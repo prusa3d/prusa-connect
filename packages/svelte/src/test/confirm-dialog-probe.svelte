@@ -1,9 +1,6 @@
 <!--
   The delete confirmation the confirm-dialog tests drive. A trigger is a
   snippet that takes the trigger's own props, and a test cannot write one.
-
-  This file holds no class of its own, so it adds nothing to what
-  classes.test.ts compares.
 -->
 <script lang="ts">
   import Button from '../primitives/button/button.svelte';

@@ -165,10 +165,11 @@ export const formatDuration = (seconds: number): string => {
   if (whole < MINUTE) return unitText(whole, 'second');
   if (whole < HOUR) return unitText(Math.floor(whole / MINUTE), 'minute');
 
-  const parts = [
-    unitText(Math.floor(whole / HOUR), 'hour'),
-    unitText(Math.floor((whole % HOUR) / MINUTE), 'minute'),
-  ];
+  const hours = unitText(Math.floor(whole / HOUR), 'hour');
+  const minutes = Math.floor((whole % HOUR) / MINUTE);
 
-  return formatList(parts, 'unit');
+  // A whole number of hours reads "4 hr", not "4 hr, 0 min".
+  return minutes === 0
+    ? hours
+    : formatList([hours, unitText(minutes, 'minute')], 'unit');
 };

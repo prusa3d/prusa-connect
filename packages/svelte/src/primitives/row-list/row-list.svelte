@@ -5,12 +5,21 @@
 <script lang="ts">
   import type { RowListProps } from './types';
 
-  let { children, class: className, ...rest }: RowListProps = $props();
+  let {
+    children,
+    radius = 'sm',
+    class: className,
+    ...rest
+  }: RowListProps = $props();
 </script>
 
 <div
   data-slot="row-list"
-  class={['rounded-sm border border-border', className]}
+  class={[
+    'border border-border',
+    radius === 'md' ? 'rounded-md' : 'rounded-sm',
+    className,
+  ]}
   {...rest}
 >
   {@render children()}

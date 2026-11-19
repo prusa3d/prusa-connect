@@ -31,6 +31,7 @@
 
 <div class="flex flex-col gap-4" data-part="history">
   <SettingsRow
+    layout="switch"
     label={t('setupWizard.history.label')}
     description={t('setupWizard.history.hint')}
   >

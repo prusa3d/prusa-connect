@@ -45,8 +45,8 @@ describe('the phone bar', () => {
     });
 
     await userEvent.click(page.getByRole('button', { name: /menu/i }));
+    await userEvent.click(page.getByRole('button', { name: 'Settings' }));
 
-    await expect.element(page.getByText('Settings')).toBeInTheDocument();
     await expect
       .element(page.getByRole('link', { name: 'Server' }))
       .toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('the phone bar', () => {
     await expect.element(row).not.toBeInTheDocument();
   });
 
-  it('shows settings rooms below their own heading', async () => {
+  it('lists each destination once, in the rail order', async () => {
     await render(PhoneBar, {
       productName: 'Prusa Connect',
       items: ITEMS,
@@ -81,44 +81,17 @@ describe('the phone bar', () => {
     });
 
     await userEvent.click(page.getByRole('button', { name: /menu/i }));
+    await userEvent.click(page.getByRole('button', { name: 'Settings' }));
 
     const labels = page
       .getByRole('link')
       .all()
       .map((link) => link.element().textContent.trim());
-
     expect(labels).toEqual([
       ...ITEMS.map((item) => item.label),
       'Account',
       'Server',
     ]);
-  });
-
-  it('lists a group of pages under the group name', async () => {
-    const farm: RailNavItem = {
-      id: 'farm',
-      label: 'Farm',
-      href: '/m/farm/plan',
-      children: [
-        { id: 'plan', label: 'Plan', href: '/m/farm/plan' },
-        { id: 'jobs', label: 'Jobs', href: '/m/farm/jobs' },
-      ],
-    };
-    await render(PhoneBar, {
-      productName: 'Prusa Connect',
-      items: [...ITEMS, farm],
-      currentPath: '/printers',
-      connection: 'online',
-    });
-
-    await userEvent.click(page.getByRole('button', { name: /menu/i }));
-
-    await expect.element(page.getByText('Farm')).toBeInTheDocument();
-    const labels = page
-      .getByRole('link')
-      .all()
-      .map((link) => link.element().textContent.trim());
-    expect(labels).toEqual(['Printers', 'Jobs', 'Plan', 'Jobs']);
   });
 
   it('marks Server current on a child route', async () => {
@@ -131,6 +104,7 @@ describe('the phone bar', () => {
     });
 
     await userEvent.click(page.getByRole('button', { name: /menu/i }));
+    await userEvent.click(page.getByRole('button', { name: 'Settings' }));
 
     await expect
       .element(page.getByRole('link', { name: 'Server' }))
@@ -153,6 +127,7 @@ describe('the phone bar', () => {
     });
 
     await userEvent.click(page.getByRole('button', { name: /menu/i }));
+    await userEvent.click(page.getByRole('button', { name: 'Printers' }));
 
     await expect
       .element(page.getByRole('link', { name: 'Fleet' }))

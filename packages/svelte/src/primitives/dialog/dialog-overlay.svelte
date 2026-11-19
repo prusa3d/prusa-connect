@@ -20,7 +20,7 @@
   bind:ref
   data-slot="dialog-overlay"
   class={[
-    'fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in',
+    'fixed inset-0 z-50 bg-black/50 state-open:animate-fade-in state-closed:animate-fade-out',
     className,
   ]}
   {...rest}

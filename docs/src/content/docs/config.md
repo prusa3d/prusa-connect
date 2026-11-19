@@ -397,6 +397,10 @@ carries the line and the key that does the work now.
 | `observability` | `core.observability.enabled` |
 | `fractal` | `resources.link.<name>.enabled` |
 
+`core.frontend.skin` is retired with no replacement. The web app has one
+appearance and no key chooses it, so the server refuses the key and you delete
+the line.
+
 `make build` refuses the three top-level blocks in this table, and two more of
 its own, `server.api` and `documentation.enabled`, naming
 `core.frontend.enabled` and `make docs` in their place. It does not check the

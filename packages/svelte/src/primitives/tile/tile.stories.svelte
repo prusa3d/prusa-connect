@@ -123,3 +123,17 @@
     {/snippet}
   </Tile>
 </Story>
+
+<!-- One of a list of tiles: the list padding, a fainter border and hover. -->
+<Story name="Quiet List" asChild>
+  <Tile class="w-60" href="#bed-1" size="list" quiet>
+    {@render bed('Bed 1', '4 objects')}
+  </Tile>
+</Story>
+
+<!-- A tile whose content draws to its edges, with the larger corner. -->
+<Story name="Flush With A Medium Corner" asChild>
+  <Tile class="w-60 overflow-hidden" onclick={noop} size="flush" radius="md">
+    {@render bed('Bed 1', '4 objects')}
+  </Tile>
+</Story>

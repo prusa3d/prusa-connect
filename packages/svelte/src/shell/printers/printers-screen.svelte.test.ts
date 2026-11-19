@@ -59,8 +59,18 @@ const lastAsked = (listing: { asked: Partial<FleetListingQuery>[] }) =>
 const panel = (): HTMLElement | null =>
   document.body.querySelector<HTMLElement>('[data-slot="popover-content"]');
 
+/** On a toolbar narrower than its container breakpoint, which the test page
+ * is, the facets sit under the Filters disclosure. */
+const showFilters = async (): Promise<void> => {
+  const filters = page.getByRole('button', { name: /^Filters/ });
+  if (filters.element().getAttribute('aria-expanded') !== 'true') {
+    await filters.click();
+  }
+};
+
 /** A facet stays open after a pick, so it is shut before the next one opens. */
 const pick = async (facet: string, value: string): Promise<void> => {
+  await showFilters();
   await page.getByRole('button', { name: new RegExp(facet) }).click();
   await expect.poll(panel).not.toBeNull();
   const surface = panel();
@@ -143,6 +153,54 @@ describe('PrintersScreen', () => {
       .getByRole('button', { name: 'Remove' })
       .click();
     await expect.poll(() => retired).toStrictEqual(['p0']);
+  });
+
+  it('holds the card order while a card menu is open', async () => {
+    const devices = devicesOf(3);
+    const screen = await render(PrintersScreen, {
+      props: { ...propsOf(3), store: fakeListingStore() },
+    });
+    const order = () =>
+      page
+        .getByRole('button', { name: /^Actions for/ })
+        .elements()
+        .map((button) => button.getAttribute('aria-label'));
+    const first = [
+      'Actions for MK4S #0',
+      'Actions for MK4S #1',
+      'Actions for MK4S #2',
+    ];
+    const reversed = [...first].reverse();
+
+    await page.getByRole('button', { name: 'Actions for MK4S #1' }).click();
+    await screen.rerender({
+      listing: fakeListing({ items: [...devices].reverse() }),
+    });
+    await expect.poll(order).toStrictEqual(first);
+
+    await userEvent.keyboard('{Escape}');
+    await expect.poll(order).toStrictEqual(reversed);
+  });
+
+  it('lets go of the order when the card with the open menu leaves', async () => {
+    const devices = devicesOf(3);
+    const screen = await render(PrintersScreen, {
+      props: { ...propsOf(3), store: fakeListingStore() },
+    });
+    const order = () =>
+      page
+        .getByRole('button', { name: /^Actions for/ })
+        .elements()
+        .map((button) => button.getAttribute('aria-label'));
+
+    await page.getByRole('button', { name: 'Actions for MK4S #1' }).click();
+    await screen.rerender({
+      listing: fakeListing({ items: [devices[2]!, devices[0]!] }),
+    });
+
+    await expect
+      .poll(order)
+      .toStrictEqual(['Actions for MK4S #2', 'Actions for MK4S #0']);
   });
 
   it('offers the act inside the empty state, and only there', async () => {
@@ -247,6 +305,7 @@ describe('PrintersScreen', () => {
         }),
       ),
     });
+    await showFilters();
 
     await expect
       .element(
@@ -290,7 +349,11 @@ describe('PrintersScreen', () => {
       .poll(() => lastAsked(listing))
       .toEqual(expect.objectContaining({ sort: 'last_seen', order: 'desc' }));
 
-    await page.getByRole('button', { name: t('printers.sort.desc') }).click();
+    await page
+      .getByRole('button', {
+        name: `${t('printers.sort.last_seen')}: ${t('printers.sort.asc')}`,
+      })
+      .click();
     expect(lastAsked(listing)).toEqual(
       expect.objectContaining({ sort: 'last_seen', order: 'asc' }),
     );
@@ -431,6 +494,7 @@ describe('PrintersScreen', () => {
         }),
       ),
     });
+    await showFilters();
 
     await expect
       .element(page.getByRole('button', { name: /State/ }))

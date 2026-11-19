@@ -1,5 +1,7 @@
 <!-- Who can sign in to this server, and what each of them may do. -->
 <script lang="ts">
+  import { compareValues } from '../../primitives/table/ordering';
+
   import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import UsersIcon from '@lucide/svelte/icons/users';
@@ -28,7 +30,12 @@
   } from '../../primitives';
   import AddPersonDialog from './add-person-dialog.svelte';
   import PeopleListing from './people-listing.svelte';
-  import { browserStore, matches, personRowsOf } from './presentation';
+  import {
+    browserStore,
+    matches,
+    personRowsOf,
+    roleLabelKey,
+  } from './presentation';
   import type {
     PeopleFieldId,
     PersonRow,
@@ -59,6 +66,7 @@
   let password = $state('');
 
   let search = $state('');
+  let toolbarRegion = $state<HTMLDivElement>();
 
   const everyone = $derived(personRowsOf(people.items, subject));
 
@@ -66,7 +74,14 @@
     everyone.filter((row) => matches(search, row.username, row.displayName)),
   );
 
-  const listing = new ListingState<PersonRow>({
+  const sortValues = {
+    person: (row: PersonRow) => row.username,
+    name: (row: PersonRow) => row.displayName,
+    role: (row: PersonRow) => t(roleLabelKey(row.role)),
+    added: (row: PersonRow) => Date.parse(row.createdAt),
+  };
+
+  const listing: ListingState<PersonRow> = new ListingState<PersonRow>({
     id: 'settings-people',
     fields: FIELDS,
     views: viewModes(['table', 'rows']),
@@ -76,6 +91,12 @@
       write: (key, value) => store.write(key, value),
     },
     rows: () => rows,
+    compare: (a, b) => {
+      const sort = listing.sort;
+      if (!sort || !Object.hasOwn(sortValues, sort.field)) return 0;
+      const value = sortValues[sort.field as keyof typeof sortValues];
+      return compareValues(value(a), value(b), sort.order);
+    },
   });
 
   const shows = (field: PeopleFieldId): boolean =>
@@ -139,7 +160,7 @@
   {/if}
 
   <!-- The listing sits on a surface of its own. -->
-  <Card>
+  <Card data-settings-panel>
     <CardHeader>
       <CardTitle>
         <h2 class="contents">{t('settingsPeople.title')}</h2>
@@ -171,12 +192,14 @@
           action={addButton}
         />
       {:else}
-        <ListingToolbar
-          fields={FIELDS}
-          fieldState={listing.fields}
-          view={listing.view}
-          search={searchBox}
-        />
+        <div bind:this={toolbarRegion}>
+          <ListingToolbar
+            fields={FIELDS}
+            fieldState={listing.fields}
+            view={listing.view}
+            search={searchBox}
+          />
+        </div>
 
         {#if rows.length === 0}
           <ListingNoMatch
@@ -187,10 +210,13 @@
             clearLabel={t('primitives.listing.clearSearch')}
             onClear={() => {
               search = '';
+              listing.setPage(0);
+              toolbarRegion?.querySelector('input')?.focus();
             }}
           />
         {:else}
           <PeopleListing
+            {listing}
             rows={listing.page}
             roles={people.roles}
             view={listing.view.value}

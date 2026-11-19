@@ -4,6 +4,7 @@
     StorageScreen,
     type StoragePlace,
     type StorageRow,
+    type StorageRowFold,
   } from '@prusa/connect-ui/shell';
   import { describeFault, translateFor } from '@prusa/connect-ui/i18n';
   import { ABOVE_ROW_LINK, FaultAlert } from '@prusa/connect-ui/primitives';
@@ -129,12 +130,19 @@
   {/if}
 </div>
 
-<!-- A module's file-action entries, on each file's row. -->
-{#snippet fileActions(storage: string, row: StorageRow)}
+<!-- A module's file-action entries, on each file's row, under the row's own
+     acts. -->
+{#snippet fileActions(
+  storage: string,
+  row: StorageRow,
+  fold: StorageRowFold | undefined,
+)}
   <SlotActions
     name="file-action"
     fileRef={fileRefOf(storage, row.path)}
     label={row.name}
     class={ABOVE_ROW_LINK}
+    items={fold?.items}
+    itemsOnlyClass={fold?.shown}
   />
 {/snippet}

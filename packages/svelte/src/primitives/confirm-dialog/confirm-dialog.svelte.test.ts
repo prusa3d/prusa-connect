@@ -36,8 +36,10 @@ describe('ConfirmDialog', () => {
     const confirm = inPanel(panel, 'Delete');
 
     // The one thing the hand-built copies disagreed about, four at 44px and
-    // five at 36.
-    expect(getComputedStyle(cancel).height).toBe('44px');
+    // five at 36. 44px is the floor for a finger on a wall tablet.
+    expect(parseFloat(getComputedStyle(cancel).height)).toBeGreaterThanOrEqual(
+      44,
+    );
     expect(getComputedStyle(confirm).height).toBe(
       getComputedStyle(cancel).height,
     );

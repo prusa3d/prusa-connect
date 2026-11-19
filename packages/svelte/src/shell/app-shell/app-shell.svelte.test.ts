@@ -8,7 +8,7 @@
 // because the breakpoint is a container query.
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { t } from '../../i18n';
@@ -48,6 +48,24 @@ const mount = (width: string, children = body) => {
 };
 
 describe('the frame', () => {
+  it('offers a skip to the main landmark as the first Tab stop', async () => {
+    await mount('80rem');
+    const skip = page.getByRole('link', { name: t('shell.skipToContent') });
+    // Above the screen until it has focus, inside it once it does.
+    expect(skip.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      0,
+    );
+
+    await userEvent.tab();
+    await expect.element(skip).toHaveFocus();
+    await expect
+      .poll(() => skip.element().getBoundingClientRect().top)
+      .toBeGreaterThanOrEqual(0);
+
+    await userEvent.keyboard('{Enter}');
+    await expect.element(page.getByRole('main')).toHaveFocus();
+  });
+
   it('draws one navigation landmark on a wide container', async () => {
     await mount('80rem');
 

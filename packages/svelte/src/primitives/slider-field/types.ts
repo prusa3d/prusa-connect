@@ -7,6 +7,7 @@ export interface SliderFieldProps {
   onCommit: (next: number) => void;
   min: number;
   max: number;
+  /** When supplied, the numeric field also snaps to this increment. */
   step?: number;
   /** Printed after the field, and part of both controls' accessible names. */
   unit: string;

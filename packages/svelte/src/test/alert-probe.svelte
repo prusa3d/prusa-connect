@@ -2,8 +2,7 @@
   An alert with its title and description, for the test to render. The parts
   only work together, and a test cannot write markup of its own.
 
-  Every word comes in as a prop, and this file holds no class of its own, so it
-  adds nothing to what classes.test.ts compares.
+  Every word comes in as a prop.
 -->
 <script lang="ts">
   import InfoIcon from '@lucide/svelte/icons/info';

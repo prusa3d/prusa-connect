@@ -35,10 +35,14 @@
       : formatDuration(row.durationSeconds);
 </script>
 
-<RowList>
+<RowList radius="md">
   {#each rows as row (row.id)}
     {#snippet state()}
-      <Badge variant={stateBadgeVariant(row.state)}>
+      <Badge
+        variant={stateBadgeVariant(row.state)}
+        mono={false}
+        class="font-mono"
+      >
         {t(PRINTER_STATE_LABEL_KEY[row.state])}
       </Badge>
     {/snippet}
@@ -55,6 +59,14 @@
         <span class="min-w-0 truncate">{row.printerName}</span>
       </a>
     {/snippet}
+    {#snippet preview()}
+      <FileThumbnail
+        name={row.fileName}
+        glyph={FileCode2Icon}
+        thumbnailUrl={thumbnailFor?.(row)}
+        size="print"
+      />
+    {/snippet}
     <!-- A row shows the same fields as the table's columns. -->
     <DataRow
       href={row.detailHref}
@@ -68,15 +80,10 @@
         shows('duration') ? span(row) : undefined,
         shows('progress') ? formatUnit(row.progress, '%') : undefined,
       ]}
+      {...shows('preview') ? { leading: preview } : {}}
+      roomy={shows('preview')}
       class="min-h-18"
     >
-      {#snippet leading()}
-        <FileThumbnail
-          name={row.fileName}
-          glyph={FileCode2Icon}
-          thumbnailUrl={thumbnailFor?.(row)}
-        />
-      {/snippet}
       {#snippet actions()}
         <JobsRowActions {row} {printAgainOf} />
       {/snippet}

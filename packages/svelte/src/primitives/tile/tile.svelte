@@ -19,6 +19,8 @@
     disabled = false,
     off = false,
     size = 'md',
+    radius = 'sm',
+    quiet = false,
     label,
     top,
     child,
@@ -32,8 +34,8 @@
   );
   const picked = $derived(pressed === true || selected);
 
-  // `data-slot` is what the frame's `has-[…]` selectors find, so a focused
-  // checkbox in `top` keeps its own ring and does not light the frame.
+  // `data-slot` is what the frame's `with-press-focus` selectors find, so a
+  // focused checkbox in `top` keeps its own ring and does not light the frame.
   const press: TilePressProps = $derived({
     'data-slot': 'tile-press',
     class: `${ROW_LINK} min-w-0 text-start outline-none disabled:cursor-default`,
@@ -46,16 +48,23 @@
   {...rest}
   data-slot="tile"
   class={[
-    'relative isolate flex flex-col gap-2 rounded-sm border',
-    size === 'sm' ? 'p-2' : 'p-3',
+    'relative isolate flex flex-col gap-2 border',
+    radius === 'md' ? 'rounded-md' : 'rounded-sm',
+    size === 'sm' && 'p-2',
+    size === 'md' && 'p-3',
+    size === 'list' && 'px-3 py-2',
+    size === 'flush' && 'p-0',
     picked && 'border-primary bg-accent',
     !picked && off && 'border-dashed border-destructive',
-    !picked && !off && 'border-border',
+    !picked && !off && !quiet && 'border-border',
+    !picked && !off && quiet && 'border-border/60',
     pressable &&
-      'has-[[data-slot=tile-press]:focus-visible]:ring-2 has-[[data-slot=tile-press]:focus-visible]:ring-ring has-[[data-slot=tile-press]:focus-visible]:ring-offset-2 has-[[data-slot=tile-press]:focus-visible]:ring-offset-background',
+      'with-press-focus:ring-2 with-press-focus:ring-ring with-press-focus:ring-offset-2 with-press-focus:ring-offset-background',
     pressable &&
       !disabled &&
-      'cursor-pointer transition-colors hover:bg-accent motion-reduce:transition-none',
+      'cursor-pointer transition-colors motion-reduce:transition-none',
+    pressable && !disabled && !quiet && 'hover:bg-accent',
+    pressable && !disabled && quiet && 'hover:bg-foreground/5',
     disabled && 'text-disabled-foreground',
     className,
   ]}

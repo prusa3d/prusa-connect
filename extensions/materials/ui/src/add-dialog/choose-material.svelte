@@ -22,6 +22,7 @@
     MaterialSwatch,
     ListingSearch,
   } from '@prusa/connect-ui/primitives';
+  import { FilamentColorWheel } from '@prusa/connect-ui/shell';
   import { moduleTabId } from '@prusa/connect-ui/slots';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import { onMount, untrack } from 'svelte';
@@ -32,6 +33,7 @@
   import { MaterialList } from '../list.svelte';
   import MaterialDetails from '../material-page/material-details.svelte';
   import FaultNote from '../materials-page/fault-note.svelte';
+  import { WHEEL, WHEEL_OUTER } from '../colour-palette';
   import ColourSwatches from '../colour-swatches.svelte';
   import SearchSelect from '../search-select.svelte';
   import CustomMaterialForm from './custom-material-form.svelte';
@@ -39,12 +41,14 @@
   let {
     service,
     chosen,
+    colourWheel = false,
     onchoose,
     oncancel,
   }: {
     service: MaterialsService;
     /** The material step 2 had, when the person came back to change it. */
     chosen?: Detail | undefined;
+    colourWheel?: boolean;
     onchoose: (detail: Detail) => void;
     /** Closes the dialog. */
     oncancel: () => void;
@@ -52,6 +56,8 @@
 
   const host = heldHost();
   const t = host.t;
+  const families = WHEEL;
+  const colorLabel = (color: (typeof families)[number]) => t(color[2]);
   const catalogue = heldCatalogue();
 
   /** The dialog asks the core nothing: only a person who may write opens it. */
@@ -229,11 +235,28 @@
             <span class="text-sm text-muted-foreground">
               {t('materials.add.colour')}
             </span>
-            <ColourSwatches
-              value={list.query.color}
-              onPick={(color: string | undefined) =>
-                void list.narrow({ color })}
-            />
+            {#if colourWheel}
+              <div class="w-32 shrink-0">
+                <FilamentColorWheel
+                  colors={families}
+                  outerCount={WHEEL_OUTER}
+                  selected={families.find(
+                    ([family]) => family === list.query.color,
+                  )}
+                  labelOf={colorLabel}
+                  onChoose={([color]: (typeof families)[number]) =>
+                    void list.narrow({
+                      color: list.query.color === color ? undefined : color,
+                    })}
+                />
+              </div>
+            {:else}
+              <ColourSwatches
+                value={list.query.color}
+                onPick={(color: string | undefined) =>
+                  void list.narrow({ color })}
+              />
+            {/if}
           </div>
         {/if}
 

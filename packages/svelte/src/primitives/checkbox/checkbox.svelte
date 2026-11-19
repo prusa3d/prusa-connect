@@ -5,8 +5,8 @@
   The focus ring is the Button's recipe, so a keyboard walk across a form rings
   every control the same way.
 
-  The disabled colours use compound `disabled:data-[state=checked]:*` selectors.
-  A plain `disabled:*` ties on specificity with `data-[state=checked]:*` and can
+  The disabled colours use compound `disabled:state-checked:*` selectors.
+  A plain `disabled:*` ties on specificity with `state-checked:*` and can
   lose, which leaves a disabled ticked box painted in the live colour. The tick
   itself is `text-current`, so the root's `text-*` covers both.
 -->
@@ -32,7 +32,8 @@
   bind:indeterminate
   data-slot="checkbox"
   class={[
-    'peer size-4 shrink-0 rounded-sm border border-input transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:text-disabled-foreground data-[state=checked]:border-control-on data-[state=checked]:bg-control-on data-[state=checked]:text-control-on-foreground data-[state=checked]:hover:border-primary-hovered data-[state=checked]:hover:bg-primary-hovered data-[state=checked]:active:bg-primary-pressed disabled:data-[state=checked]:border-transparent disabled:data-[state=checked]:bg-disabled disabled:data-[state=checked]:text-disabled-foreground data-[state=indeterminate]:border-control-on data-[state=indeterminate]:bg-control-on data-[state=indeterminate]:text-control-on-foreground',
+    'peer size-checkbox shrink-0 rounded-checkbox border border-input transition-colors outline-none hover:border-checkbox-on focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:text-disabled-foreground state-checked:border-control-on state-checked:bg-control-on state-checked:text-control-on-foreground enabled:state-checked:border-checkbox-on enabled:state-checked:bg-checkbox-on enabled:state-checked:text-control-on-foreground enabled:state-checked:hover:border-checkbox-on enabled:state-checked:hover:bg-checkbox-on enabled:state-checked:active:bg-checkbox-on disabled:state-checked:bg-disabled disabled:state-checked:text-disabled-foreground state-indeterminate:border-control-on state-indeterminate:bg-control-on state-indeterminate:text-control-on-foreground',
+    'disabled:state-checked:border-border disabled:state-indeterminate:border-border disabled:state-unchecked:border-border',
     className,
   ]}
   {...rest}
@@ -53,7 +54,7 @@
         data-slot="checkbox-indicator"
         class="grid place-content-center text-current transition-none"
       >
-        <CheckIcon class="size-3.5" />
+        <CheckIcon class="size-checkbox-mark" />
       </span>
     {/if}
   {/snippet}

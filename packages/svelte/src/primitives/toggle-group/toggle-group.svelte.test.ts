@@ -97,6 +97,30 @@ describe('ToggleGroup', () => {
     expect(edges.size).toBe(2);
   });
 
+  // A choice that sets the machine is picked in the primary button's orange,
+  // and one that only changes the page keeps the selected blue.
+  it('paints the picked item in the primary fill under the primary tone', async () => {
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'var(--color-button-accent)';
+    document.body.append(probe);
+    const accent = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+
+    const fills = new Map<string, string>();
+    for (const tone of ['default', 'primary'] as const) {
+      const { unmount } = await render(ToggleGroupProbe, {
+        props: { tone },
+      });
+      const [picked] = items();
+      expect(picked!.dataset.tone).toBe(tone);
+      fills.set(tone, getComputedStyle(picked!).backgroundColor);
+      await unmount();
+    }
+
+    expect(fills.get('primary')).toBe(accent);
+    expect(fills.get('default')).not.toBe(accent);
+  });
+
   // Under `outline` a shared edge would be drawn by both its neighbours, so
   // every item but the first drops its left border.
   it('draws one hairline between two outlined items', async () => {
@@ -122,7 +146,7 @@ describe('ToggleGroup', () => {
 
     expect(heights[0]).toBeLessThan(heights[1]!);
     expect(heights[1]).toBeLessThan(heights[2]!);
-    // An item is padded by the group and not by its size: a segmented control
+    // An item's inline padding is the same at every size: a segmented control
     // whose options are padded differently reads as a row of loose buttons.
     expect(paddings.size).toBe(1);
   });

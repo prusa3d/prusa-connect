@@ -34,6 +34,8 @@ const FAMILIES = [
   'printerCode.',
   // Built from the answer's name the printer sent.
   'printerButton.',
+  // Built from the event type the server stored.
+  'printerDetailHistory.eventType.',
 ];
 
 const sourceFiles = async (at: string): Promise<string[]> => {

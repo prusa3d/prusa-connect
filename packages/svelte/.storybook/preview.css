@@ -5,3 +5,13 @@
    and adding one `@source` keeps a single theme and a single set of tokens. */
 @import '../src/styles/index.css';
 @source '.';
+
+/* The frames stories draw a primitive in. */
+@theme inline {
+  --container-story-narrow-row: 280px;
+  --container-story-pager: 40rem;
+}
+
+body.sb-main-padded:has([data-slot='app-shell']) {
+  padding: 0;
+}

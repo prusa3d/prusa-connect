@@ -8,18 +8,13 @@
   import {
     type Clock,
     CLOCKS,
-    formatDateTime,
     formatNumber,
     formatting,
-    formatUnit,
     t,
     TEMPERATURE_UNITS,
     type TemperatureUnit,
   } from '../../i18n';
   import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
     DEFAULT_VIEW_FIELDS,
     type DefaultViewField,
     Label,
@@ -27,32 +22,17 @@
     type PageSize,
     RadioGroup,
     RadioGroupItem,
-    Separator,
     SettingsPane,
     ToggleGroup,
     ToggleGroupItem,
-    type ViewModeName,
     viewModes,
     viewPreferences,
   } from '../../primitives';
-  import { type Skin, SKIN_NAMES } from '../../styles/skin';
-  import { skin } from '../../styles/skin-store.svelte';
+  import { textSize, type TextSize } from '../../styles/text-size.svelte';
   import { theme, type ThemePreference } from '../../styles/theme.svelte';
   import type { SettingsAppearanceScreenProps } from './types';
-  import ViewSchematic from './view-schematic.svelte';
 
   let { home, dashboards = true }: SettingsAppearanceScreenProps = $props();
-
-  /** What the folded row says it is hiding: the picks themselves, not their count. */
-  const defaultViewsSummary = $derived(
-    DEFAULT_VIEW_FIELDS.map((field) => {
-      const picked = viewModes([...field.modes]).find(
-        (option) => option.value === chosenView(field),
-      );
-
-      return `${t(field.labelKey)}: ${picked?.label ?? '\u2014'}`;
-    }).join(' \u00b7 '),
-  );
 
   const THEME_ICON = {
     system: MonitorIcon,
@@ -77,19 +57,6 @@
     dark: 'settingsAppearance.theme.dark',
   } as const;
 
-  // A key per value rather than one sentence per group.
-  const THEME_HINT = {
-    system: 'settingsAppearance.theme.hint.system',
-    light: 'settingsAppearance.theme.hint.light',
-    dark: 'settingsAppearance.theme.hint.dark',
-  } as const;
-
-  const SKIN_HINT = {
-    prusa: 'settingsAppearance.skin.hint.prusa',
-    slicer: 'settingsAppearance.skin.hint.slicer',
-    prusapro: 'settingsAppearance.skin.hint.prusapro',
-  } as const;
-
   const HOME_NAME = {
     dashboard: 'settingsAppearance.home.dashboard',
     auto: 'settingsAppearance.home.auto',
@@ -104,12 +71,6 @@
     'all-printers': 'settingsAppearance.home.allPrintersNote',
   } as const;
 
-  const SKIN_NAME = {
-    prusa: 'settingsAppearance.skin.prusa',
-    slicer: 'settingsAppearance.skin.slicer',
-    prusapro: 'settingsAppearance.skin.prusapro',
-  } as const;
-
   const CLOCK_NAME = {
     '24-hour': 'settingsAppearance.clock.24',
     '12-hour': 'settingsAppearance.clock.12',
@@ -120,15 +81,7 @@
     fahrenheit: 'settingsAppearance.temperature.fahrenheit',
   } as const;
 
-  // A sample rather than a sentence naming the pattern.
-  const SAMPLE_INSTANT = new Date(2026, 7, 19, 17, 5);
-
-  // A nozzle at its usual PLA target.
-  const SAMPLE_DEGREES = 215;
-
   const id = $props.id();
-
-  let viewsOpen = $state(false);
 
   /** The stored pick, or the shape the listing opens in until there is one. */
   const chosenView = (field: DefaultViewField): string =>
@@ -139,8 +92,8 @@
     theme.preference = next as ThemePreference;
   };
 
-  const chooseSkin = (next: string): void => {
-    skin.preference = next as Skin;
+  const chooseTextSize = (next: string): void => {
+    textSize.preference = next as TextSize;
   };
 
   const chooseClock = (next: string): void => {
@@ -178,15 +131,15 @@
     class="rounded-input grid h-12 w-20 shrink-0 grid-cols-2 gap-1 border border-border bg-muted p-1.5"
   >
     {#if shape === 'dashboard'}
-      <span class="rounded-badge col-span-2 bg-primary"></span>
+      <span class="rounded-badge col-span-2 bg-control-on"></span>
       <span class="rounded-badge bg-border"></span>
       <span class="rounded-badge bg-border"></span>
     {:else if shape === 'auto'}
-      <span class="rounded-badge row-span-2 bg-primary"></span>
+      <span class="rounded-badge row-span-2 bg-control-on"></span>
       <span class="rounded-badge bg-border"></span>
       <span class="rounded-badge bg-border"></span>
     {:else if shape === 'my-printer'}
-      <span class="rounded-badge col-span-2 row-span-2 bg-primary"></span>
+      <span class="rounded-badge col-span-2 row-span-2 bg-control-on"></span>
     {:else}
       <span class="rounded-badge bg-border"></span>
       <span class="rounded-badge bg-border"></span>
@@ -195,21 +148,13 @@
     {/if}
   </span>
 {/snippet}
-
-<SettingsPane class="w-full" title={t('settingsAppearance.title')}>
-  <div class="flex flex-col gap-4 pb-6">
-    <h3 class="text-xs font-normal text-muted-foreground">
-      {t('settingsAppearance.look.title')}
-    </h3>
-
-    <div class="grid gap-6 @[44rem]/pane:grid-cols-2">
+{#snippet lookSection()}
+  <div class="flex flex-col gap-section-gap pb-0">
+    <div class="grid gap-section-block">
       <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
+        <h3 class="text-body font-medium">
           {t('settingsAppearance.theme.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.theme.note')}
-        </p>
+        </h3>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -225,53 +170,40 @@
             </ToggleGroupItem>
           {/each}
         </ToggleGroup>
-        <p class="text-caption text-muted-foreground">
-          {t(THEME_HINT[theme.preference])}
-        </p>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
-          {t('settingsAppearance.skin.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.skin.note')}
-        </p>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          value={skin.preference}
-          onValueChange={chooseSkin}
-          aria-label={t('settingsAppearance.skin.label')}
-        >
-          {#each SKIN_NAMES as name (name)}
-            <ToggleGroupItem value={name}>
-              {t(SKIN_NAME[name])}
-            </ToggleGroupItem>
-          {/each}
-        </ToggleGroup>
-        <p class="text-caption text-muted-foreground">
-          {t(SKIN_HINT[skin.preference])}
-        </p>
       </div>
     </div>
   </div>
+{/snippet}
 
-  <Separator />
-
-  <div class="flex flex-col gap-4 py-6">
-    <h3 class="text-xs font-normal text-muted-foreground">
-      {t('settingsAppearance.reading.title')}
-    </h3>
-
-    <div class="grid gap-6 @[44rem]/pane:grid-cols-2">
+{#snippet readingSection()}
+  <div class="flex flex-col gap-section-gap py-0">
+    <div class="grid grid-cols-1 gap-section-block @md/pane:grid-cols-2">
       <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
+        <h3 class="text-body font-medium">
+          {t('settingsAppearance.textSize.label')}
+        </h3>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={textSize.preference}
+          onValueChange={chooseTextSize}
+          aria-label={t('settingsAppearance.textSize.label')}
+        >
+          <ToggleGroupItem value="small">
+            {t('settingsAppearance.textSize.small')}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="normal">
+            {t('settingsAppearance.textSize.normal')}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="large">
+            {t('settingsAppearance.textSize.large')}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      <div class="flex flex-col gap-2">
+        <h3 class="text-body font-medium">
           {t('settingsAppearance.clock.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.clock.note')}
-        </p>
+        </h3>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -285,18 +217,12 @@
             </ToggleGroupItem>
           {/each}
         </ToggleGroup>
-        <p class="text-caption text-muted-foreground">
-          {formatDateTime(SAMPLE_INSTANT)}
-        </p>
       </div>
 
       <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
+        <h3 class="text-body font-medium">
           {t('settingsAppearance.temperature.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.temperature.note')}
-        </p>
+        </h3>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -310,18 +236,12 @@
             </ToggleGroupItem>
           {/each}
         </ToggleGroup>
-        <p class="text-caption text-muted-foreground">
-          {formatUnit(SAMPLE_DEGREES, '°C', { maximumFractionDigits: 0 })}
-        </p>
       </div>
 
       <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
+        <h3 class="text-body font-medium">
           {t('settingsAppearance.rows.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.rows.note')}
-        </p>
+        </h3>
         <!-- A toggle group and not the pager's own select. -->
         <ToggleGroup
           type="single"
@@ -339,24 +259,20 @@
       </div>
     </div>
   </div>
+{/snippet}
 
-  <Separator />
-
-  <div class="flex flex-col gap-4 pt-6">
-    <h3 class="text-xs font-normal text-muted-foreground">
-      {t('settingsAppearance.open.title')}
-    </h3>
-
+{#snippet openSection()}
+  <div
+    class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
     <div class="grid gap-6 @[44rem]/pane:grid-cols-2">
       <div class="flex flex-col gap-2">
-        <h4 class="text-body font-medium">
+        <h3 class="text-body font-medium">
           {t('settingsAppearance.home.label')}
-        </h4>
-        <p class="text-caption text-muted-foreground">
-          {t('settingsAppearance.home.note')}
-        </p>
+        </h3>
         <RadioGroup
-          class="gap-4 pt-1"
+          gap="section"
+          class="pt-1"
           value={homeShown}
           onValueChange={chooseHome}
           aria-label={t('settingsAppearance.home.label')}
@@ -369,7 +285,7 @@
                 <Label variant="option" for={`${id}-${name}`}>
                   {t(HOME_NAME[name])}
                 </Label>
-                <span class="text-caption text-muted-foreground">
+                <span class="text-sm text-muted-foreground">
                   {t(HOME_NOTE[name])}
                 </span>
               </div>
@@ -378,71 +294,76 @@
         </RadioGroup>
       </div>
     </div>
-
-    <!-- Folded: a person opens Appearance to change the theme far more often
-         than to decide which shape Users opens in, and the closed row still
-         says every current pick, so nothing is hidden, only stowed. -->
-    <Collapsible class="mt-2" bind:open={viewsOpen}>
-      <CollapsibleTrigger variant="row">
-        <span class="flex min-w-0 flex-1 flex-col">
-          <span class="text-body font-medium">
-            {t('settingsAppearance.defaultViews.label')}
-          </span>
-          <span class="truncate text-caption font-normal text-muted-foreground">
-            {defaultViewsSummary}
-          </span>
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <p class="pt-3 text-caption text-muted-foreground">
-          {t('settingsAppearance.defaultViews.note')}
-        </p>
-        <div
-          class="grid grid-cols-1 gap-x-8 gap-y-4 pt-3 @[36rem]/pane:grid-cols-2 @[60rem]/pane:grid-cols-3"
-        >
-          {#each DEFAULT_VIEW_FIELDS as field (field.id)}
-            <div class="flex flex-col gap-2">
-              <h4 id={`${id}-view-${field.id}`} class="text-body font-medium">
-                {t(field.labelKey)}
-              </h4>
-              <!-- `flex` as well as `flex-row`: the primitive's own base is a
-                   grid, which a bare direction does not turn off. -->
-              <RadioGroup
-                class="flex flex-row gap-2"
-                value={chosenView(field)}
-                onValueChange={(next: string) => {
-                  viewPreferences.setDefaultView(field.id, next);
-                }}
-                aria-labelledby={`${id}-view-${field.id}`}
-              >
-                <!-- `viewModes()` and not a list written here: the names, the
-                     words and the order are the listing's own. -->
-                {#each viewModes([...field.modes]) as option (option.value)}
-                  {@const chosen = option.value === chosenView(field)}
-                  <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- a native radio inside its card label: radio-group semantics and arrow keys no primitive gives -->
-                  <label
-                    for={`${id}-view-${field.id}-${option.value}`}
-                    class={[
-                      'flex cursor-pointer flex-col items-center gap-1.5 rounded-md border p-2 text-caption font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background hover:bg-accent',
-                      chosen
-                        ? 'border-selected bg-selected/10 text-foreground'
-                        : 'border-input text-muted-foreground',
-                    ]}
-                  >
-                    <RadioGroupItem
-                      value={option.value}
-                      id={`${id}-view-${field.id}-${option.value}`}
-                      class="sr-only"
-                    />
-                    <ViewSchematic kind={option.value as ViewModeName} />
-                    {option.label}
-                  </label>
-                {/each}
-              </RadioGroup>
-            </div>
-          {/each}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
   </div>
-</SettingsPane>
+{/snippet}
+
+{#snippet viewsSection()}
+  <div class="flex flex-col divide-y divide-border">
+    {#each DEFAULT_VIEW_FIELDS as field (field.id)}
+      <div
+        class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-panel-padding-mobile py-3 @lg/pane:px-panel-padding"
+      >
+        <h3 class="text-body font-medium">{t(field.labelKey)}</h3>
+        <!-- `viewModes()` and not a list written here: the names, the words
+             and the order are the listing's own. -->
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={chosenView(field)}
+          onValueChange={(next: string) => {
+            viewPreferences.setDefaultView(field.id, next);
+          }}
+          aria-label={t(field.labelKey)}
+        >
+          {#each viewModes([...field.modes]) as option (option.value)}
+            {@const Icon = option.icon}
+            <ToggleGroupItem value={option.value}>
+              <Icon />
+              {option.label}
+            </ToggleGroupItem>
+          {/each}
+        </ToggleGroup>
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
+<div class="@container/appearance flex w-full min-w-0 flex-col gap-section-gap">
+  <h2 data-slot="settings-section-title" class="text-lead font-semibold">
+    {t('settingsAppearance.title')}
+  </h2>
+  <div
+    data-slot="appearance-panels"
+    class="grid min-w-0 grid-cols-settings-panels gap-x-section-gap gap-y-form-gap @appearance-columns/appearance:gap-y-section-gap"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-form-gap @appearance-columns/appearance:gap-section-gap"
+    >
+      <SettingsPane title={t('settingsAppearance.look.title')} class="min-w-0">
+        <div class="min-w-0 p-panel-padding-mobile @lg/pane:p-panel-padding">
+          {@render lookSection()}
+        </div>
+      </SettingsPane>
+      <SettingsPane
+        title={t('settingsAppearance.reading.title')}
+        class="min-w-0 @appearance-columns/appearance:flex-auto"
+      >
+        <div class="min-w-0 p-panel-padding-mobile @lg/pane:p-panel-padding">
+          {@render readingSection()}
+        </div>
+      </SettingsPane>
+    </div>
+    <SettingsPane
+      title={t('settingsAppearance.startPage.title')}
+      class="min-w-0"
+    >
+      {@render openSection()}
+    </SettingsPane>
+  </div>
+  <SettingsPane
+    title={t('settingsAppearance.defaultViews.label')}
+    class="min-w-0"
+  >
+    {@render viewsSection()}
+  </SettingsPane>
+</div>

@@ -5,6 +5,7 @@ export interface TextareaProps extends Omit<
   'class' | 'value'
 > {
   class?: ClassValue | undefined;
+  resizable?: boolean | undefined;
   /** The text in the box. Bindable, so a form reads what a person typed. */
   value?: string;
 }

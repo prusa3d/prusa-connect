@@ -181,8 +181,8 @@ type Config struct {
 	// BetaPortal runs OAuth device pairing without exposing the device code,
 	// token or proof key. Nil publishes the same contract and answers not found.
 	BetaPortal BetaPortalPairing
-	// App is core.frontend as the page reads it: the name, the language, the
-	// theme and the brand file, served unauthenticated at /api/v1/ui. The zero
+	// App is core.frontend as the page reads it: the name, the language and the
+	// theme, served unauthenticated at /api/v1/ui. The zero
 	// value is a deployment that serves no app, which is what a caller reading
 	// it is told.
 	App AppSettings

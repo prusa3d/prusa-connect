@@ -110,28 +110,27 @@ describe('the rule above Settings', () => {
 });
 
 describe('an item with children', () => {
-  it('draws no chevron for an item that has none', async () => {
+  it('keeps an item that has none a link', async () => {
     await render(Rail, { items: ITEMS, currentPath: '/printers' });
 
-    expect(page.getByRole('button', { name: /sections$/ }).all()).toHaveLength(
+    expect(page.getByRole('button', { name: 'Printers' }).all()).toHaveLength(
       0,
     );
+    await expect
+      .element(page.getByRole('link', { name: 'Printers' }))
+      .toHaveAttribute('href', '/printers');
   });
 
-  it('reveals its children behind a chevron that never navigates', async () => {
+  it('reveals its children behind a toggle that never navigates', async () => {
     await render(Rail, { items: NESTED_ITEMS, currentPath: '/jobs' });
 
-    const toggle = page.getByRole('button', {
-      name: 'Show the Printers sections',
-    });
+    const toggle = page.getByRole('button', { name: 'Printers' });
     await expect.element(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(page.getByRole('link', { name: 'Fleet' }).all()).toHaveLength(0);
 
     await toggle.click();
 
-    await expect
-      .element(page.getByRole('button', { name: 'Hide the Printers sections' }))
-      .toHaveAttribute('aria-expanded', 'true');
+    await expect.element(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect
       .element(page.getByRole('link', { name: 'Fleet' }))
       .toBeInTheDocument();
@@ -147,8 +146,22 @@ describe('an item with children', () => {
       .element(page.getByRole('link', { name: 'Fleet' }))
       .toBeInTheDocument();
     await expect
-      .element(page.getByRole('button', { name: 'Hide the Printers sections' }))
+      .element(page.getByRole('button', { name: 'Printers' }))
       .toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+describe('an item whose children leave out its own page', () => {
+  it('lists the item itself first among its sections', async () => {
+    await render(Rail, { items: NESTED_ITEMS, currentPath: '/jobs' });
+
+    await page.getByRole('button', { name: 'Printers' }).click();
+
+    const links = page
+      .getByRole('link')
+      .all()
+      .map((link) => link.element().getAttribute('href'));
+    expect(links).toEqual(['/printers', '/printers/fleet', '/jobs']);
   });
 });
 
@@ -270,9 +283,19 @@ describe('an item with children in a collapsed rail', () => {
 
     await page.getByRole('button', { name: 'Settings' }).click();
 
-    await expect
-      .element(page.getByRole('menuitem', { name: 'Server' }))
-      .toHaveClass(/focus:bg-selected-hovered/);
+    const server = page.getByRole('menuitem', { name: 'Server' });
+    await expect.element(server).toBeInTheDocument();
+    const item = server.element();
+    item.focus();
+    const probe = document.createElement('div');
+    probe.className = 'bg-selected-hovered text-selected-foreground';
+    document.body.append(probe);
+
+    const focused = getComputedStyle(item);
+    const wanted = getComputedStyle(probe);
+    expect(focused.backgroundColor).toBe(wanted.backgroundColor);
+    expect(focused.color).toBe(wanted.color);
+    probe.remove();
   });
 
   it('keeps an item without children a plain link', async () => {

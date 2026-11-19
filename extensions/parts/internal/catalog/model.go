@@ -125,6 +125,11 @@ type File struct {
 	Size int64 `json:"size"`
 	// SHA256 is the digest the storage reported, and empty where it keeps none.
 	SHA256 string `json:"sha256,omitempty"`
+	// Thumbnail is whether the storage reported a picture inside the file when
+	// the version was written. It is nil where the storage did not say, which
+	// includes every file written before it was recorded, so a page still asks
+	// for those.
+	Thumbnail *bool `json:"thumbnail,omitempty"`
 }
 
 // Version is one state of a part: the files it was at, and a note on what

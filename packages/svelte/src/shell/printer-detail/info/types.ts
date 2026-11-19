@@ -2,6 +2,7 @@ import type { Snippet } from 'svelte';
 
 import type { DeviceAdministration, DeviceDetail } from '../../../data';
 import type { Device } from '../../../domain';
+import type { CommandPort, TelemetrySource } from '../types';
 
 /** What the panel reads of one printer's prints. */
 export type PrinterHistorySource = Pick<
@@ -60,4 +61,16 @@ export interface PrinterInfoPanelProps {
    * caller the record says may administer the printer.
    */
   access?: Snippet | undefined;
+  /**
+   * What the Tools table reads and sends: its material chips need the
+   * telemetry, its temperature editors need the commands too.
+   */
+  telemetry?: TelemetrySource | undefined;
+  commands?: CommandPort | undefined;
+  /**
+   * Draws the material of one tool in the Tools table, handed the tool's id
+   * and the chip to fall back on. An extension that assigns materials
+   * supplies it.
+   */
+  material?: Snippet<[string, Snippet]> | undefined;
 }

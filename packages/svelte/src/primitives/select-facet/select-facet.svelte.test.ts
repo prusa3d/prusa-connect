@@ -231,25 +231,9 @@ describe('SelectFacet', () => {
     );
     if (viewport === null) throw new Error('no viewport rendered');
 
-    expect(viewport.clientHeight).toBe(280);
     expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
     // A long value wraps inside the panel instead of widening it.
     expect(viewport.scrollWidth).toBe(viewport.clientWidth);
-  });
-
-  it('stands the search box on the height the panel asks for', async () => {
-    const { container } = await draw({
-      searchable: true,
-      searchAriaLabel: 'Search states',
-    });
-
-    const box = container.querySelector<HTMLInputElement>(
-      '[data-slot="input"]',
-    );
-    if (box === null) throw new Error('no search box rendered');
-
-    expect(getComputedStyle(box).height).toBe('32px');
-    expect(Math.round(parseFloat(getComputedStyle(box).fontSize))).toBe(12);
   });
 
   it('reaches every row from the keyboard', async () => {

@@ -131,9 +131,7 @@ describe('ContextMenu', () => {
     expect(remove.getAttribute('data-variant')).toBe('destructive');
     expect(rename.getAttribute('data-variant')).toBe('default');
     expect(
-      remove.classList.contains(
-        'data-[variant=destructive]:text-destructive-text',
-      ),
+      remove.classList.contains('variant-destructive:text-destructive-text'),
     ).toBe(true);
     expect(getComputedStyle(remove).color).not.toBe(
       getComputedStyle(rename).color,

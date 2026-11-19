@@ -101,7 +101,11 @@ beforeAll(async () => {
 
   await sheet.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
   await sheet.getByLabel('Username').fill(process.env.PCL_DEMO_USER ?? 'demo');
-  await sheet.getByLabel('Password').fill(process.env.PCL_DEMO_PASSWORD ?? '');
+  // Exact: the field's reveal toggle is named Show Password, which a
+  // substring match on the label finds too.
+  await sheet
+    .getByLabel('Password', { exact: true })
+    .fill(process.env.PCL_DEMO_PASSWORD ?? '');
   await sheet.getByRole('button', { name: 'Sign in' }).click();
   await sheet.waitForSelector('[data-slot="rail"]', { timeout: 60_000 });
 });

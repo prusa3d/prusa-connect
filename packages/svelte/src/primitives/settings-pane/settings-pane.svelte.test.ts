@@ -1,9 +1,13 @@
 import { createRawSnippet } from 'svelte';
-import { describe, expect, it } from 'vitest';
-import { page } from 'vitest/browser';
+import { afterEach, describe, expect, it } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import SettingsPane from './settings-pane.svelte';
+
+afterEach(() => {
+  document.documentElement.classList.remove('dark');
+});
 import SettingsRow from './settings-row.svelte';
 
 const snippet = (html: string) =>
@@ -132,3 +136,28 @@ describe('SettingsPane', () => {
     }
   });
 });
+
+it.each([false, true])(
+  'keeps the panel surface steady during hover and focus (dark=%s)',
+  async (dark) => {
+    document.documentElement.classList.toggle('dark', dark);
+    await render(SettingsPane, {
+      props: {
+        title: 'Password',
+        children: snippet('<input aria-label="Password value" />'),
+      },
+    });
+    const pane = page.getByRole('region', { name: 'Password' });
+    const panel = pane.element();
+    const shadow = getComputedStyle(panel).boxShadow;
+
+    await userEvent.hover(pane);
+    expect(getComputedStyle(panel).boxShadow).toBe(shadow);
+
+    const input = page.getByRole('textbox', { name: 'Password value' });
+    await input.click();
+    expect(panel.matches(':focus-within')).toBe(true);
+    expect(getComputedStyle(panel).boxShadow).toBe(shadow);
+    expect(getComputedStyle(panel, '::after').content).toBe('none');
+  },
+);

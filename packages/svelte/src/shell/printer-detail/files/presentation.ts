@@ -1,22 +1,16 @@
 // What a file on a printer's drive is.
-import type { Component } from 'svelte';
-
-import FileIcon from '@lucide/svelte/icons/file';
-import FileCode2Icon from '@lucide/svelte/icons/file-code-2';
-import FolderIcon from '@lucide/svelte/icons/folder';
-
 import { isPrintFile } from '../../../domain';
 
 import type { PrinterFileEntry } from './types';
 
 export const SPLIT_ROW =
-  'flex flex-col @5xl/printer-files:flex-row @5xl/printer-files:items-stretch';
+  'flex flex-col @4xl/printer-files:flex-row @4xl/printer-files:items-stretch';
 
 export const SPLIT_LEADING =
-  'border-t border-border pt-6 @5xl/printer-files:order-first @5xl/printer-files:w-1/3 @5xl/printer-files:min-w-64 @5xl/printer-files:border-t-0 @5xl/printer-files:pt-0 @5xl/printer-files:pe-6';
+  'order-first border-b border-border pb-6 @4xl/printer-files:w-(--file-upload-pane-width) @4xl/printer-files:max-w-2/5 @4xl/printer-files:min-w-0 @4xl/printer-files:border-b-0 @4xl/printer-files:pb-0 @4xl/printer-files:pe-panel-padding';
 
 export const SPLIT_TRAILING =
-  'border-border pb-6 @5xl/printer-files:border-s @5xl/printer-files:pb-0 @5xl/printer-files:ps-6';
+  'border-border pt-6 @4xl/printer-files:border-s @4xl/printer-files:pt-0 @4xl/printer-files:ps-panel-padding';
 
 /** A firmware image the printer can write to itself. */
 const FIRMWARE = /\.bbf$/i;
@@ -37,9 +31,3 @@ export const isFirmware = (entry: PrinterFileEntry): boolean =>
 
 export const isModel = (entry: PrinterFileEntry): boolean =>
   !entry.folder && MODEL.test(nameOf(entry));
-
-export const glyphOf = (entry: PrinterFileEntry): Component => {
-  if (entry.folder) return FolderIcon;
-
-  return isPrintable(entry) ? FileCode2Icon : FileIcon;
-};

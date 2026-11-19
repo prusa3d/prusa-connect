@@ -1,9 +1,6 @@
 <!--
   A searchable select facet inside its real popover, so a test can press
   Escape against the panel bits-ui portals to the body.
-
-  This file holds no class of its own, so it adds nothing to what
-  classes.test.ts compares.
 -->
 <script lang="ts">
   import FacetPopover from '../primitives/facet-popover/facet-popover.svelte';

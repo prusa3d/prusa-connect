@@ -30,12 +30,12 @@ beside one in the new.
 | --- | --- |
 | the theme's custom properties, for light and dark | the host page |
 | the `dark` variant and the library's `@utility` definitions | the host page |
-| the library's components, already styled | the host page |
 | one rule per utility class the module's markup names | the module's own bundle |
+| one rule per utility class the library's components name, variants included | the module's own bundle |
 
 ## The stylesheet a module writes
 
-One file, and the module's entry imports it. It holds four statements:
+One file, and the module's entry imports it. It holds four statements, the last of them two `@source` lines:
 
 ```css
 @reference 'tailwindcss';
@@ -44,6 +44,7 @@ One file, and the module's entry imports it. It holds four statements:
   @tailwind utilities;
 }
 @source './';
+@source '../node_modules/@prusa/connect-ui/dist';
 ```
 
 | line | what it does |
@@ -52,6 +53,12 @@ One file, and the module's entry imports it. It holds four statements:
 | `@reference '@prusa/connect-ui/tokens.css'` | brings the library's theme, its utilities and its `dark` variant into scope |
 | `@tailwind utilities` inside `@layer utilities` | the only statement that emits bytes, in the same layer as the host's own utilities |
 | `@source './'` | names the tree Tailwind scans for class names |
+| `@source '../node_modules/@prusa/connect-ui/dist'` | scans the library's components too, as the next paragraph explains |
+
+The library's components name variants such as `@md/pane:` and `md:`, and those
+have to be in this sheet. Its scoped `.flex-col` beats the host's
+`@md/pane:flex-row` on any element inside the module, so a variant left to the
+host never applies. The scan adds about 16 kB gzipped to a bundle.
 
 Neither `@reference` emits anything. Each one tells Tailwind what a name means,
 so `text-muted-foreground` compiles to `color: var(--muted-foreground)`, and the
@@ -132,6 +139,14 @@ A portal draws content at the end of the page, outside the slot. The list of a
 `Select` and the body of a `Dialog` are drawn this way. The module's own
 utilities do not reach them, and the library's components there keep the
 host's styling.
+
+A portalled panel can carry the module's `data-module` itself, as a
+`DialogContent` does. It then receives the module's utilities on everything
+inside it, but not on the panel. A scoped rule matches the elements under the
+scope's root and never the root. A class written on the panel therefore gets
+a rule only when the host emits it too. Cap a dialog's height with the library's
+`DIALOG_SCROLLS`, or a theme class such as `max-h-dialog-height`, and never
+with a class only the module names.
 
 ## A class outside the theme still compiles to nothing
 

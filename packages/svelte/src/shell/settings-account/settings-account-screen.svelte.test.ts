@@ -33,8 +33,8 @@ describe('SettingsAccountScreen', () => {
     });
 
     await expect
-      .element(page.getByRole('heading', { level: 2 }))
-      .toHaveTextContent('Account');
+      .element(page.getByRole('heading', { level: 2, name: 'Account' }))
+      .toBeVisible();
     await expect.element(page.getByText('user:alice')).toBeVisible();
   });
 
@@ -240,5 +240,37 @@ describe('SettingsAccountScreen', () => {
     });
 
     await expectNoViolations(container);
+  });
+});
+
+describe('Password visibility', () => {
+  it('toggles each field independently without submitting the form', async () => {
+    const onChangePassword = vi.fn();
+    const { container } = await render(SettingsAccountScreen, {
+      props: { source: signedIn, onChangePassword },
+    });
+    await page.getByRole('button', { name: 'Show Current password' }).click();
+    expect(
+      container.querySelectorAll<HTMLInputElement>('[data-slot="input"]')[0]
+        ?.type,
+    ).toBe('text');
+    expect(
+      container.querySelectorAll<HTMLInputElement>('[data-slot="input"]')[1]
+        ?.type,
+    ).toBe('password');
+    expect(
+      container.querySelectorAll<HTMLInputElement>('[data-slot="input"]')[2]
+        ?.type,
+    ).toBe('password');
+    await page.getByRole('button', { name: 'Show New password' }).click();
+    expect(
+      container.querySelectorAll<HTMLInputElement>('[data-slot="input"]')[1]
+        ?.type,
+    ).toBe('text');
+    expect(
+      container.querySelectorAll<HTMLInputElement>('[data-slot="input"]')[2]
+        ?.type,
+    ).toBe('password');
+    expect(onChangePassword).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@prusa/connect-ui/i18n';
   import {
     SettingsAppearanceScreen,
     SettingsScreen,
@@ -9,7 +10,7 @@
   let { ctx }: { ctx: AppContext } = $props();
 </script>
 
-<SettingsScreen>
+<SettingsScreen title={t('settingsAppearance.title')}>
   <SettingsAppearanceScreen
     home={ctx.preferences}
     dashboards={ctx.settings.dashboards}

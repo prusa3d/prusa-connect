@@ -9,6 +9,8 @@ export interface TilePanelProps {
   subline?: string | undefined;
   /** Drawn at the end of the heading row. */
   trailing?: Snippet | undefined;
+  /** The space under the heading row. `md` for a tile that lists things. */
+  gap?: 'sm' | 'md' | undefined;
   children: Snippet;
   class?: ClassValue | undefined;
 }

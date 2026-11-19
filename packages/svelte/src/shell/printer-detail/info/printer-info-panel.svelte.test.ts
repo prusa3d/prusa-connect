@@ -324,9 +324,7 @@ describe('PrinterInfoPanel', () => {
       container.querySelectorAll('[data-slot="badge"][type="button"]'),
     ).toHaveLength(1);
 
-    await page
-      .getByRole('button', { name: 'Show Pause on the Advanced tab' })
-      .click();
+    await page.getByRole('button', { name: 'Find the Pause command' }).click();
     expect(picked).toEqual(['core.command.pause_print']);
   });
 

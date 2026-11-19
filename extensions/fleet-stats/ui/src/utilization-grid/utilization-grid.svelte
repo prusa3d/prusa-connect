@@ -102,7 +102,7 @@
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
   .row {
-    grid-template-columns: calc(var(--spacing) * 32) minmax(0, 1fr);
+    grid-template-columns: 10.5rem minmax(0, 1fr);
   }
   /* A dashboard card fits the grid to its width rather than scrolling it. */
   .compact.wide,
@@ -110,7 +110,7 @@
     min-width: 0;
   }
   .compact .row {
-    grid-template-columns: calc(var(--spacing) * 24) minmax(0, 1fr);
+    grid-template-columns: 8.5rem minmax(0, 1fr);
   }
   .cell {
     opacity: calc(0.08 + var(--share) * 0.92);

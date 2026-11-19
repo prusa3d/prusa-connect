@@ -4,7 +4,7 @@
 // listing has the server count its own. The listing kit is to grow the
 // reader's sort and search for everybody; until it has, both
 // live here.
-import { printerStateOf } from '../../domain';
+import { printStateOf } from '../../domain';
 import type { ProgressTone } from '../../primitives';
 import { printerHref } from '../printers/presentation';
 import type {
@@ -46,9 +46,11 @@ const rowOf = (printer: JobsPrinter, record: JobRecord): JobRow => ({
   id: record.id,
   fileName: record.display_name,
   path: record.path,
-  // The machine's own word, read through the shared state vocabulary so a
-  // print's badge and a printer's badge carry one colour scale.
-  state: printerStateOf(record.state),
+  state: printStateOf({
+    state: record.state,
+    ended: record.ended !== undefined,
+    outcome: record.outcome,
+  }),
   printerId: printer.id,
   printerName: printer.name,
   progress: record.progress,
@@ -62,7 +64,9 @@ const rowOf = (printer: JobsPrinter, record: JobRecord): JobRow => ({
 /** Every print this instance could read, flattened across the printers. */
 export const jobRowsOf = (source: JobsSource): JobRow[] =>
   source.printers.flatMap((printer) =>
-    (printer.jobs ?? []).map((record) => rowOf(printer, record)),
+    (printer.jobs ?? [])
+      .filter((record) => record.state !== 'IDLE' || record.ended !== undefined)
+      .map((record) => rowOf(printer, record)),
   );
 
 const VALUE = {
@@ -132,26 +136,36 @@ export const jobFacetValues = (
 ): string[] => Array.from(new Set(rows.map((row) => VALUE[facet](row))));
 
 // A print still running has no span, and sorts as the shortest one.
-const keyOf = (row: JobRow, column: JobSortColumn): number =>
-  column === 'started'
-    ? new Date(row.started).getTime()
-    : (row.durationSeconds ?? 0);
+const keyOf = (row: JobRow, column: JobSortColumn): number | string => {
+  switch (column) {
+    case 'file':
+      return row.fileName;
+    case 'printer':
+      return row.printerName;
+    case 'state':
+      return row.state;
+    case 'started':
+      return Date.parse(row.started);
+    case 'duration':
+      return row.durationSeconds ?? 0;
+    case 'progress':
+      return row.progress;
+  }
+};
 
 export const compareJobs = (a: JobRow, b: JobRow, sort: JobSort): number => {
-  const difference = keyOf(a, sort.column) - keyOf(b, sort.column);
+  const left = keyOf(a, sort.column);
+  const right = keyOf(b, sort.column);
+  const difference =
+    typeof left === 'number' && typeof right === 'number'
+      ? left - right
+      : String(left).localeCompare(String(right), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
 
   return sort.ascending ? difference : -difference;
 };
-
-/**
- * A second press on the same column reverses it; a press on the other one
- * starts descending, which is newest or longest first, the reading most visits
- * want without a third press.
- */
-export const nextSort = (sort: JobSort, column: JobSortColumn): JobSort =>
-  sort.column === column
-    ? { column, ascending: !sort.ascending }
-    : { column, ascending: false };
 
 /**
  * What the filled part of the bar says. A print in motion is the interface's

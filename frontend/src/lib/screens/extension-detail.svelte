@@ -14,6 +14,8 @@
     Button,
     FaultAlert,
     NoLongerHere,
+    SettingsPane,
+    SettingsRow,
   } from '@prusa/connect-ui/primitives';
   import {
     ExtensionDetailScreen,
@@ -91,6 +93,15 @@
       ctx.modules.error === undefined) ||
       [403, 404].includes(faultOf(ctx.modules.error).status ?? 0),
   );
+  const installedVersion = $derived.by(() => {
+    if (row === undefined) return '';
+    const version = [row.installedVersion, row.instance?.module?.version].find(
+      (value) => value !== undefined && value !== '',
+    );
+    return version === undefined
+      ? t('app.settings.extensions.version.unknown')
+      : t('app.settings.extensions.version.installed', { version });
+  });
 
   const panes = $derived(
     (slots ? moduleTabs(slots.registry, 'settings') : []).filter((pane) =>
@@ -262,7 +273,7 @@
 {:else}
   <ExtensionDetailScreen
     title={row?.title ?? namespace}
-    version={row === undefined ? '' : (row.installedVersion ?? row.version)}
+    version={installedVersion}
     source={row === undefined ? '' : t(SOURCE_KEY[row.source])}
     module={row?.module}
     observed={row?.instance === undefined
@@ -294,6 +305,13 @@
 
 {#snippet control()}
   {#if row}
+    {#if row.pageUrl}<a
+        href={row.pageUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-sm break-all text-muted-foreground underline underline-offset-4"
+        >{row.pageUrl}</a
+      >{/if}
     <ExtensionSwitch {row} {catalogue} {ask} />
   {/if}
   {#if writeFor === 'switch' && catalogue.writeConflict}
@@ -364,29 +382,35 @@
   {#if row?.instance}
     {@const asked = row.instance.module?.asked}
     {@const offer = row.offer}
-    <ExtensionPorts
-      asked={askedPorts}
-      listening={row.instance.module?.listening ?? []}
-      locked={portsLocked}
-      busy={blocked}
-      fault={catalogue.acting === undefined &&
-      catalogue.actionError !== undefined
-        ? catalogue.actionError
-        : undefined}
-      onsave={async (listen: Record<string, number>) => {
-        if (offer === undefined || asked === undefined) return false;
-        const saved = await catalogue.install(offer, {
-          expect: asked,
-          version: row.installedVersion ?? row.version,
-          approveListen: true,
-          listen,
-        });
-        catalogue.dismissOutcome();
-        void ctx.modules.load();
+    <SettingsPane class="w-full" title={t('app.settings.extensions.tab.ports')}>
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+      >
+        <ExtensionPorts
+          asked={askedPorts}
+          listening={row.instance.module?.listening ?? []}
+          locked={portsLocked}
+          busy={blocked}
+          fault={catalogue.acting === undefined &&
+          catalogue.actionError !== undefined
+            ? catalogue.actionError
+            : undefined}
+          onsave={async (listen: Record<string, number>) => {
+            if (offer === undefined || asked === undefined) return false;
+            const saved = await catalogue.install(offer, {
+              expect: asked,
+              version: row.installedVersion ?? row.version,
+              approveListen: true,
+              listen,
+            });
+            catalogue.dismissOutcome();
+            void ctx.modules.load();
 
-        return saved;
-      }}
-    />
+            return saved;
+          }}
+        />
+      </div>
+    </SettingsPane>
   {/if}
 {/snippet}
 
@@ -416,12 +440,18 @@
 {#snippet logPanel()}
   {#if row?.instance}
     {@const instance = row.instance}
-    <ModuleLog
-      log={ctx.moduleOperations.log(instance)}
-      refused={ctx.moduleOperations.logRefused(instance)}
-      fault={ctx.moduleOperations.logFault(instance)}
-      missing={ctx.moduleOperations.missing(instance)}
-    />
+    <SettingsPane class="w-full" title={t('app.settings.extensions.tab.log')}>
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+      >
+        <ModuleLog
+          log={ctx.moduleOperations.log(instance)}
+          refused={ctx.moduleOperations.logRefused(instance)}
+          fault={ctx.moduleOperations.logFault(instance)}
+          missing={ctx.moduleOperations.missing(instance)}
+        />
+      </div>
+    </SettingsPane>
   {/if}
 {/snippet}
 
@@ -430,63 +460,100 @@
 {/snippet}
 
 {#snippet dependenciesPanel()}
-  <ExtensionDependencies
-    {dependencies}
-    {namespace}
-    why={catalogue.whyOf(namespace)}
-    outdated={catalogue.outdated}
-  />
+  <SettingsPane
+    class="w-full"
+    title={t('app.settings.extensions.tab.dependencies')}
+  >
+    <div
+      class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+    >
+      <ExtensionDependencies
+        {dependencies}
+        {namespace}
+        why={catalogue.whyOf(namespace)}
+        outdated={catalogue.outdated}
+      />
+    </div>
+  </SettingsPane>
 {/snippet}
 
 {#snippet permissionsPanel()}
   {@const asked = row?.instance?.module?.asked}
-  {#if asked === undefined}
-    <p class="text-sm">{t('app.settings.extensions.grantedNothing')}</p>
-  {:else}
-    <RequestList
-      instance={row?.instance?.name ?? ''}
-      requests={listRequests(asked)}
-      label={t('app.settings.extensions.granted')}
-    />
-    {@const place = databasePlace(row?.instance?.module?.database, t)}
-    {@const schema = databaseSchema(row?.instance?.module?.database, t)}
-    {#if place !== ''}
-      <p class="text-sm" data-part="database-place">{place}</p>
+  <SettingsPane
+    class="w-full"
+    title={t('app.settings.extensions.tab.permissions')}
+    description={asked === undefined
+      ? t('app.settings.extensions.grantedNothing')
+      : t('app.settings.extensions.granted')}
+  >
+    {#if asked !== undefined}
+      <RequestList
+        rows
+        instance={row?.instance?.name ?? ''}
+        requests={listRequests(asked)}
+        label={t('app.settings.extensions.granted')}
+      />
+      {@const place = databasePlace(row?.instance?.module?.database, t)}
+      {@const schema = databaseSchema(row?.instance?.module?.database, t)}
+      {#if place !== '' || schema !== ''}
+        <div
+          class="flex flex-col gap-section-gap px-panel-padding-mobile pb-panel-padding-mobile @lg/pane:px-panel-padding @lg/pane:pb-panel-padding"
+        >
+          {#if place !== ''}
+            <SettingsRow
+              layout="switch"
+              label={t('app.settings.extensions.database.placeLabel')}
+              description={place}
+            />
+          {/if}
+          {#if schema !== ''}
+            <SettingsRow
+              layout="switch"
+              label={t('app.settings.extensions.database.schemaLabel')}
+              description={schema}
+            />
+          {/if}
+        </div>
+      {/if}
     {/if}
-    {#if schema !== ''}
-      <p class="text-sm text-muted-foreground" data-part="database-schema">
-        {schema}
-      </p>
-    {/if}
-  {/if}
+  </SettingsPane>
 {/snippet}
 
 {#snippet visibilityPanel()}
   {#if row?.instance}
     {@const instance = row.instance}
-    <ExtensionVisibility
-      {instance}
-      {contributions}
-      locked={lockedReason}
-      saving={catalogue.writing !== undefined}
-      fault={writeFor === 'visibility' ? catalogue.writeError : undefined}
-      conflict={writeFor === 'visibility' && catalogue.writeConflict}
-      onhide={async (next: string[]) => {
-        const written = await catalogue.writeInstance(instance, {
-          hidden_contributions: next,
-        });
-        // The loader declares the modules once, when the app starts.
-        if (written) {
-          slots?.registry.hide(
-            instance.namespace ?? namespace,
-            hiddenEntries({ hidden_contributions: next, ui: instance.ui }),
-          );
-          void ctx.modules.load();
-        }
+    <SettingsPane
+      class="w-full"
+      title={t('app.settings.extensions.tab.visibility')}
+    >
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+      >
+        <ExtensionVisibility
+          {instance}
+          {contributions}
+          locked={lockedReason}
+          saving={catalogue.writing !== undefined}
+          fault={writeFor === 'visibility' ? catalogue.writeError : undefined}
+          conflict={writeFor === 'visibility' && catalogue.writeConflict}
+          onhide={async (next: string[]) => {
+            const written = await catalogue.writeInstance(instance, {
+              hidden_contributions: next,
+            });
+            // The loader declares the modules once, when the app starts.
+            if (written) {
+              slots?.registry.hide(
+                instance.namespace ?? namespace,
+                hiddenEntries({ hidden_contributions: next, ui: instance.ui }),
+              );
+              void ctx.modules.load();
+            }
 
-        return written;
-      }}
-    />
+            return written;
+          }}
+        />
+      </div>
+    </SettingsPane>
   {/if}
 {/snippet}
 

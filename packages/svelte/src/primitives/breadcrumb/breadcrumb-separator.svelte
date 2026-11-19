@@ -1,11 +1,8 @@
 <!--
-  The mark between two crumbs. It is a chevron unless the caller passes its
-  own, and it is hidden from a screen reader: the list order already says what
-  it says.
+  The mark between two crumbs. A caller can supply its own mark.
+  Screen readers use the list order.
 -->
 <script lang="ts">
-  import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-
   import type { BreadcrumbSeparatorProps } from './types';
 
   let {
@@ -25,6 +22,6 @@
   {#if children}
     {@render children()}
   {:else}
-    <ChevronRightIcon />
+    <span>&gt;</span>
   {/if}
 </li>

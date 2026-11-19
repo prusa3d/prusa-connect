@@ -1,0 +1,7 @@
+{
+  "printerDetailStatus.camera.expandSnapshot": "Open snapshot from {printer}",
+  "printerDetailStatus.camera.expandStream": "Open camera stream on {printer}",
+  "printerDetailStatus.camera.openSnapshot": "Open snapshot",
+  "printerDetailStatus.camera.openStream": "Open camera stream",
+  "printerDetailStatus.camera.title": "Camera on {printer}"
+}

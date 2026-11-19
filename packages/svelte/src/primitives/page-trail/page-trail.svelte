@@ -25,7 +25,7 @@
   import Breadcrumb from '../breadcrumb/breadcrumb.svelte';
   import type { PageTrailProps } from './types';
 
-  let { trail, page, monoPage = false }: PageTrailProps = $props();
+  let { trail, page, sansPage = false }: PageTrailProps = $props();
 </script>
 
 <Breadcrumb>
@@ -49,7 +49,7 @@
       <BreadcrumbSeparator />
     {/each}
     <BreadcrumbItem>
-      <BreadcrumbPage class={monoPage ? 'font-mono' : undefined}
+      <BreadcrumbPage class={sansPage ? 'font-sans' : undefined}
         >{page}</BreadcrumbPage
       >
     </BreadcrumbItem>

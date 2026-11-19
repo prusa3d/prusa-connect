@@ -98,17 +98,17 @@ describe('DropdownMenu', () => {
     expect(remove.getAttribute('data-variant')).toBe('destructive');
     expect(rename.getAttribute('data-variant')).toBe('default');
     expect(remove.getAttribute('class')).toContain(
-      'data-[variant=destructive]:text-destructive-text',
+      'variant-destructive:text-destructive-text',
     );
     expect(getComputedStyle(remove).color).not.toBe(
       getComputedStyle(rename).color,
     );
   });
 
-  // A command row carries `min-h-11` for the touch floor, where upstream's
-  // padding alone leaves it the height of its text. The checkbox row keeps the
-  // upstream shape, so it is what the floor is measured against.
-  it('raises a command row above the height its padding alone gives', async () => {
+  // Under a mouse a command row stands on the compact control height, the
+  // floor a facet row keeps too. The 44px touch floor is for a coarse pointer
+  // only, and the checkbox row carries no floor at all.
+  it('stands a command row on the compact floor under a mouse', async () => {
     await render(DropdownMenuProbe);
 
     await trigger().click();
@@ -118,11 +118,11 @@ describe('DropdownMenu', () => {
     const unraised = page
       .getByRole('menuitemcheckbox', { name: 'Auto-connect' })
       .element();
+    const floor = Number.parseFloat(getComputedStyle(command).minHeight);
 
-    expect(command.getBoundingClientRect().height).toBeGreaterThan(
-      unraised.getBoundingClientRect().height,
-    );
-    expect(getComputedStyle(command).minHeight).not.toBe('0px');
+    expect(floor).toBeGreaterThan(0);
+    expect(floor).toBeLessThan(44);
+    expect(getComputedStyle(unraised).minHeight).toBe('0px');
   });
 
   // The exit animation is what keeps the closing surface on the screen long

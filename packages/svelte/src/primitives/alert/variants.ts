@@ -4,10 +4,10 @@ import type { AlertVariant } from './types';
 // utility written here is emitted; one assembled at run time is not.
 
 // The grid is two columns. The first is zero wide until a direct `svg` child
-// appears, and `has-[>svg]` then opens it to one icon, so a caller adds an
+// appears, and `with-icon` then opens it to one icon, so a caller adds an
 // icon without saying so anywhere else.
 export const base =
-  'relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-sm border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current';
+  'relative grid w-full grid-cols-alert items-start gap-y-0.5 border px-4 py-3 text-sm with-icon:grid-cols-alert-icon with-icon:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current rounded-md';
 
 // Each status is a hairline border in its own colour over the shared bg-card
 // fill. The text reads a `-text` token, tuned for bg-card, rather than a

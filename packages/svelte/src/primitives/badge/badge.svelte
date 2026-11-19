@@ -46,20 +46,7 @@
 {#if child}
   {@render child({ props: attrs })}
 {:else}
-  <!-- The class list is written on the element as well as in `attrs`, because
-       classes.test.ts compares the `class` attribute of the markup with the
-       React fixture and does not read the object. -->
-  <span
-    {...attrs}
-    class={[
-      base,
-      variants[variant],
-      sizes[size],
-      mono && monoClass,
-      numeric && numericClass,
-      className,
-    ]}
-  >
+  <span {...attrs}>
     {@render children?.()}
   </span>
 {/if}

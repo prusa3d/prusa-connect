@@ -82,7 +82,7 @@ describe('PrinterDetailScreen', () => {
       .toHaveAttribute('href', '/printers');
   });
 
-  it('draws the six tabs and reports the one pressed', async () => {
+  it('draws the five tabs and reports the one pressed', async () => {
     const onTabChange = vi.fn();
     const { container } = await render(PrinterDetailScreen, {
       props: props({ onTabChange }),
@@ -91,17 +91,23 @@ describe('PrinterDetailScreen', () => {
     const labels = [
       ...container.querySelectorAll('[data-slot="tabs-trigger"]'),
     ].map((trigger) => trigger.textContent.trim());
-    expect(labels).toEqual([
-      'Now',
-      'Controls',
-      'Files',
-      'Printer',
-      'History',
-      'Advanced',
-    ]);
+    expect(labels).toEqual(['Now', 'Controls', 'Files', 'Printer', 'History']);
 
     await page.getByRole('tab', { name: 'Files' }).click();
     expect(onTabChange).toHaveBeenCalledWith('files');
+  });
+
+  it('selects Controls for a legacy Advanced address', async () => {
+    await render(PrinterDetailScreen, {
+      props: props({ tab: 'commands' }),
+    });
+
+    await expect
+      .element(page.getByRole('tab', { name: 'Controls', exact: true }))
+      .toHaveAttribute('aria-selected', 'true');
+    await expect
+      .element(page.getByRole('tab', { name: 'Advanced', exact: true }))
+      .not.toBeInTheDocument();
   });
 
   // A skeleton that never resolves reads as a broken page.

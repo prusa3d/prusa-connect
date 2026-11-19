@@ -7,4 +7,6 @@ export interface RowActionsProps {
   /** Menu items. Their height is settled by the menu, so none needs its own. */
   children: Snippet;
   class?: ClassValue | undefined;
+  /** Told each time the menu opens or shuts. */
+  onOpenChange?: ((open: boolean) => void) | undefined;
 }

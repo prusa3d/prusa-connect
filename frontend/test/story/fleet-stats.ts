@@ -31,14 +31,14 @@ const DAYS = 60;
  * every range the page offers has a period before it to compare against.
  * The numbers come from a fixed seed, so a story draws the same each time.
  */
-const settledJobs = (size: FleetSize): unknown[] => {
+const settledJobs = (size: FleetSize) => {
   let seed = 7;
   const next = (): number => {
     seed = (seed * 48_271) % 2_147_483_647;
     return seed / 2_147_483_647;
   };
   const now = Date.now();
-  const facts: unknown[] = [];
+  const facts = [];
 
   for (const device of fleetOf(size)) {
     let at = now - DAYS * 24 * HOUR;
@@ -72,6 +72,20 @@ const settledJobs = (size: FleetSize): unknown[] => {
 /** `GET /api/v1/history/facts`: one page, which the page filters by range. */
 export const historyAnswer = (size: FleetSize): Response =>
   json(200, { items: settledJobs(size), cursor: '', incomplete: false });
+
+export const statsJobsAnswer = (size: FleetSize): Response =>
+  json(200, {
+    items: settledJobs(size).map(({ origin, payload }) => ({
+      device_id: origin.slice('device:'.length),
+      id: payload.job_id,
+      display_name: payload.display_name,
+      started: payload.started,
+      ended: payload.ended,
+      outcome: payload.outcome,
+      state: payload.machine_state,
+    })),
+    cursor: '',
+  });
 
 interface Listing {
   readonly items: unknown[];

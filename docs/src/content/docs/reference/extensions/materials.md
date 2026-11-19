@@ -28,7 +28,7 @@ A catalogue of filament materials, and the spools a person has of them.
 
 | | |
 |---|---|
-| version | 0.2.5 |
+| version | 0.2.6 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/materials` |
 | namespace | `com.github.aux.prusa3d.materials` |
@@ -49,6 +49,7 @@ It connects outside Prusa Connect to:
 - **Catalogue**: a tab on the module's page under Settings, Extensions
 - **Locations**: a tab on the module's page under Settings, Extensions
 - **Tools**: a tab of its own on each printer's page
+- **`printer-positions`**: a component other modules may draw on their own pages
 
 ## What it needs {#what-it-needs}
 

@@ -134,14 +134,13 @@
     if (!next) onclose();
   }}
 >
-  <!-- The panel is portalled, so it carries the module's name for its
-       utilities; the cap is the one GuidedDialog uses. -->
-  <!-- eslint-disable no-restricted-syntax -->
+  <!-- Portalled, so the panel carries the module's name for the utilities
+       inside it. A scoped rule never matches the scope's root, so the
+       panel's own cap is the host's. -->
   <DialogContent
     data-module={OWN_MODULE}
-    class="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+    class="max-h-dialog-height overflow-y-auto"
   >
-    <!-- eslint-enable no-restricted-syntax -->
     <DialogHeader>
       <DialogTitle
         >{t('materials.edit.title', { id: spool?.id ?? 0 })}</DialogTitle

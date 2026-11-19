@@ -1,7 +1,7 @@
 <!-- Send one file to the printers a person ticks. -->
 <script lang="ts">
   import FileCode2Icon from '@lucide/svelte/icons/file-code-2';
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
 
   import { runningTransferOf } from '../../data/running-transfers.svelte';
   import { FILE_NAME_TAKEN, printOnEach } from '../../data/services/print';
@@ -17,6 +17,7 @@
   import {
     Badge,
     Button,
+    Checkbox,
     ConfirmDialog,
     Dialog,
     DIALOG_BODY,
@@ -31,8 +32,8 @@
     FileThumbnail,
     KeyValueList,
     Label,
+    ListingSearch,
     Selection,
-    SelectCheckbox,
     toast,
     type KeyValueRow,
     PrinterGlyphIcon,
@@ -62,10 +63,17 @@
   }: PrintDialogProps = $props();
 
   const PERCENT = 100;
+  const fileKey = $derived(
+    file === undefined
+      ? undefined
+      : JSON.stringify([file.storage, file.source, file.name]),
+  );
 
   const uid = $props.id();
 
   let busy = $state(false);
+  let query = $state('');
+  let selectedOnly = $state(false);
 
   /** The printers the last send did not start, each with why. */
   let failures = $state.raw<{ id: string; name: string; fault: FaultText }[]>(
@@ -76,22 +84,64 @@
    * The printers that hold a different file under this name. The person is
    * asked once for all of them whether to replace it.
    */
-  let taken = $state.raw<string[]>([]);
+  let taken = $state.raw<{ fileKey: string; ids: string[] }>();
+  const conflict = $derived(
+    open && taken?.fileKey === fileKey ? taken : undefined,
+  );
+  const replaceable = $derived(
+    conflict?.ids.filter((id) => readyIds.has(id)) ?? [],
+  );
+
+  const unavailable = (id: string) => {
+    const row = targets.find((target) => target.id === id);
+    return {
+      id,
+      name: row?.name ?? id,
+      fault: {
+        code: undefined,
+        title:
+          row?.reasonKey === undefined
+            ? t('printPicker.reason.unavailable')
+            : reasonOf(row),
+        detail: undefined,
+      },
+    };
+  };
+  const blockedReplacements = $derived(
+    conflict?.ids.filter((id) => !readyIds.has(id)).map(unavailable) ?? [],
+  );
 
   // The number of the send whose answer the panel still waits for.
   let listening = 0;
+  onDestroy(() => {
+    listening += 1;
+  });
 
   // The panel's own memory of whether it was open.
   let opened = false;
+  let openedFile: string | undefined;
 
   const targets = $derived(
     printTargetsOf(devices, { locked, noStorage, transitions }),
   );
 
   const free = $derived(targets.filter((row) => row.ready));
+  const readyIds = $derived(new Set(free.map((row) => row.id)));
   const chosen = new Selection<string>({
     rows: () => targets.map((row) => row.id),
   });
+
+  const searchable = $derived(targets.length > 8);
+  const needle = $derived(query.trim().toLocaleLowerCase());
+  const visible = $derived(
+    targets.filter(
+      (row) =>
+        !searchable ||
+        ((!selectedOnly || (row.ready && chosen.has(row.id))) &&
+          (needle === '' ||
+            `${row.name} ${row.model}`.toLocaleLowerCase().includes(needle))),
+    ),
+  );
 
   const none = $derived(free.length === 0);
 
@@ -140,13 +190,16 @@
     listening += 1;
     busy = false;
     failures = [];
-    taken = [];
+    taken = undefined;
   };
 
   /** The pick the panel opens on, decided once. */
   $effect(() => {
-    if (open === opened) return;
+    if (open === opened && fileKey === openedFile) return;
     opened = open;
+    openedFile = fileKey;
+    query = '';
+    selectedOnly = false;
 
     clear();
     if (!open) return;
@@ -234,17 +287,31 @@
 
   const send = (): Promise<void> => sendTo(sendable, false);
 
+  // `open` is a live prop: it can turn false while a send awaits.
+  const superseded = (token: number, key: string): boolean =>
+    token !== listening || !open || fileKey !== key;
+
   const sendTo = async (ids: string[], replace: boolean): Promise<void> => {
     const sending = file;
-    if (sending === undefined || ids.length === 0 || busy) return;
+    const key = fileKey;
+    if (!open || sending === undefined || key === undefined || busy) return;
+
+    const ready = ids.filter((id) => readyIds.has(id));
+    const blocked = ids.filter((id) => !readyIds.has(id)).map(unavailable);
+    failures = blocked;
+    if (ready.length === 0) return;
 
     listening += 1;
     const token = listening;
     busy = true;
-    failures = [];
     const attempts = await printOnEach(
-      onPrint,
-      ids.map((deviceId) =>
+      (request) => {
+        if (superseded(token, key)) throw new DOMException('', 'AbortError');
+        if (!readyIds.has(request.deviceId))
+          throw new Error(unavailable(request.deviceId).fault.title);
+        return onPrint(request);
+      },
+      ready.map((deviceId) =>
         sending.storage === undefined
           ? { deviceId, path: sending.source }
           : {
@@ -257,7 +324,7 @@
             },
       ),
     );
-    if (token !== listening) return;
+    if (superseded(token, key)) return;
 
     busy = false;
     const started = attempts.filter((one) => one.failure === undefined);
@@ -268,10 +335,10 @@
     if (started.length > 0) {
       toast.success(t('printPicker.started', { count: started.length }));
     }
-    if (started.length === attempts.length) {
+    if (started.length === attempts.length && blocked.length === 0) {
       listening += 1;
       onOpenChange(false);
-      onPrinted?.(ids);
+      onPrinted?.(ready);
 
       return;
     }
@@ -281,15 +348,31 @@
         : [{ id: one.deviceId, fault: describeFault(one.failure) }],
     );
     // A name the printer holds is a question for the person, not a failure.
-    taken = refused
-      .filter((one) => one.fault.code === FILE_NAME_TAKEN && !replace)
+    const conflicts = refused
+      .filter(
+        (one) =>
+          one.fault.code === FILE_NAME_TAKEN &&
+          !replace &&
+          readyIds.has(one.id),
+      )
       .map((one) => one.id);
-    failures = refused
-      .filter((one) => !taken.includes(one.id))
-      .map((one) => ({
-        ...one,
-        name: targets.find((row) => row.id === one.id)?.name ?? one.id,
-      }));
+    taken =
+      conflicts.length === 0 ? undefined : { fileKey: key, ids: conflicts };
+    failures = [
+      ...blocked,
+      ...refused
+        .filter((one) => !conflicts.includes(one.id))
+        .map((one) =>
+          one.fault.code === FILE_NAME_TAKEN &&
+          !replace &&
+          !readyIds.has(one.id)
+            ? unavailable(one.id)
+            : {
+                ...one,
+                name: targets.find((row) => row.id === one.id)?.name ?? one.id,
+              },
+        ),
+    ];
   };
 </script>
 
@@ -337,12 +420,42 @@
         </p>
       {/if}
 
+      {#if searchable}
+        <div class="flex flex-wrap items-center gap-3">
+          <ListingSearch
+            class="min-w-0 flex-1"
+            value={query}
+            onValue={(value: string) => {
+              query = value;
+            }}
+            label={t('printPicker.selection.search')}
+            placeholder={t('printPicker.selection.searchPlaceholder')}
+          />
+          <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- Label's leading-none and select-none would change this checkbox row; design call pending -->
+          <label class="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={selectedOnly}
+              onCheckedChange={(value: boolean) => {
+                selectedOnly = value;
+              }}
+            />
+            {t('printPicker.selection.only')}
+          </label>
+        </div>
+      {/if}
+
+      {#if visible.length === 0 && searchable}
+        <p class="text-sm text-muted-foreground">
+          {t('printPicker.selection.noMatch')}
+        </p>
+      {/if}
+
       <div
         role="group"
         aria-label={t('printPicker.choice.label')}
         class="flex flex-col gap-1"
       >
-        {#each targets as row (row.id)}
+        {#each visible as row (row.id)}
           {@const id = `${uid}-${row.id}`}
           {@const phase = phaseOf(row.id)}
           <div
@@ -351,13 +464,15 @@
               row.ready ? 'hover:bg-accent' : 'opacity-60',
             ]}
           >
-            <SelectCheckbox
+            <Checkbox
               {id}
               class="relative z-10"
-              selection={chosen}
-              key={row.id}
-              label={row.name}
-              disabled={!row.ready}
+              aria-label={row.name}
+              checked={row.ready && chosen.has(row.id)}
+              disabled={!row.ready || busy}
+              onCheckedChange={(checked: boolean) => {
+                chosen.set([row.id], checked);
+              }}
             />
             <div class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex min-w-0 items-center gap-2">
@@ -393,7 +508,8 @@
                     aria-label={t('printPicker.progress.label', {
                       printer: row.name,
                     })}
-                    class="h-1 flex-1"
+                    size="sm"
+                    class="flex-1"
                   />
                   {#if percent !== null}
                     <span
@@ -424,41 +540,71 @@
       {/if}
     </div>
 
-    <DialogFooter>
-      <DialogClose>
-        {#snippet child({ props }: { props: Record<string, unknown> })}
-          <Button {...props} variant="secondary">
-            {t('primitives.cancel')}
-          </Button>
-        {/snippet}
-      </DialogClose>
-      <Button
-        disabled={busy || sendable.length === 0 || file === undefined}
-        aria-busy={busy}
-        onclick={() => {
-          void send();
-        }}
-      >
-        {busy ? t('printPicker.sending') : t('printPicker.send')}
-      </Button>
-    </DialogFooter>
+    <div class="flex min-w-0 flex-col gap-3">
+      <p role="status" class="text-sm font-medium">
+        {t('printPicker.selection.count', { count: sendable.length })}
+      </p>
+      <DialogFooter>
+        <DialogClose>
+          {#snippet child({ props }: { props: Record<string, unknown> })}
+            <Button {...props} variant="secondary">
+              {t('primitives.cancel')}
+            </Button>
+          {/snippet}
+        </DialogClose>
+        <Button
+          disabled={busy || sendable.length === 0 || file === undefined}
+          aria-busy={busy}
+          onclick={() => {
+            void send();
+          }}
+        >
+          {#if busy}
+            {t('printPicker.sending')}
+          {:else if sendable.length > 0}
+            {t('printPicker.selection.send', { count: sendable.length })}
+          {:else}
+            {t('printPicker.send')}
+          {/if}
+        </Button>
+      </DialogFooter>
+    </div>
   </DialogContent>
 </Dialog>
 
 <ConfirmDialog
-  open={taken.length > 0}
+  open={conflict !== undefined}
+  confirmDisabled={replaceable.length === 0}
   onOpenChange={(next: boolean) => {
-    if (!next) taken = [];
+    if (!next) taken = undefined;
   }}
   title={t('printPicker.replace.title', {
     name: file?.name ?? '',
-    count: taken.length,
+    count: conflict?.ids.length ?? 0,
   })}
-  description={t('printPicker.replace.note', { count: taken.length })}
+  description={t('printPicker.replace.note', {
+    count: replaceable.length,
+  })}
   confirmLabel={t('printPicker.replace.confirm')}
   onConfirm={() => {
-    const ids = taken;
-    taken = [];
+    const ids = conflict?.ids ?? [];
+    taken = undefined;
     void sendTo(ids, true);
   }}
-/>
+>
+  {#if blockedReplacements.length > 0}
+    <div role="status" class="flex flex-col gap-2 text-sm">
+      <p>{t('printPicker.replace.available', { count: replaceable.length })}</p>
+      <ul class="flex max-h-64 flex-col gap-2 overflow-y-auto">
+        {#each blockedReplacements as blocked (blocked.id)}
+          <li>
+            <span class="block font-medium break-words">{blocked.name}</span>
+            <span class="block break-words text-muted-foreground"
+              >{blocked.fault.title}</span
+            >
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+</ConfirmDialog>

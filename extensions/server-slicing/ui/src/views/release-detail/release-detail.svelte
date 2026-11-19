@@ -46,7 +46,6 @@
     type ReleaseActs,
   } from '../../release-acts.svelte';
   import type { ReleaseRow } from '../../releases';
-  import { channelVariant } from '../channel';
   import { DigestBadge } from '../digest-badge';
   import { ReleaseState } from '../release-state';
 
@@ -186,10 +185,8 @@
 
 {#snippet titleAside()}
   {#if row}
-    <Badge variant={channelVariant(row.channel)}
-      >{t(`slicer.channel.${row.channel}`)}</Badge
-    >
-    {#if row.isDefault}<Badge variant="default">{t('slicer.default')}</Badge
+    <Badge variant="outline">{t(`slicer.channel.${row.channel}`)}</Badge>
+    {#if row.isDefault}<Badge variant="secondary">{t('slicer.default')}</Badge
       >{/if}
   {/if}
 {/snippet}
@@ -287,7 +284,7 @@
       <CardContent class="grid grid-cols-1 content-start gap-6">
         <section class="grid grid-cols-1 content-start gap-4">
           {@render part(t('slicer.detail.release'), LayersIcon)}
-          <KeyValueList rows={release} />
+          <KeyValueList rows={release} labelWidth="14rem" />
           {#if row.offer?.notes}
             {@const notes = row.offer.notes}
             <div class="text-sm">
@@ -315,7 +312,7 @@
             data-part="download"
           >
             {@render part(t('slicer.detail.download'), DownloadIcon)}
-            <KeyValueList rows={download} />
+            <KeyValueList rows={download} labelWidth="14rem" />
           </section>
         {/if}
 
@@ -331,7 +328,7 @@
               }),
               HardDriveIcon,
             )}
-            <KeyValueList rows={copyOf(held)} />
+            <KeyValueList rows={copyOf(held)} labelWidth="14rem" />
           </section>
         {/each}
       </CardContent>

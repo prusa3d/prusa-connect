@@ -231,7 +231,6 @@ func operationExamples() map[string]operationExample {
 			Title:            "Prusa Connect",
 			DefaultLanguage:  "en",
 			Theme:            "system",
-			Skin:             "default",
 			PrinterAdmission: "approval",
 			APIReference:     referenceExample(),
 			Dashboards:       dashboardsCarried,

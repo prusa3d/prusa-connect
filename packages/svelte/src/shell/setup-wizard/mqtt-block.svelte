@@ -20,6 +20,7 @@
 
 <div class="flex flex-col gap-5" data-part="mqtt">
   <SettingsRow
+    layout="switch"
     label={t('setupWizard.mqtt.label')}
     description={t('setupWizard.mqtt.hint')}
   >

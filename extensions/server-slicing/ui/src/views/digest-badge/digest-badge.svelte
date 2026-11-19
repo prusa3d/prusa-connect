@@ -3,7 +3,6 @@
   local binary was never downloaded, so it has nothing to check.
 -->
 <script lang="ts">
-  import { Badge } from '@prusa/connect-ui/primitives';
   import ShieldAlertIcon from '@lucide/svelte/icons/shield-alert';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 
@@ -14,17 +13,23 @@
 </script>
 
 {#if digest === 'verified'}
-  <Badge variant="outline" data-digest="verified">
-    <ShieldCheckIcon class="size-3" aria-hidden="true" />{t(
+  <span
+    class="inline-flex items-center gap-1 text-sm text-muted-foreground"
+    data-digest="verified"
+  >
+    <ShieldCheckIcon class="size-3.5" aria-hidden="true" />{t(
       'slicer.digest.verified',
     )}
-  </Badge>
+  </span>
 {:else if digest === 'unverified'}
-  <Badge variant="warning" data-digest="unverified">
-    <ShieldAlertIcon class="size-3" aria-hidden="true" />{t(
+  <span
+    class="inline-flex items-center gap-1 text-sm text-foreground"
+    data-digest="unverified"
+  >
+    <ShieldAlertIcon class="size-3.5" aria-hidden="true" />{t(
       'slicer.digest.unverified',
     )}
-  </Badge>
+  </span>
 {:else}
   <span class="text-sm text-muted-foreground" data-digest="none"
     >{t('slicer.digest.none')}</span

@@ -25,6 +25,8 @@
   import { Combobox as ComboboxPrimitive } from 'bits-ui';
 
   import {
+    CONTROL_FILL,
+    CONTROL_RING,
     CONTROL_SIZES,
     CONTROL_TRIGGER,
   } from '../control-trigger/control-trigger';
@@ -141,8 +143,10 @@
           data-size={size}
           class={[
             CONTROL_TRIGGER,
+            CONTROL_FILL,
+            CONTROL_RING,
             CONTROL_SIZES[size],
-            'w-full cursor-text pr-8 placeholder:text-muted-foreground',
+            'w-full cursor-text placeholder:text-muted-foreground',
             className,
           ]}
         />

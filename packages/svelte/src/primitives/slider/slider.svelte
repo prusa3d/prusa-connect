@@ -24,11 +24,23 @@
     ref = $bindable(null),
     value = $bindable(),
     orientation = 'horizontal',
+    tone = 'default',
     class: className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     ...rest
   }: SliderProps = $props();
+
+  // Static strings chosen by key, so Tailwind emits every one (svelte-5.md).
+  const ranges = {
+    default: 'bg-control-on',
+    primary: 'bg-primary',
+  } as const;
+  const edges = {
+    default:
+      'border-control-on hover:border-control-on active:border-control-on',
+    primary: 'border-primary hover:border-primary active:border-primary',
+  } as const;
 </script>
 
 <SliderPrimitive.Root
@@ -36,8 +48,9 @@
   bind:value={value as never}
   {orientation}
   data-slot="slider"
+  data-tone={tone}
   class={[
-    'relative flex w-full touch-none items-center select-none data-[disabled]:pointer-events-none data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col',
+    'relative flex w-full touch-none items-center select-none data-disabled:pointer-events-none orientation-vertical:h-full orientation-vertical:min-h-44 orientation-vertical:w-auto orientation-vertical:flex-col',
     className,
   ]}
   {...rest}
@@ -48,11 +61,14 @@
     <span
       data-slot="slider-track"
       data-orientation={orientation}
-      class="relative grow overflow-hidden rounded-sm bg-muted data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+      class="relative grow overflow-hidden rounded-full bg-muted orientation-horizontal:h-1.5 orientation-horizontal:w-full orientation-vertical:h-full orientation-vertical:w-1.5"
     >
       <SliderPrimitive.Range
         data-slot="slider-range"
-        class="absolute bg-control-on data-[disabled]:bg-disabled data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+        class={[
+          'absolute data-disabled:bg-disabled orientation-horizontal:h-full orientation-vertical:w-full',
+          ranges[tone],
+        ]}
       />
     </span>
     {#each thumbItems as thumb (thumb.index)}
@@ -61,7 +77,10 @@
         data-slot="slider-thumb"
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledby}
-        class="block size-4 shrink-0 rounded-sm border border-control-on bg-background transition-colors outline-none hover:border-primary-hovered focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:border-primary-pressed data-[disabled]:border-disabled-foreground data-[disabled]:bg-disabled"
+        class={[
+          'block size-4 shrink-0 rounded-full border bg-background transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-disabled:border-disabled-foreground data-disabled:bg-disabled',
+          edges[tone],
+        ]}
       />
     {/each}
   {/snippet}

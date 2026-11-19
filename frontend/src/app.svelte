@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+  import { browserStorage, forgetRemembered, theme } from '@prusa/connect-ui';
   import { operationTable } from '@prusa/connect';
   import {
     AppSettings,
     DeviceIssues,
+    deviceThumbnailUrlOf,
     DeviceModels,
     DeviceStates,
     downloadDiagnostics,
@@ -17,7 +20,7 @@
     startPrint,
   } from '@prusa/connect-ui/data';
   import { translateFor } from '@prusa/connect-ui/i18n';
-  import { Router } from '@prusa/connect-ui/router';
+  import { Router, type RouterNavigation } from '@prusa/connect-ui/router';
   import { homeOn } from '@prusa/connect-ui/domain';
   import {
     Alert,
@@ -83,7 +86,20 @@
     });
   };
 
-  const router = new Router({ known: PATTERNS });
+  const {
+    navigation,
+    useServerAppearance = false,
+    deviceThumbnail = (deviceId, path) =>
+      deviceThumbnailUrlOf(client, deviceId, path),
+  }: {
+    navigation?: RouterNavigation;
+    useServerAppearance?: boolean;
+    deviceThumbnail?: NonNullable<AppContext['deviceThumbnail']>;
+  } = $props();
+  const router = new Router({
+    known: PATTERNS,
+    navigation: untrack(() => navigation),
+  });
   // The server sends a sign-in at the provider that did not finish back here
   // with its reason. The sign-in says it once, and a reload does not.
   const failureOnLoad = signInFailureOf(router.search);
@@ -110,6 +126,17 @@
     if (failed === screen) reset();
   });
   const settings = new AppSettings(client);
+
+  // A skin an older build left in this browser's storage is deleted.
+  forgetRemembered(browserStorage(), 'skin');
+
+  $effect(() => {
+    if (!useServerAppearance || !settings.asked) return;
+    const preferredTheme = settings.theme;
+    untrack(() => {
+      theme.useDefault(preferredTheme);
+    });
+  });
   const appVersion = new AppVersion(client);
   const maintenance = new Maintenance(client, undefined, {
     upgrades: () => settings.upgrades,
@@ -239,6 +266,7 @@
   const host = $derived(window.location.host);
 
   const ctx: AppContext = {
+    deviceThumbnail: (deviceId, path) => deviceThumbnail(deviceId, path),
     get fleet() {
       return person.fleet;
     },
@@ -565,6 +593,7 @@
   {:else if session.status === 'signed-out'}
     <SignInScreen
       {host}
+      instanceName={settings.title}
       ended={session.ended}
       busy={session.busy}
       failure={signInFailure}

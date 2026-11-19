@@ -28,7 +28,11 @@ export default defineConfig({
       enabled: true,
       headless: true,
       provider: playwright(),
-      instances: [{ browser: 'chromium' }],
+      // Wide enough for the folder tree to sit beside the listing: below the
+      // page's `@4xl` it starts shut behind a toggle.
+      instances: [
+        { browser: 'chromium', viewport: { width: 1280, height: 900 } },
+      ],
       screenshotFailures: false,
       // The page marks its parts with `data-part`, the same attribute the
       // library's own components carry, so a test scopes a query to one part

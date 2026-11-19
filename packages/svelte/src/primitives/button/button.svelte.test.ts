@@ -12,7 +12,7 @@ import type {
   ButtonSize,
   ButtonVariant,
 } from './types';
-import { base, sizes, variants } from './variants';
+import { base, radii, sizes, variants } from './variants';
 
 const label = (text: string) =>
   createRawSnippet(() => ({ render: () => `<span>${text}</span>` }));
@@ -126,7 +126,23 @@ describe('Button', () => {
     expect(looks.size).toBe(VARIANTS.length);
   });
 
-  it('measures each size, and 44px for the two touch sizes', async () => {
+  // The craft lane counts primary buttons by `--primary-fill`, so a default
+  // button painted in another colour hides every one of them from it.
+  it('paints the default button in the primary fill', async () => {
+    await render(Button, { props: { children: label('Print') } });
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'var(--primary-fill)';
+    document.body.append(probe);
+    const fill = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+
+    expect(
+      getComputedStyle(page.getByRole('button', { name: 'Print' }).element())
+        .backgroundColor,
+    ).toBe(fill);
+  });
+
+  it('measures each size, and at least 44px for the touch size', async () => {
     const boxes = new Map<ButtonSize, DOMRect>();
 
     for (const size of Object.keys(sizes) as ButtonSize[]) {
@@ -145,21 +161,24 @@ describe('Button', () => {
     expect(boxes.get('icon-md')!.width).toBe(boxes.get('icon-md')!.height);
 
     // 44px is the floor for a control operated standing, with a gloved hand,
-    // on a wall-mounted tablet.
-    expect(boxes.get('lg')!.height).toBe(44);
-    expect(boxes.get('icon-lg')!.height).toBe(44);
-    expect(boxes.get('icon-lg')!.width).toBe(44);
+    // on a wall-mounted tablet. `icon-lg` takes it under a finger (button.touch.svelte.test.ts).
+    expect(boxes.get('lg')!.height).toBeGreaterThanOrEqual(44);
+    expect(boxes.get('icon-lg')!.width).toBe(boxes.get('icon-lg')!.height);
+    expect(boxes.get('icon-lg')!.height).toBeGreaterThanOrEqual(24);
   });
 
   it('keeps one radius at every size', async () => {
+    const radii: string[] = [];
     for (const size of ['sm', 'lg'] as const) {
       const { unmount } = await render(Button, {
         props: { size, children: label('Print') },
       });
       const button = page.getByRole('button', { name: 'Print' });
-      expect(getComputedStyle(button.element()).borderRadius).toBe('2px');
+      radii.push(getComputedStyle(button.element()).borderRadius);
       await unmount();
     }
+
+    expect(radii[0]).toBe(radii[1]);
   });
 
   it('takes focus from the keyboard and paints a ring for it', async () => {
@@ -250,7 +269,7 @@ describe('Button', () => {
         handed = argument().props;
         return {
           render: () =>
-            `<a href="#printers" class="${base} ${variants.default} ${sizes.md}">Printers</a>`,
+            `<a href="#printers" class="${base} ${radii.sm} ${variants.default} ${sizes.md}">Printers</a>`,
         };
       },
     );
@@ -267,6 +286,7 @@ describe('Button', () => {
     expect(handed?.['data-variant']).toBe('default');
     expect((handed?.class as unknown[]).filter(Boolean)).toEqual([
       base,
+      radii.sm,
       variants.default,
       sizes.md,
     ]);
@@ -396,7 +416,7 @@ describe('Button link with an icon', () => {
       page.getByRole('button', { name: 'Guide' }).element(),
     );
     expect(style.display).toBe('inline-flex');
-    expect(style.columnGap).toBe('6px');
+    expect(parseFloat(style.columnGap)).toBeGreaterThan(0);
     expect(style.paddingLeft).toBe('0px');
   });
 });

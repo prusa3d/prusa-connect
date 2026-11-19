@@ -1,5 +1,7 @@
 <!-- This screen lists the tags on the printers, and the printers under each. -->
 <script lang="ts">
+  import { compareValues } from '../../primitives/table/ordering';
+
   import TagIcon from '@lucide/svelte/icons/tag';
 
   import { describeFault, t } from '../../i18n';
@@ -36,7 +38,12 @@
 
   const rows = $derived(tagRowsOf(fleet.devices));
 
-  const listing = new ListingState<TagRow>({
+  const sortValues = {
+    tag: (row: TagRow) => row.tag,
+    printers: (row: TagRow) => row.printers.length,
+  };
+
+  const listing: ListingState<TagRow> = new ListingState<TagRow>({
     id: 'tags',
     fields: FIELDS,
     views: viewModes(['table', 'cards']),
@@ -48,7 +55,12 @@
       },
     },
     rows: () => rows,
-    compare: byTag,
+    compare: (a, b) => {
+      const sort = listing.sort;
+      if (!sort || !Object.hasOwn(sortValues, sort.field)) return byTag(a, b);
+      const value = sortValues[sort.field as keyof typeof sortValues];
+      return compareValues(value(a), value(b), sort.order);
+    },
   });
 
   const shows = (field: TagFieldId): boolean =>
@@ -103,6 +115,7 @@
           />
         {:else}
           <TagsTable
+            {listing}
             rows={listing.page}
             {shows}
             action={printersHref ? showPrinters : undefined}

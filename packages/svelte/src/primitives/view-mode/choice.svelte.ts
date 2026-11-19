@@ -54,7 +54,7 @@ export class ViewModeState {
 
     // The thresholds are rem-valued, like the container queries they come
     // from, so the root's own font size is what converts them. A literal 16
-    // would be wrong under any skin or reader setting that moves it.
+    // would be wrong under any reader setting that moves it.
     const rem = Number.parseFloat(
       getComputedStyle(document.documentElement).fontSize,
     );

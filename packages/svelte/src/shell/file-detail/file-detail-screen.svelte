@@ -12,7 +12,11 @@
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
   import FileToolNeeds from './file-tool-needs.svelte';
-  import { PRINTER_STATE_LABEL_KEY, printerStateOf } from '../../domain';
+  import {
+    isPrintFile,
+    PRINTER_STATE_LABEL_KEY,
+    printStateOf,
+  } from '../../domain';
   import {
     describeFault,
     formatBytes,
@@ -48,8 +52,6 @@
   import { printerModelOf, stateBadgeVariant } from '../printers/presentation';
   import type { FileDetailScreenProps } from './types';
 
-  // What the firmware starts as it stands.
-  const PRINTABLE = /\.(?:bgcode|gcode|gco|g)$/i;
   const SLICEABLE = /\.(?:3mf|stl|obj|step|stp|amf)$/i;
 
   let {
@@ -84,10 +86,17 @@
   const waiting = $derived(loading || entry === undefined);
 
   // The listing answered and holds no such file.
-  const missing = $derived(!loading && entry === undefined);
+  const missing = $derived(
+    !loading && entry === undefined && fault === undefined,
+  );
 
-  const printable = $derived(PRINTABLE.test(name));
-  const sliceable = $derived(SLICEABLE.test(name));
+  const addressedNames = $derived(
+    entry === undefined ? [path] : [entry.name, entry.path],
+  );
+  const printable = $derived(addressedNames.some(isPrintFile));
+  const sliceable = $derived(
+    addressedNames.some((value) => SLICEABLE.test(value)),
+  );
 
   const Glyph = $derived.by(() => {
     if (printable) return FileCode2Icon;
@@ -264,7 +273,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-6">
-  <PageTrail trail={crumbs} page={name} monoPage />
+  <PageTrail trail={crumbs} page={name} sansPage />
 
   <FaultAlert fault={refusal} />
 
@@ -279,7 +288,7 @@
         />
       </CardContent>
     </Card>
-  {:else}
+  {:else if entry !== undefined || fault === undefined}
     <DetailHeader
       title={name}
       loading={waiting}
@@ -324,7 +333,11 @@
       {:else}
         <RowList>
           {#each prints as print (print.id)}
-            {@const printState = printerStateOf(print.state)}
+            {@const printState = printStateOf({
+              state: print.state,
+              ended: print.ended !== undefined,
+              outcome: print.outcome,
+            })}
             {#snippet stateBadge()}
               <Badge variant={stateBadgeVariant(printState)}>
                 {t(PRINTER_STATE_LABEL_KEY[printState])}
@@ -372,7 +385,7 @@
 {/snippet}
 
 {#snippet detailsTab()}
-  <Card>
+  <Card data-settings-panel>
     <CardContent>
       <KeyValueList rows={facts} />
     </CardContent>
@@ -380,7 +393,7 @@
 {/snippet}
 
 {#snippet coreContents()}
-  <Card>
+  <Card data-settings-panel>
     <CardContent>
       <section class="flex flex-col gap-4">
         <h2 class="flex items-center gap-2 text-sm font-medium">

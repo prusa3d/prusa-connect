@@ -112,11 +112,16 @@ describe('Toaster', () => {
     expect(glyph('info')).toContain('lucide-info');
     expect(glyph('loading')).toContain('lucide-loader-circle');
 
-    // Every glyph is the same size, and the waiting one turns.
+    // Every glyph is the same size, and the waiting one is the Spinner,
+    // which turns.
     for (const kind of ['success', 'error', 'warning', 'info', 'loading']) {
       expect(glyph(kind)).toContain('size-4');
     }
-    expect(glyph('loading')).toContain('animate-spin');
+    expect(
+      document.querySelector(
+        '[data-sonner-toast][data-type="loading"] [data-icon] [data-slot="spinner"]',
+      ),
+    ).not.toBeNull();
   });
 
   it('starts in the theme the root element is in', async () => {

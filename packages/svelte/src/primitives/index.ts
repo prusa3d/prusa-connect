@@ -163,6 +163,8 @@ export {
   ZAxisIcon,
 } from './control-icon';
 export {
+  CONTROL_FILL,
+  CONTROL_RING,
   CONTROL_SIZES,
   CONTROL_TRIGGER,
   type ControlSize,
@@ -338,6 +340,12 @@ export {
 } from './listing-toolbar';
 export { Logo, type LogoLines, type LogoProps, type LogoSize } from './logo';
 export {
+  ConnectLogo,
+  type ConnectLogoProps,
+  type ConnectLogoShape,
+  type ConnectLogoSize,
+} from './connect-logo';
+export {
   MaterialSwatch,
   type MaterialSwatchProps,
   type SwatchMaterial,
@@ -484,7 +492,7 @@ export {
   type SheetTriggerProps,
 } from './sheet';
 export { Skeleton, type SkeletonProps } from './skeleton';
-export { Slider, type SliderProps } from './slider';
+export { Slider, type SliderProps, type SliderTone } from './slider';
 export { SliderField, type SliderFieldProps } from './slider-field';
 export { toast, Toaster, type ToasterProps } from './sonner';
 export {
@@ -520,6 +528,7 @@ export {
 } from './swatch-picker';
 export { Switch, type SwitchProps, type SwitchSize } from './switch';
 export {
+  SORT_DIRECTION,
   SortableTableHead,
   type SortableTableHeadProps,
   Table,
@@ -572,6 +581,7 @@ export {
   Toggle,
   type ToggleProps,
   type ToggleSize,
+  type ToggleTone,
   type ToggleVariant,
 } from './toggle';
 export {
@@ -615,3 +625,5 @@ export {
   viewPreferences,
   type ViewPreferencesOptions,
 } from './view-preferences';
+
+export { PasswordInput, type PasswordInputProps } from './password-input';

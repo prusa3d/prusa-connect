@@ -117,7 +117,10 @@
 {/each}
 
 {#if listed.length > 0 || props.items !== undefined}
-  <RowActions name={props.label} class={props.class}>
+  <RowActions
+    name={props.label}
+    class={[props.class, listed.length === 0 && props.itemsOnlyClass]}
+  >
     {#if props.items}
       {@render props.items()}
       {#if listed.length > 0}<DropdownMenuSeparator />{/if}

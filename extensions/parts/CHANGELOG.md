@@ -4,6 +4,16 @@ What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host, and
 `changelog_test.go` fails when the three differ.
 
+## 0.3.8 - 2026-11-17
+
+### Changed
+
+- The page takes the Ember look of the web app. On a narrow page the folder tree folds above the listing, behind a toggle.
+
+### Fixed
+
+- The page no longer asks for the picture of a print file that carries none, so no request ends in a 404. Each file version records whether the storage found a thumbnail in it.
+
 ## 0.3.7 - 2026-11-16
 
 ### Changed

@@ -753,8 +753,8 @@ func mountsFor(
 //
 // Enabled is where the app stands and not what the file says. A client
 // reading it from a build that carries no app is told the page is not here.
-// The four appearance keys are sent whatever the answer, because a deployment
-// serving its own page still reads the name and the brand this server was
+// The three appearance keys are sent whatever the answer, because a deployment
+// serving its own page still reads the name and the theme this server was
 // configured with.
 func appSettings(frontend config.Frontend, diagnostics config.Diagnostics, state string) httpapi.AppSettings {
 	return httpapi.AppSettings{
@@ -762,7 +762,6 @@ func appSettings(frontend config.Frontend, diagnostics config.Diagnostics, state
 		Title:           frontend.Title,
 		DefaultLanguage: frontend.DefaultLanguage,
 		Theme:           frontend.Theme,
-		Skin:            frontend.Skin,
 		PrinterAddress:  frontend.PrinterAddress,
 		PrinterCustomCA: frontend.PrinterCustomCA,
 		Documentation:   version.Documentation(),

@@ -31,7 +31,7 @@
   bind:ref
   data-slot="sheet-overlay"
   class={[
-    'pointer-events-auto fixed inset-0 z-50 bg-black/50 backdrop-blur-[3px] data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in',
+    'pointer-events-auto fixed inset-0 z-50 bg-black/50 backdrop-blur-scrim state-open:animate-fade-in state-closed:animate-fade-out',
     className,
   ]}
   {...rest}

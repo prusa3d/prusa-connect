@@ -18,10 +18,7 @@ what each utility means.
   Tailwind theme, as a CSS custom property the theme exposes. A component reads
   the theme and never restates a value
 - no arbitrary values. `p-[13px]`, `text-[#333]` and `w-[calc(...)]` are
-  refused in review. A value the theme lacks is added to the theme, once. The
-  one exception is `packages/svelte/src/primitives/`, where a component copies
-  its class names from the React design system and
-  `primitives/classes.fixture.json` holds the exact set
+  refused in review. A value the theme lacks is added to the theme, once
 - a component is composed from utilities in its markup. A repeated group of
   utilities becomes a component or an `@apply` class in the component's own
   `<style>`, never a global stylesheet
@@ -119,7 +116,9 @@ next reader does not "simplify" it back into a broken layout.
 - `transform: translate()` in hover states, except drag ghosts
 - border *width* changes on hover. Use outline or box-shadow. A colour
   change is allowed: the box does not reflow
-- `!important`
+- `!important`, except to outrank an inline style that a library or the
+  browser writes, which no selector can. The comment at the site names the
+  writer
 - inline styles beyond a custom property that carries an input
 - pill-shaped badges. Use less rounded
 

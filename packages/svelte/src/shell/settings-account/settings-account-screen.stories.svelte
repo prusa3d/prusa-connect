@@ -22,6 +22,20 @@
 <Story name="Default" args={{ source: signedIn, onChangePassword }} />
 
 <Story
+  name="Populated"
+  args={{
+    source: signedIn,
+    identity: {
+      username: 'alice',
+      displayName: 'Alice Doe',
+      role: 'admin',
+      createdAt: '2026-08-19T17:05:00Z',
+    },
+    onChangePassword,
+  }}
+/>
+
+<Story
   name="Reading The Principal"
   args={{ source: reading, onChangePassword }}
 />
@@ -45,6 +59,21 @@
 <Story
   name="Changed"
   args={{ source: signedIn, changed: true, onChangePassword }}
+/>
+
+<Story
+  name="Profile Image Unavailable"
+  args={{
+    source: signedIn,
+    identity: {
+      username: 'alice',
+      displayName: 'Alice Doe',
+      avatarUrl: 'data:image/png;base64,invalid',
+      role: 'admin',
+      createdAt: '2026-08-19T17:05:00Z',
+    },
+    onChangePassword,
+  }}
 />
 
 <!-- Signed in at an identity provider, which keeps the password. -->

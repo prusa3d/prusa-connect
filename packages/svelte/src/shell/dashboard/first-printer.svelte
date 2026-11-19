@@ -10,7 +10,7 @@
 </script>
 
 <div
-  class="rounded-lg flex flex-col gap-4 border border-primary/40 bg-primary/5 p-4 @md/dashboard:flex-row @md/dashboard:items-center"
+  class="flex flex-col gap-4 rounded-md border border-primary/40 bg-primary/5 p-4 @md/dashboard:flex-row @md/dashboard:items-center"
   data-part="first-printer"
 >
   <PrinterGlyphIcon class="size-8 shrink-0 text-primary" aria-hidden="true" />

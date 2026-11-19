@@ -34,13 +34,14 @@ var flatPathReaders = map[string]string{
 }
 
 // flatPathSkipped are the trees this test does not read: no source of the
-// core, and the records of how the design got here. The decisions, the
+// core, a local scratch tree of working notes that git never tracks, and the
+// records of how the design got here. The decisions, the
 // changelog and its pending fragments say what an earlier release wrote, and
 // a record keeps its history.
 //
 //nolint:gochecknoglobals // a fixed skip set.
 var flatPathSkipped = []string{
-	".git", ".codex", "node_modules", "dist", "bin", "storybook-static", "generated",
+	".git", ".codex", ".superpowers", "node_modules", "dist", "bin", "storybook-static", "generated",
 	"docs/decisions", "docs/changes", "docs/CHANGELOG.md",
 	"internal/arch/testdata",
 }

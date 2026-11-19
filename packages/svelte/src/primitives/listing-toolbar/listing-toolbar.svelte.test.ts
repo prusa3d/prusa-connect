@@ -9,7 +9,17 @@ import ListingToolbarProbe from '../../test/listing-toolbar-probe.svelte';
 const panel = (): HTMLElement | null =>
   document.body.querySelector<HTMLElement>('[data-slot="popover-content"]');
 
+/** On a toolbar narrower than its container breakpoint, which the test page
+ * is, the facets sit under the Filters disclosure. */
+const showFilters = async (): Promise<void> => {
+  const filters = page.getByRole('button', { name: /^Filters/ });
+  if (filters.element().getAttribute('aria-expanded') !== 'true') {
+    await filters.click();
+  }
+};
+
 const openFacet = async (name: string): Promise<HTMLElement> => {
+  await showFilters();
   await page.getByRole('button', { name: new RegExp(name) }).click();
   await expect.poll(panel).not.toBeNull();
   const surface = panel();
@@ -20,6 +30,7 @@ const openFacet = async (name: string): Promise<HTMLElement> => {
 describe('ListingToolbar', () => {
   it('draws a trigger for each facet the listing declares', async () => {
     await render(ListingToolbarProbe, {});
+    await showFilters();
 
     await expect
       .element(page.getByRole('button', { name: /State/ }))
@@ -66,16 +77,37 @@ describe('ListingToolbar', () => {
   it('wraps the filters under the first line and keeps the view switch on it', async () => {
     const { container } = await render(ListingToolbarProbe, {});
     container.style.width = '14rem';
+    await showFilters();
 
     const toolbar = document.querySelector('[data-slot="listing-toolbar"]');
     const controls = document.querySelector('[data-slot="listing-controls"]');
-    const flag = document.querySelector('[data-slot="listing-toggle"]');
-    if (!toolbar || !controls || !flag) throw new Error('toolbar not drawn');
+    const flag = page.getByRole('button', { name: 'Flagged' }).element();
+    if (!toolbar || !controls) throw new Error('toolbar not drawn');
 
     const top = (node: Element): number => node.getBoundingClientRect().top;
     expect(top(controls)).toBe(top(toolbar));
     expect(top(flag)).toBeGreaterThan(top(controls));
     expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth);
+  });
+
+  it('wraps the actions before the search runs under them', async () => {
+    const { container } = await render(ListingToolbarProbe, {
+      withSearch: true,
+      withActions: true,
+    });
+    container.style.width = '24rem';
+
+    const search = page.getByRole('searchbox', { name: 'Search' }).element();
+    const actions = page.getByTestId('actions').element();
+    const a = search.getBoundingClientRect();
+    const b = actions.getBoundingClientRect();
+    expect(b.width).toBeGreaterThan(150);
+    const apart =
+      a.right <= b.left ||
+      b.right <= a.left ||
+      a.bottom <= b.top ||
+      b.bottom <= a.top;
+    expect(apart).toBe(true);
   });
 
   it('offers Clear filters only while a filter is on', async () => {

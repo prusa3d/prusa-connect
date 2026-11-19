@@ -42,6 +42,8 @@ export interface LineChartProps {
    * the axis and not stretched to its full height.
    */
   readonly minStep?: number | undefined;
+  /** The value axis reaches zero, so a small change is not drawn as a large one. */
+  readonly zeroBaseline?: boolean | undefined;
   /** Drawn dashed across the plot; the value axis reaches it. */
   readonly threshold?: ChartThreshold | undefined;
   /** A tick at the top edge and a dot on the first line at each instant. */

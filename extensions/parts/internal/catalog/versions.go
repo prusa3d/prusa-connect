@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"slices"
+	"strings"
 
 	"github.com/prusa3d/prusa-connect/sdk/storageapi"
 )
@@ -167,9 +169,15 @@ func (c *Catalog) filesOf(
 			return nil, invalid("%q is a folder, and a version holds files", draft.Path)
 		}
 
-		files = append(files, File{
-			Name: name, Storage: storage, Path: draft.Path, Size: info.Size, SHA256: info.SHA256,
-		})
+		file := File{Name: name, Storage: storage, Path: draft.Path, Size: info.Size, SHA256: info.SHA256}
+		// The host reads a print file's picture while it describes the file, and
+		// leaves Print out when it found neither details nor a picture.
+		if slices.Contains(thumbnailExtensions, strings.ToLower(path.Ext(name))) {
+			carries := info.Print != nil && info.Print.ThumbnailWidth > 0
+			file.Thumbnail = &carries
+		}
+
+		files = append(files, file)
 	}
 
 	return files, nil

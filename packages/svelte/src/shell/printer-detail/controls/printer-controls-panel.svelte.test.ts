@@ -1,5 +1,6 @@
+import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import {
@@ -83,6 +84,42 @@ afterEach(() => {
 });
 
 describe('PrinterControlsPanel', () => {
+  it('keeps reset behind the maintenance disclosure and confirmation', async () => {
+    const onCommand = vi.fn();
+    await render(PrinterControlsPanel, {
+      props: props({
+        device: printer('PRINTING'),
+        commands: { onCommand },
+      }),
+    });
+
+    for (const name of ['Mesh bed leveling', 'Release axes', 'Mark as ready']) {
+      await expect.element(page.getByRole('button', { name })).toBeDisabled();
+    }
+
+    const disclosure = page.getByText('Maintenance', { exact: true });
+    const reset = page.getByRole('button', {
+      name: 'Reset printer',
+      exact: true,
+    });
+    await expect.element(reset).not.toBeInTheDocument();
+    await disclosure.click();
+    await expect.element(reset).toBeEnabled();
+    await reset.click();
+
+    const dialog = page.getByRole('alertdialog');
+    await expect
+      .element(
+        dialog.getByText('This stops the print and turns off the heaters.'),
+      )
+      .toBeVisible();
+    expect(onCommand).not.toHaveBeenCalled();
+    await dialog.getByRole('button', { name: 'Reset printer' }).click();
+    expect(onCommand).toHaveBeenCalledExactlyOnceWith(
+      'core.command.reset_printer',
+    );
+  });
+
   it('sends a relative jog of the chosen step, at the pad feedrate', async () => {
     const onCommand = vi.fn();
     await render(PrinterControlsPanel, {
@@ -165,12 +202,12 @@ describe('PrinterControlsPanel', () => {
       });
 
       await expect.element(page.getByText('Tools')).toBeVisible();
-      await expect.element(page.getByText('T0')).toBeVisible();
+      await expect.element(page.getByText('Tool 1')).toBeVisible();
       await expect.element(page.getByText('PLA')).toBeVisible();
       // The active head's material, in its own row and in the extruder's.
       await expect.element(page.getByText('PETG').nth(1)).toBeVisible();
       await expect
-        .element(page.getByText('T1'))
+        .element(page.getByText('Tool 2'))
         .toHaveAttribute('class', expect.stringContaining('font-semibold'));
     });
 
@@ -190,8 +227,8 @@ describe('PrinterControlsPanel', () => {
         }),
       });
 
-      await expect.element(page.getByText('T1')).toBeVisible();
-      await expect.element(page.getByText('T2')).not.toBeInTheDocument();
+      await expect.element(page.getByText('Tool 2')).toBeVisible();
+      await expect.element(page.getByText('Tool 3')).not.toBeInTheDocument();
     });
 
     // A printer with one nozzle is head 0, and the extruder row reads it
@@ -232,7 +269,7 @@ describe('PrinterControlsPanel', () => {
       });
 
       await page
-        .getByRole('button', { name: 'Set T0 extruder target' })
+        .getByRole('button', { name: /^Set Tool 1 extruder target/ })
         .click();
       await (await openSurface()).getByRole('button', { name: 'PETG' }).click();
       await (
@@ -256,10 +293,12 @@ describe('PrinterControlsPanel', () => {
         }),
       });
 
-      await page.getByRole('combobox', { name: 'T1 nozzle diameter' }).click();
+      await page
+        .getByRole('combobox', { name: 'Tool 2 nozzle diameter' })
+        .click();
       await page.getByRole('option', { name: '0.6 mm' }).click();
       await page
-        .getByRole('group', { name: 'T0 high flow nozzle' })
+        .getByRole('group', { name: 'Tool 1 high flow nozzle' })
         .getByRole('radio', { name: 'On' })
         .click();
 
@@ -272,7 +311,7 @@ describe('PrinterControlsPanel', () => {
         { high_flow: 'true', tool: '0' },
       );
       await expect
-        .element(page.getByRole('combobox', { name: 'T1 nozzle diameter' }))
+        .element(page.getByRole('combobox', { name: 'Tool 2 nozzle diameter' }))
         .toHaveTextContent('0.6 mm');
     });
 
@@ -328,7 +367,62 @@ describe('PrinterControlsPanel', () => {
       await expect.element(page.getByText('Extruder')).toBeVisible();
       await expect.element(page.getByText('PETG')).toBeVisible();
       await expect.element(page.getByText('Tools')).not.toBeInTheDocument();
-      await expect.element(page.getByText('T0')).not.toBeInTheDocument();
+      await expect.element(page.getByText('Tool 1')).not.toBeInTheDocument();
+    });
+
+    // The Extruder row repeats the active head, so a printer that sets each
+    // head alone shows the heads only.
+    it('leaves out the extruder row where each head is set alone', async () => {
+      await render(PrinterControlsPanel, {
+        props: props({
+          device: {
+            ...slotted(),
+            capabilities: [
+              ...EVERY_VERB,
+              'core.command.set_nozzle_temperature#tool',
+            ],
+          },
+        }),
+      });
+
+      await expect.element(page.getByText('Tool 2')).toBeVisible();
+      await expect.element(page.getByText('Extruder')).not.toBeInTheDocument();
+    });
+
+    it('hands each head of a tool changer to the material picker', async () => {
+      const material = createRawSnippet((id: () => string) => ({
+        render: () => `<button>Assign ${id()}</button>`,
+      }));
+      await render(PrinterControlsPanel, {
+        props: props({
+          device: {
+            ...slotted(),
+            capabilities: [
+              ...EVERY_VERB,
+              'core.command.set_nozzle_temperature#tool',
+            ],
+          },
+          material,
+        }),
+      });
+
+      await expect
+        .element(page.getByRole('button', { name: 'Assign 0', exact: true }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole('button', { name: 'Assign 1', exact: true }))
+        .toBeVisible();
+    });
+
+    it('hands the one nozzle of a single-head printer to the material picker', async () => {
+      const material = createRawSnippet((id: () => string) => ({
+        render: () => `<button>Assign ${id()}</button>`,
+      }));
+      await render(PrinterControlsPanel, { props: props({ material }) });
+
+      await expect
+        .element(page.getByRole('button', { name: 'Assign 0', exact: true }))
+        .toBeVisible();
     });
 
     it('opens a head that is not printing on the target it reports', async () => {
@@ -354,7 +448,7 @@ describe('PrinterControlsPanel', () => {
       });
 
       await page
-        .getByRole('button', { name: 'Set T0 extruder target' })
+        .getByRole('button', { name: /^Set Tool 1 extruder target/ })
         .click();
 
       await expect
@@ -378,17 +472,17 @@ describe('PrinterControlsPanel', () => {
       });
 
       await expect
-        .element(page.getByRole('combobox', { name: 'T1 nozzle diameter' }))
+        .element(page.getByRole('combobox', { name: 'Tool 2 nozzle diameter' }))
         .toHaveTextContent('0.6 mm');
       await expect
         .element(
           page
-            .getByRole('group', { name: 'T1 hardened nozzle' })
+            .getByRole('group', { name: 'Tool 2 hardened nozzle' })
             .getByRole('radio', { name: 'On' }),
         )
         .toBeChecked();
       await expect
-        .element(page.getByRole('combobox', { name: 'T0 nozzle diameter' }))
+        .element(page.getByRole('combobox', { name: 'Tool 1 nozzle diameter' }))
         .toHaveTextContent('No reading yet');
     });
   });
@@ -445,12 +539,14 @@ describe('PrinterControlsPanel', () => {
         commands: { onCommand },
       }),
     });
+    // Beep and reset sit in the Maintenance disclosure.
+    await page.getByText('Maintenance', { exact: true }).click();
 
     for (const name of [
       'Move X left',
       'Move the bed up',
       'Home',
-      'Disable steppers',
+      'Release axes',
       'Mark as ready',
       'Exit to idle',
       'Mesh bed leveling',
@@ -469,7 +565,7 @@ describe('PrinterControlsPanel', () => {
       )
       .toBeVisible();
     await expect
-      .element(page.getByText('Available once the print finishes.'))
+      .element(page.getByText('Available once the print finishes.').first())
       .toBeVisible();
     expect(onCommand).not.toHaveBeenCalled();
   });
@@ -797,6 +893,7 @@ describe('PrinterControlsPanel', () => {
       }),
     });
 
+    await page.getByText('Maintenance', { exact: true }).click();
     await page.getByRole('button', { name: 'Change hostname' }).click();
     const dialog = page.getByRole('dialog');
     const field = dialog.getByRole('textbox', { name: 'Hostname' });
@@ -828,6 +925,248 @@ describe('PrinterControlsPanel', () => {
       .element(page.getByRole('button', { name: 'Home' }))
       .toBeDisabled();
     expect(onCommand).not.toHaveBeenCalled();
+  });
+
+  describe('coordinates', () => {
+    const MOTION_VERBS = [
+      'core.command.disable_steppers',
+      'core.command.home',
+      'core.command.move',
+      'core.command.move_z',
+    ];
+
+    const plate = (axes: Record<'x' | 'y' | 'z', number>) => {
+      const reported = $state({ ...axes });
+      const source: TelemetrySource = {
+        value: (path) =>
+          ({
+            '/axis/x': reported.x,
+            '/axis/y': reported.y,
+            '/axis/z': reported.z,
+          })[path],
+        points: () => [],
+      };
+      return { reported, source };
+    };
+
+    const renderPlate = async (
+      axes: Record<'x' | 'y' | 'z', number>,
+      onCommand: PrinterControlsPanelProps['commands']['onCommand'],
+    ) => {
+      const { reported, source } = plate(axes);
+      await render(PrinterControlsPanel, {
+        props: props({
+          device: {
+            ...printer('IDLE', MOTION_VERBS),
+            build_volume: { x_mm: 250, y_mm: 210, z_mm: 220 },
+          },
+          telemetry: source,
+          commands: { onCommand },
+        }),
+      });
+      return reported;
+    };
+
+    const TIMEOUT_TEXT =
+      'No reading of the requested position yet. Check the printer before you try again.';
+
+    it('frees the controls when the printer never reports the move back', async () => {
+      const onCommand = vi.fn(() =>
+        Promise.resolve({ kind: 'accepted' as const }),
+      );
+      await renderPlate({ x: 100, y: 75, z: 25 }, onCommand);
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        await page.getByRole('button', { name: 'X+' }).click();
+        await expect
+          .element(page.getByText('Command accepted.', { exact: false }))
+          .toBeVisible();
+        // 1 mm at 3000 mm/min is 20 ms of travel, then the 12 s margin.
+        vi.advanceTimersByTime(12_020);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      await expect.element(page.getByText(TIMEOUT_TEXT)).toBeVisible();
+      await page.getByRole('button', { name: 'Home axes' }).click();
+      expect(onCommand).toHaveBeenLastCalledWith(
+        'core.command.home',
+        undefined,
+      );
+      expect(onCommand).toHaveBeenCalledTimes(2);
+    });
+
+    // 195 mm of Z at 600 mm/min is 19.5 s of travel, longer than a fixed
+    // wait would allow.
+    it('waits as long as a long move takes before it gives up', async () => {
+      const onCommand = vi.fn(() =>
+        Promise.resolve({ kind: 'accepted' as const }),
+      );
+      const reported = await renderPlate({ x: 100, y: 75, z: 25 }, onCommand);
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        page
+          .getByRole('slider', { name: 'Z position in millimeters' })
+          .element()
+          .focus();
+        await userEvent.keyboard('{End}');
+        await expect
+          .element(page.getByText('Command accepted.', { exact: false }))
+          .toBeVisible();
+        expect(onCommand).toHaveBeenCalledWith('core.command.move_z', {
+          feedrate: '600',
+          distance: '195',
+        });
+        vi.advanceTimersByTime(13_000);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      await expect
+        .element(page.getByText('Command accepted.', { exact: false }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole('button', { name: 'Z+' }))
+        .toHaveAttribute('aria-disabled', 'true');
+      reported.z = 220;
+      await expect.element(page.getByText('Position confirmed')).toBeVisible();
+    });
+
+    it('keeps the controls held while a reading is still on its way to the target', async () => {
+      const onCommand = vi.fn(() =>
+        Promise.resolve({ kind: 'accepted' as const }),
+      );
+      const reported = await renderPlate({ x: 100, y: 75, z: 25 }, onCommand);
+
+      await page.getByRole('button', { name: 'X+' }).click();
+      await expect
+        .element(page.getByText('Command accepted.', { exact: false }))
+        .toBeVisible();
+      reported.x = 100.5;
+      await expect.element(page.getByText('100.5 mm')).toBeVisible();
+
+      await expect
+        .element(page.getByRole('button', { name: 'X+' }))
+        .toHaveAttribute('aria-disabled', 'true');
+      await expect
+        .element(page.getByText('Command accepted.', { exact: false }))
+        .toBeVisible();
+
+      reported.x = 101;
+      await expect.element(page.getByText('Position confirmed')).toBeVisible();
+      await page.getByRole('button', { name: 'X+' }).click();
+      expect(onCommand).toHaveBeenCalledTimes(2);
+    });
+
+    // The plate reads the same hold as Advanced, by the state telemetry
+    // reports.
+    it('holds the plate on a paused printer, with the one reason', async () => {
+      const onCommand = vi.fn();
+      const { source } = plate({ x: 100, y: 75, z: 25 });
+      await render(PrinterControlsPanel, {
+        props: props({
+          device: {
+            ...printer('IDLE', MOTION_VERBS),
+            build_volume: { x_mm: 250, y_mm: 210, z_mm: 220 },
+          },
+          telemetry: {
+            ...source,
+            value: (path) =>
+              path === '/state' ? 'PAUSED' : source.value(path),
+          },
+          commands: { onCommand },
+        }),
+      });
+
+      for (const name of ['X+', 'Z+', 'Home axes', 'Release axes']) {
+        await expect
+          .element(page.getByRole('button', { name, exact: true }))
+          .toBeDisabled();
+      }
+      const reason = page.getByText(
+        'The printer moves and homes only when it is idle, ready, finished or stopped.',
+      );
+      await expect.element(reason).toBeVisible();
+      // Said once, by the plate, and not again under the axis actions.
+      expect(reason.elements()).toHaveLength(1);
+      expect(onCommand).not.toHaveBeenCalled();
+    });
+
+    // A finished print has left the gantry, so the plate moves again.
+    it('lets the plate move on a printer whose print finished', async () => {
+      const { source } = plate({ x: 100, y: 75, z: 25 });
+      await render(PrinterControlsPanel, {
+        props: props({
+          device: {
+            ...printer('IDLE', MOTION_VERBS),
+            build_volume: { x_mm: 250, y_mm: 210, z_mm: 220 },
+          },
+          telemetry: {
+            ...source,
+            value: (path) =>
+              path === '/state' ? 'FINISHED' : source.value(path),
+          },
+        }),
+      });
+
+      for (const name of ['X+', 'Z+', 'Home axes', 'Release axes']) {
+        await expect
+          .element(page.getByRole('button', { name, exact: true }))
+          .toBeEnabled();
+      }
+    });
+
+    it('says why X and Y are off when the reported position lies outside the plate', async () => {
+      await renderPlate({ x: -2, y: 75, z: 25 }, vi.fn());
+
+      await expect
+        .element(page.getByRole('button', { name: 'X+' }))
+        .toBeDisabled();
+      await expect
+        .element(page.getByRole('button', { name: 'Z+' }))
+        .toBeEnabled();
+      await expect
+        .element(
+          page.getByText('The printer has no usable position for this move.'),
+        )
+        .toBeVisible();
+    });
+
+    it('says why a drag is dropped when the reported position moved during it', async () => {
+      const onCommand = vi.fn();
+      const reported = await renderPlate({ x: 100, y: 75, z: 25 }, onCommand);
+      const nozzle = page
+        .getByRole('button', { name: 'Nozzle position on the build plate' })
+        .element() as HTMLElement;
+      nozzle.setPointerCapture = () => undefined;
+      const { left, top } = nozzle.getBoundingClientRect();
+      const pointer = (type: string, dx: number) =>
+        new PointerEvent(type, {
+          bubbles: true,
+          button: 0,
+          pointerId: 1,
+          isPrimary: true,
+          clientX: left + dx,
+          clientY: top,
+        });
+
+      nozzle.dispatchEvent(pointer('pointerdown', 0));
+      nozzle.dispatchEvent(pointer('pointermove', 45));
+      reported.x = 100.02;
+      await expect.element(page.getByText('100.02 mm')).toBeVisible();
+      nozzle.dispatchEvent(pointer('pointerup', 45));
+
+      await expect
+        .element(
+          page.getByText(
+            'The reported position changed during the drag. Try again.',
+          ),
+        )
+        .toBeVisible();
+      expect(onCommand).not.toHaveBeenCalled();
+    });
   });
 
   it('has no accessibility violations', async () => {

@@ -35,7 +35,7 @@
 -->
 
 <Story name="Default" asChild>
-  <div class="w-[40rem]">
+  <div class="w-story-pager">
     <Pager
       page={jobs.page}
       pageCount={pagesOf(61, jobs.size)}
@@ -52,7 +52,7 @@
 </Story>
 
 <Story name="On The Last Page" asChild>
-  <div class="w-[40rem]">
+  <div class="w-story-pager">
     <Pager
       page={last.page}
       pageCount={pagesOf(61, last.size)}
@@ -69,7 +69,7 @@
 </Story>
 
 <Story name="One Page Only" asChild>
-  <div class="w-[40rem]">
+  <div class="w-story-pager">
     <Pager
       page={short.page}
       pageCount={pagesOf(4, short.size)}
@@ -86,7 +86,7 @@
 </Story>
 
 <Story name="The Listing Writes Its Own Count" asChild>
-  <div class="w-[40rem]">
+  <div class="w-story-pager">
     <Pager
       page={search.page}
       pageCount={pagesOf(12, search.size)}

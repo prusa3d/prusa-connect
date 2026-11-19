@@ -1,6 +1,6 @@
 <!--
-  The Memory tab of one service module: its last hour, then its budget and
-  what the host does when it goes over. Every choice is written through
+  The Memory tab of one service module, one pane: its last hour, then its
+  budget and what the host does when it goes over. Every choice is written through
   `write`, which says whether the server took it.
 -->
 <script lang="ts">
@@ -44,7 +44,6 @@
 </script>
 
 <div class="flex flex-col gap-4" data-part="extension-memory-panel">
-  <MemoryHistory {history} {memory} {missing} fault={historyFault} />
   <ExtensionMemory
     estimate={memoryEstimate({
       budgetBytes: memory.budget_bytes,
@@ -75,5 +74,7 @@
     onswitchoff={(
       next: { failures: number; window_seconds: number } | undefined,
     ) => write({ switch_off: next ?? null })}
-  />
+  >
+    <MemoryHistory {history} {memory} {missing} fault={historyFault} />
+  </ExtensionMemory>
 </div>

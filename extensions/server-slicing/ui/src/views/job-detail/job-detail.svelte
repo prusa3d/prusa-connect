@@ -280,7 +280,7 @@
   <PageTrail
     trail={[{ label: t('slicer.tab.jobs'), href: backHref }]}
     page={name}
-    monoPage
+    sansPage
   />
 
   {#if job === undefined}
@@ -326,12 +326,12 @@
       <CardContent class="grid grid-cols-1 content-start gap-6">
         <section class="grid grid-cols-1 content-start gap-4">
           {@render part(t('slicer.detail.run'), ClockIcon)}
-          <KeyValueList rows={run} />
+          <KeyValueList rows={run} labelWidth="14rem" />
         </section>
         <Separator />
         <section class="grid grid-cols-1 content-start gap-4">
           {@render part(t('slicer.detail.project'), FolderOpenIcon)}
-          <KeyValueList rows={project} />
+          <KeyValueList rows={project} labelWidth="14rem" />
         </section>
         {#if job.result}
           {@const result = job.result}
@@ -341,7 +341,7 @@
             data-part="output"
           >
             {@render part(t('slicer.detail.output'), FileCodeIcon)}
-            <KeyValueList rows={output} />
+            <KeyValueList rows={output} labelWidth="14rem" />
             <div class="text-sm">
               <Button variant="link" size="inline-icon">
                 {#snippet child({ props })}

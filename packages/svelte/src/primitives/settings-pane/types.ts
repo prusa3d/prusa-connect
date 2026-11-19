@@ -9,7 +9,9 @@ export interface SettingsPaneProps {
   /** The rows: form controls, a table, a list. */
   children?: Snippet;
   /** The submit row. It sits in a tinted band at the foot of the pane. */
-  actions?: Snippet;
+  actions?: Snippet | undefined;
+  /** Short text at the end of the header band, beside the title. */
+  headerEnd?: Snippet | undefined;
   /** A message about the last save, read out when it arrives. */
   message?: string | undefined;
   /** The message is a failure, so it is announced rather than queued. */
@@ -20,6 +22,8 @@ export interface SettingsPaneProps {
 }
 
 export interface SettingsRowProps {
+  /** A help control beside the label. */
+  labelHelp?: Snippet | undefined;
   /** The name of the setting. */
   label: string;
   /** What it does, in one sentence. */
@@ -31,5 +35,11 @@ export interface SettingsRowProps {
    * so a control can name itself by the label and be described by the line.
    */
   id?: string | undefined;
+  /**
+   * The columns on a wide pane. `form` gives the label a fixed column and the
+   * control the rest; `switch` lets the label take the room and puts the
+   * control at the end.
+   */
+  layout?: 'form' | 'switch' | undefined;
   class?: ClassValue | undefined;
 }

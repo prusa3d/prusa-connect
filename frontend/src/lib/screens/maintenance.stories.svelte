@@ -30,6 +30,8 @@
     [RELEASES]: () => json(200, []),
     [HISTORY]: () => json(200, []),
     [BACKUPS]: () => json(200, []),
+    'GET /api/v1/server/beta-portal-pairing': () =>
+      json(200, { state: 'unpaired' }),
   };
 </script>
 

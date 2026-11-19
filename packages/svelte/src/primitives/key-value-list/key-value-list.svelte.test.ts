@@ -29,6 +29,14 @@ afterEach(() => {
 });
 
 describe('KeyValueList', () => {
+  it('widens the name column to the width a caller names', async () => {
+    await render(KeyValueList, { props: { rows, labelWidth: '14rem' } });
+
+    expect(
+      document.querySelector('dl')?.style.getPropertyValue('--kv-label'),
+    ).toBe('14rem');
+  });
+
   it('draws each name and its reading as a pair', async () => {
     await render(KeyValueList, { props: { rows } });
 

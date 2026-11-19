@@ -1,5 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
+  import { userEvent, within } from 'storybook/test';
 
   import type { Device, StateTransition } from '../../../domain';
   import { fakeDevice } from '../../../test/fakes';
@@ -177,6 +178,22 @@
       [`/tools/0.4/${MATERIAL}`]: 'PETG',
     },
   };
+
+  // A printer that declares its build volume gets the coordinate plate.
+  const withPlate = (state: string): Device => ({
+    ...printer(state, [
+      'core.command.disable_steppers',
+      'core.command.home',
+      'core.command.move',
+      'core.command.move_z',
+    ]),
+    build_volume: { x_mm: 250, y_mm: 210, z_mm: 220 },
+  });
+
+  // The printer takes the move and never reports the new position.
+  const accepted = {
+    onCommand: () => Promise.resolve({ kind: 'accepted' as const }),
+  };
 </script>
 
 <Story name="Printing" asChild>
@@ -272,6 +289,49 @@
       '/tools/1/nozzle_temp': 244.8,
       '/tools/1/nozzle_target_temp': 245,
     })}
+    {commands}
+  />
+</Story>
+
+<Story name="Coordinates" asChild>
+  <PrinterControlsPanel
+    device={withPlate('IDLE')}
+    telemetry={idle}
+    {commands}
+  />
+</Story>
+
+<!-- One move sent: every control waits for the reported position, or for
+     the timeout, before the next. -->
+<Story
+  name="Coordinates Waiting For The Reported Position"
+  asChild
+  play={async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'X+' }),
+    );
+  }}
+>
+  <PrinterControlsPanel
+    device={withPlate('IDLE')}
+    telemetry={idle}
+    commands={accepted}
+  />
+</Story>
+
+<!-- A reading below zero: X and Y are off, and the panel says why. -->
+<Story name="Coordinates With No Usable Position" asChild>
+  <PrinterControlsPanel
+    device={withPlate('IDLE')}
+    telemetry={readings({ '/axis/x': -2 })}
+    {commands}
+  />
+</Story>
+
+<Story name="Coordinates Held While Printing" asChild>
+  <PrinterControlsPanel
+    device={withPlate('PRINTING')}
+    telemetry={readings()}
     {commands}
   />
 </Story>

@@ -27,7 +27,6 @@
     ReleaseSort,
     ReleaseSortColumn,
   } from '../../releases';
-  import { channelVariant } from '../channel';
   import { DigestBadge } from '../digest-badge';
   import { ReleaseActions } from '../release-actions';
   import { ReleaseState } from '../release-state';
@@ -126,14 +125,13 @@
               >{row.version}</a
             >
             {#if row.isDefault}
-              <Badge variant="default">{t('slicer.default')}</Badge>
+              <Badge variant="secondary">{t('slicer.default')}</Badge>
             {/if}
           </div>
         </TableCell>
         {#if shows('channel')}
           <TableCell class="hidden @xl/releases:table-cell">
-            <Badge variant={channelVariant(row.channel)}
-              >{t(`slicer.channel.${row.channel}`)}</Badge
+            <Badge variant="outline">{t(`slicer.channel.${row.channel}`)}</Badge
             >
           </TableCell>
         {/if}

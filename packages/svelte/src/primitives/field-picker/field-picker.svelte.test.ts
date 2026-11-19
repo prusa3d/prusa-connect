@@ -41,6 +41,17 @@ describe('FieldPicker', () => {
     }
   });
 
+  it('draws a square trigger at every size', async () => {
+    for (const size of ['sm', 'md', 'lg'] as const) {
+      const { unmount } = await render(FieldPickerProbe, { size });
+      const box = page.getByRole('button', { name: 'Fields' }).element();
+      const style = getComputedStyle(box);
+
+      expect(style.width, size).toBe(style.height);
+      await unmount();
+    }
+  });
+
   it('offers a required field ticked and unpickable, and says why', async () => {
     await render(FieldPickerProbe, {});
     await open('Fields');
@@ -84,6 +95,24 @@ describe('FieldPicker', () => {
     await open('Fields, 1 hidden');
 
     // Nothing has been changed yet, so there is nothing to go back to.
+    expect(page.getByRole('button', { name: 'Reset to default' }).query()).toBe(
+      null,
+    );
+  });
+
+  // The storage table holds Modified but offers no toggle for it.
+  it('judges the defaults by the fields it offers alone', async () => {
+    await render(FieldPickerProbe, {
+      props: {
+        fields: [
+          { id: 'file', label: 'File', required: true },
+          { id: 'printer', label: 'Printer' },
+        ],
+        initial: ['file', 'printer', 'modified'],
+      },
+    });
+    await open('Fields');
+
     expect(page.getByRole('button', { name: 'Reset to default' }).query()).toBe(
       null,
     );

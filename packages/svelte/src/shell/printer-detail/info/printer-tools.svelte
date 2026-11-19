@@ -1,6 +1,8 @@
 <!-- Tools: each head of the printer, the slots of the feeder on it, the filament loaded in each, and what a multi-material unit is doing, as the printer reported them. -->
 <script lang="ts">
-  import type { Device } from '../../../domain';
+  import type { Snippet } from 'svelte';
+
+  import { STATE_PATH, toolsOf, type Device } from '../../../domain';
   import { formatUnit, t } from '../../../i18n';
   import {
     Card,
@@ -17,66 +19,68 @@
     type KeyValueRow,
   } from '../../../primitives';
 
-  type Tree = NonNullable<Device['tools']>;
-  type Tool = NonNullable<Tree['tools'][string]>;
+  import NozzleEditor from '../controls/nozzle-editor.svelte';
+  import {
+    declaresArgument,
+    resolverFor,
+    textOf,
+    VERBS,
+  } from '../controls/machine-controls';
+  import FilamentPositions from '../filament-positions.svelte';
+  import { slotLabel, toolLabel } from '../../printers/tool-label';
+  import { compareIds, toolRowsOf } from '../tool-rows';
+  import type { CommandPort, TelemetrySource } from '../types';
+
+  type Tool = NonNullable<NonNullable<Device['tools']>['tools'][string]>;
 
   let {
     tools,
     buildVolume,
-  }: { tools: Device['tools']; buildVolume?: Device['build_volume'] } =
-    $props();
+    live,
+    material,
+  }: {
+    tools: Device['tools'];
+    buildVolume?: Device['build_volume'];
+    /**
+     * What the rows read and send. Without commands the temperature column is
+     * a reading; without the whole of it the Material column is too.
+     */
+    live?:
+      | {
+          device: Device;
+          telemetry: TelemetrySource;
+          commands?: CommandPort | undefined;
+        }
+      | undefined;
+    /**
+     * Draws the material of a tool the reader may assign, handed its id and
+     * the chip to fall back on. Absent, the cell is that chip.
+     */
+    material?: Snippet<[string, Snippet]> | undefined;
+  } = $props();
 
-  /** One row of the table: a head, or a slot of the feeder on a head. */
-  interface Row {
-    id: string;
-    slot: boolean;
-    /** Null is a tool the printer has switched off. */
-    tool: Tool | null;
-  }
+  const rows = $derived(toolRowsOf(tools));
 
-  // Ids are whole numbers joined by dots, and order part by part as numbers,
-  // so 0.10 comes after 0.2 and a head comes before its slots.
-  const compareIds = (left: string, right: string): number => {
-    const a = left.split('.').map(Number);
-    const b = right.split('.').map(Number);
+  // The nozzle chip of the header sets the same heads under the same rules: a
+  // printer that is not reporting offers nothing to set, and a verb with no
+  // tool argument heats the one head only.
+  const settable = $derived.by(() => {
+    if (live?.commands === undefined || !live.device.connected)
+      return undefined;
+    const { device, telemetry, commands } = live;
 
-    for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
-      const step = (a[i] ?? 0) - (b[i] ?? 0);
-      if (step !== 0) return step;
-    }
-
-    return a.length - b.length;
-  };
-
-  // A slot is listed under its head while the head's feeder covers it. A slot
-  // the printer still holds under a feeder it switched off is left out.
-  const covered = (tree: Tree, id: string): boolean => {
-    const at = id.lastIndexOf('.');
-    if (at < 0) return true;
-
-    const parent = tree.tools[id.slice(0, at)];
-    const index = Number(id.slice(at + 1));
-
-    return (
-      parent !== null &&
-      parent !== undefined &&
-      index < (parent.feeder?.slot_count ?? 0) &&
-      covered(tree, id.slice(0, at))
-    );
-  };
-
-  const rows = $derived<Row[]>(
-    tools === undefined
-      ? []
-      : Object.keys(tools.tools)
-          .filter((id) => covered(tools, id))
-          .sort(compareIds)
-          .map((id) => ({
-            id,
-            slot: id.includes('.'),
-            tool: tools.tools[id] ?? null,
-          })),
-  );
+    return {
+      resolve: resolverFor(
+        device,
+        commands,
+        textOf(telemetry, device, STATE_PATH),
+      ),
+      busy: commands.sending === true,
+      onCommand: commands.onCommand,
+      perTool: declaresArgument(device, VERBS.nozzle, 'tool'),
+      readings: toolsOf(telemetry, device),
+    };
+  });
 
   const flag = (value: boolean | undefined): string => {
     if (value === undefined) return t('printerDetailInfo.tools.unknown');
@@ -103,6 +107,11 @@
       ? t('printerDetailInfo.tools.noMaterial')
       : loaded.package.material.abbreviation;
   };
+
+  // A head with a feeder holds no material, and a head the printer switched off
+  // holds none to assign; every other row can be given one.
+  const assignable = (tool: Tool | null): tool is Tool =>
+    tool !== null && !tool.feeder?.slot_count;
 
   // The commands of the multi-material unit, as the one character its
   // firmware names each by. Any other command is shown by its character.
@@ -153,7 +162,9 @@
                 id: `mmu-${id}`,
                 label:
                   rows.filter((row) => !row.slot).length > 1
-                    ? t('printerDetailInfo.tools.mmuOnHead', { n: id })
+                    ? t('printerDetailInfo.tools.mmuOnHead', {
+                        n: Number(id) + 1,
+                      })
                     : t('printerDetailInfo.tools.mmu'),
                 value: unitText(feeder),
               },
@@ -228,8 +239,8 @@
                     : 'text-foreground'}
                 >
                   {row.slot
-                    ? t('printerDetailInfo.tools.slotNumber', { id: row.id })
-                    : t('printerDetailInfo.tools.toolNumber', { n: row.id })}
+                    ? slotLabel(row.id.slice(row.id.lastIndexOf('.') + 1))
+                    : toolLabel(row.id)}
                 </TableHead>
                 {#if row.tool === null}
                   <TableCell colspan={5} class="text-muted-foreground">
@@ -237,7 +248,8 @@
                   </TableCell>
                 {:else if row.slot}
                   <TableCell colspan={3}></TableCell>
-                  <TableCell>{materialText(row.tool)}</TableCell>
+                  <TableCell>{@render materialCell(row.id, row.tool)}</TableCell
+                  >
                   <TableCell></TableCell>
                 {:else}
                   <TableCell>
@@ -253,13 +265,30 @@
                   <TableCell
                     >{flag(row.tool.features?.nozzle_hardened)}</TableCell
                   >
-                  <TableCell>{materialText(row.tool)}</TableCell>
+                  <TableCell>{@render materialCell(row.id, row.tool)}</TableCell
+                  >
                   <TableCell>
-                    {row.tool.nozzle_temp === undefined
-                      ? t('printerDetailInfo.tools.unknown')
-                      : formatUnit(row.tool.nozzle_temp, '°C', {
-                          maximumFractionDigits: 0,
-                        })}
+                    <span class="inline-flex items-center gap-1">
+                      {row.tool.nozzle_temp === undefined
+                        ? t('printerDetailInfo.tools.unknown')
+                        : formatUnit(row.tool.nozzle_temp, '°C', {
+                            maximumFractionDigits: 0,
+                          })}
+                      {#if settable && (settable.perTool || rows.filter((entry) => !entry.slot).length === 1)}
+                        {@const reading = settable.readings.find(
+                          (head) => head.index === Number(row.id),
+                        )}
+                        <NozzleEditor
+                          resolve={settable.resolve}
+                          busy={settable.busy}
+                          onCommand={settable.onCommand}
+                          perTool={settable.perTool}
+                          temperature={reading?.temperature}
+                          target={reading?.target}
+                          tool={Number(row.id)}
+                        />
+                      {/if}
+                    </span>
                   </TableCell>
                 {/if}
               </TableRow>
@@ -270,3 +299,24 @@
     {/if}
   </CardContent>
 </Card>
+
+{#snippet materialCell(id: string, tool: Tool)}
+  <!-- Without an extension that assigns materials the chip is the one the
+       header draws on its own, which keeps a material on this browser. -->
+  {#snippet reading()}
+    {#if live && assignable(tool)}
+      <FilamentPositions
+        device={live.device}
+        telemetry={live.telemetry}
+        only={id}
+      />
+    {:else}
+      {materialText(tool)}
+    {/if}
+  {/snippet}
+  {#if material && assignable(tool)}
+    {@render material(id, reading)}
+  {:else}
+    {@render reading()}
+  {/if}
+{/snippet}

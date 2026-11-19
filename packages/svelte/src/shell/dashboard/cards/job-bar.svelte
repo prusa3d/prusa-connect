@@ -25,6 +25,7 @@
 {:else}
   <Progress
     data-part="job-bar"
+    data-printing={view.state === 'PRINTING' || undefined}
     value={view.progress}
     tone={progressTone(view.state)}
     aria-label={t('dashboard.printer.progressLabel', {
@@ -33,3 +34,13 @@
     class="h-1.5"
   />
 {/if}
+
+<style>
+  :global(
+    [data-slot='dashboard-card']
+      [data-part='job-bar'][data-printing]
+      [data-slot='progress-indicator']
+  ) {
+    background-color: var(--primary);
+  }
+</style>

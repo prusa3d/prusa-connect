@@ -4,6 +4,12 @@ What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host, and
 `changelog_test.go` fails when the three differ.
 
+## 0.1.10 - 2026-11-17
+
+### Changed
+
+- The page takes the Ember look of the web app. Its header fits a phone, the component filter is wider, and only warnings and errors show as badges.
+
 ## 0.1.9 - 2026-11-16
 
 ### Changed

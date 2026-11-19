@@ -38,6 +38,17 @@ export type StorageSource = Pick<
 /** One file or folder of a storage, as the core answers it. */
 export type StorageRow = StorageSource['entries'][number];
 
+/** A file row's own acts, for the one menu the row has. */
+export interface StorageRowFold {
+  /** The acts, as menu items. */
+  items: Snippet;
+  /**
+   * Shows the menu only where the acts fold off the row, for a menu that
+   * holds nothing else.
+   */
+  shown: string;
+}
+
 /** One storage the server declares, with what it allows. */
 export type StorageChoice = StorageSource['storages'][number];
 
@@ -85,10 +96,12 @@ export interface StorageScreenProps {
   fileHref?: ((storage: string, row: StorageRow) => string) | undefined;
   /**
    * Drawn at the end of each file's row in the listing, with the storage that
-   * holds the file: the app puts the modules' `file-action` menu here. A
-   * folder's row draws nothing.
+   * holds the file and the row's own acts, which the menu drawn here holds
+   * so the row has one menu: the app puts the modules' `file-action` menu
+   * here. A folder's row draws nothing.
    */
-  fileActions?: Snippet<[string, StorageRow]> | undefined;
+  fileActions?:
+    Snippet<[string, StorageRow, StorageRowFold | undefined]> | undefined;
   /**
    * The folders this server shares with the servers below. With it the table
    * has a Shared column; without it the screen is the same as on a server

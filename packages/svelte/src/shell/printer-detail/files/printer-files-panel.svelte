@@ -2,11 +2,11 @@
 <script lang="ts">
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
+  import { compareFiles } from '../../../primitives/table/ordering';
   import type { DataFault } from '../../../data';
   import {
     type CommandProjection,
     LIFECYCLE_TRANSITIONS,
-    newestFirst,
     projectCommand,
     STATE_PATH,
     textAt,
@@ -22,12 +22,14 @@
     ListingSearchSummary,
     ListingState,
     Selection,
+    Slider,
     toast,
     viewModes,
   } from '../../../primitives';
+  import rowsIcon from '../../storage/assets/rows.svg';
+  import tilesIcon from '../../storage/assets/tiles.svg';
   import { browserStore } from '../../printers/presentation';
   import {
-    glyphOf,
     isFirmware,
     isFirmwareName,
     isModel,
@@ -87,6 +89,9 @@
     { id: 'size', label: t('printerDetailFiles.column.size') },
     { id: 'modified', label: t('printerDetailFiles.column.modified') },
   ];
+  // The table draws Modified only where its pane has room, which the picker
+  // cannot see from its popover, so the table offers no toggle for it.
+  const TABLE_FIELDS = FIELDS.filter((field) => field.id !== 'modified');
 
   // Reads nothing reactive, so it runs once when the panel mounts.
   $effect(() => {
@@ -236,14 +241,17 @@
       : files.entries,
   );
 
+  let thumbnailSize = $state(0);
+
   // The printer answers in whatever order its storage walked.
-  const byNewest = newestFirst(nameOf);
+  const byOrder = (a: PrinterFileEntry, b: PrinterFileEntry): number =>
+    compareFiles(a, b, nameOf(a), nameOf(b), listing.sort);
 
   /** What an open folder lists, in the order of the listing around it. */
   const childrenOf = (
     entry: PrinterFileEntry,
   ): PrinterFileEntry[] | undefined =>
-    files.expanded[entry.path]?.slice().sort(byNewest);
+    files.expanded[entry.path]?.slice().sort(byOrder);
 
   // A search answers with a flat list of hits.
   const discloses = $derived(!searching);
@@ -261,16 +269,17 @@
     }
   };
 
-  const listing = new ListingState<PrinterFileEntry>({
-    id: 'printer-files',
-    viewSetting: 'files',
-    fields: FIELDS,
-    views: viewModes(['table', 'cards']),
-    initialView: 'table',
-    store: browserStore(),
-    rows: () => matching,
-    compare: byNewest,
-  });
+  const listing: ListingState<PrinterFileEntry> =
+    new ListingState<PrinterFileEntry>({
+      id: 'printer-files',
+      viewSetting: 'files',
+      fields: FIELDS,
+      views: viewModes(['table', 'cards']),
+      initialView: 'table',
+      store: browserStore(),
+      rows: () => matching,
+      compare: byOrder,
+    });
 
   /** Every row the listing puts on screen, in its order, on every page. */
   const revealed = $derived.by(() => {
@@ -449,7 +458,6 @@
 
   const rowContext: PrinterFileRowContext = {
     nameOf,
-    glyphOf,
     thumbnailOf: (entry) => thumbnailFor?.(entry.path),
     printControl,
     isFirmware,
@@ -486,12 +494,47 @@
   <PrinterFileActions {entry} row={rowContext} />
 {/snippet}
 
+{#snippet listingControls()}
+  <ListingControls
+    class="ms-auto shrink-0"
+    fields={listing.view.value === 'table' ? TABLE_FIELDS : FIELDS}
+    fieldState={listing.fields}
+    view={{
+      ...listing.view,
+      options: listing.view.options.map((option) => ({
+        ...option,
+        iconSrc: option.value === 'table' ? rowsIcon : tilesIcon,
+      })),
+    }}
+  />
+{/snippet}
+
+{#snippet uploadPane()}
+  <PrinterFilesIngest
+    class={SPLIT_LEADING}
+    {dropzone}
+    {driveName}
+    {queue}
+    {transfers}
+    {uploads}
+    {onCancelUpload}
+    onFiles={receive}
+    {keep}
+    block={blocked}
+    checking={checkingStorages}
+    {onRecheck}
+  />
+{/snippet}
+
 <div class="@container/printer-files flex flex-col gap-4">
   <Card>
     <CardContent class={SPLIT_ROW}>
+      {#if ingesting}
+        {@render uploadPane()}
+      {/if}
       <div
         class={[
-          'flex min-w-0 flex-1 flex-col gap-3',
+          '@container/printer-file-listing flex min-w-0 flex-1 flex-col gap-section-inline',
           ingesting && SPLIT_TRAILING,
         ]}
       >
@@ -503,6 +546,7 @@
           {drive}
           {canCreateFolder}
           {nameOf}
+          controls={listingControls}
           onQuery={searchFor}
           onDelete={() => {
             pending = [...deletable];
@@ -512,8 +556,8 @@
             creating = true;
           }}
         />
-        <!-- The view switch rides this row rather than the toolbar above. -->
-        <div class="flex items-center gap-3">
+        <!-- Keep the view controls available when the toolbar shows bulk actions. -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
           {#if searching}
             <ListingSearchSummary
               summary={t('printerDetailFiles.search.results', {
@@ -529,27 +573,52 @@
               onOpen={openFolder}
             />
           {/if}
-          <Button
-            class="ms-auto shrink-0"
-            variant="ghost"
-            size="icon-md"
-            label={t('printerDetailFiles.refresh')}
-            disabled={files.filesRefreshing}
-            aria-busy={files.filesRefreshing}
-            onclick={() => void files.openFolder(files.directory, true)}
-          >
-            <RefreshCwIcon aria-hidden="true" />
-          </Button>
-          <ListingControls
-            class="shrink-0"
-            fields={FIELDS}
-            fieldState={listing.fields}
-            view={listing.view}
-          />
+          <div class="ms-auto flex shrink-0 items-center gap-3">
+            <Button
+              class="shrink-0"
+              variant="ghost"
+              size="icon-md"
+              label={t('printerDetailFiles.refresh')}
+              disabled={files.filesRefreshing}
+              aria-busy={files.filesRefreshing}
+              onclick={() => void files.openFolder(files.directory, true)}
+            >
+              <RefreshCwIcon aria-hidden="true" />
+            </Button>
+            {#if !atRoot}
+              <!-- Same width as the one that hides a list preview. -->
+              <div
+                class={[
+                  'flex items-center gap-3',
+                  listing.view.value === 'table' &&
+                    '@max-sm/printer-file-listing:hidden',
+                ]}
+              >
+                <span class="text-xs text-muted-foreground"
+                  >{t('storage.thumbnail.size')}</span
+                >
+                <div class="w-28 shrink-0">
+                  <Slider
+                    type="single"
+                    bind:value={thumbnailSize}
+                    min={0}
+                    max={3}
+                    step={1}
+                    aria-label={t('storage.thumbnail.size')}
+                    class="h-8 [&_[data-slot=slider-track]]:bg-input"
+                  />
+                </div>
+              </div>
+            {/if}
+            {#if selection.count > 0}
+              {@render listingControls()}
+            {/if}
+          </div>
         </div>
 
         <PrinterFileListing
           {listing}
+          {thumbnailSize}
           row={rowContext}
           actions={tileActions}
           {refusal}
@@ -570,23 +639,6 @@
           onClearSearch={clearSearch}
         />
       </div>
-
-      {#if ingesting}
-        <PrinterFilesIngest
-          class={SPLIT_LEADING}
-          {dropzone}
-          {driveName}
-          {queue}
-          {transfers}
-          {uploads}
-          {onCancelUpload}
-          onFiles={receive}
-          {keep}
-          block={blocked}
-          checking={checkingStorages}
-          {onRecheck}
-        />
-      {/if}
     </CardContent>
   </Card>
 </div>

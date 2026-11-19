@@ -26,8 +26,8 @@ const LISTING = {
     remaining_g: n * 100,
   })),
   total: 5,
-  stock_g: 1500,
-  stock_spools: 15,
+  stock_g: 0,
+  stock_spools: 0,
 };
 
 interface Placed {

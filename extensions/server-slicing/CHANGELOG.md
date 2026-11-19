@@ -4,6 +4,12 @@ What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host, and
 `changelog_test.go` fails when the three differ.
 
+## 0.2.3 - 2026-11-16
+
+### Changed
+
+- The job page's name moves from the monospaced face to the theme's sans face. The page sets it through the page trail's `sansPage` property, which replaces `monoPage`.
+
 ## 0.2.2 - 2026-11-16
 
 ### Changed

@@ -37,7 +37,7 @@
             {metric.show(stats.kpis)}
           </dd>
           {#if change !== undefined}
-            <dd class="truncate text-xs text-muted-foreground">
+            <dd class="text-xs text-muted-foreground">
               {change.label}
             </dd>
           {/if}

@@ -16,6 +16,7 @@ export interface SwatchPickerProps {
   label: string;
   /** Pressing the picked swatch again reports `undefined`. */
   deselectable?: boolean;
-  size?: 'sm' | 'md';
+  /** `xs` is a small round dot, for a filter row that shares its line. */
+  size?: 'xs' | 'sm' | 'md';
   class?: ClassValue | undefined;
 }

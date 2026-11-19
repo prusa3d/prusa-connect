@@ -22,7 +22,7 @@
   data-slot="context-menu-sub-content"
   style="--radix-context-menu-content-transform-origin: var(--bits-menu-content-transform-origin);"
   class={[
-    'z-50 min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-sm border border-border bg-popover p-1 text-popover-foreground data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
+    'z-50 min-w-menu origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground state-open:animate-scale-in state-closed:animate-scale-out',
     className,
   ]}
   {...rest}

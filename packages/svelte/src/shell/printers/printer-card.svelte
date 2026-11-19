@@ -1,12 +1,21 @@
 <!-- One printer, at the size a reader looks at when there are few of them. -->
+<script module lang="ts">
+  const sentences =
+    typeof Intl.Segmenter === 'function'
+      ? new Intl.Segmenter('en', { granularity: 'sentence' })
+      : undefined;
+</script>
+
 <script lang="ts">
+  import { filamentPreview } from './filament-colors';
+  import { displayedFilamentOf } from './filament-preferences';
   import {
     capabilityFor,
     PRINTER_STATE_LABEL_KEY,
     PRINTER_STATE_PROGRESS_TONE,
     projectLifecycleVerb,
   } from '../../domain';
-  import { t } from '../../i18n';
+  import { formatDuration, t } from '../../i18n';
   import {
     ABOVE_ROW_LINK,
     Badge,
@@ -32,6 +41,9 @@
     severityBadgeVariant,
     stateBadgeVariant,
     cardToneOf,
+    formatRemainingCompact,
+    jobFallbackOf,
+    printActivityOf,
   } from './presentation';
   import type { PrinterCardProps } from './types';
 
@@ -41,6 +53,7 @@
     actions,
     picture: Picture,
     line,
+    onMenuOpenChange,
   }: PrinterCardProps = $props();
 
   const PAUSE_PRINT = capabilityFor('pause_print');
@@ -63,16 +76,27 @@
 
   const titleId = $props.id();
 
+  const preview = filamentPreview();
+  const filament = $derived(displayedFilamentOf(row, preview));
+
+  const issueSummary = $derived(
+    row.statusNote !== undefined
+      ? (sentences
+          ?.segment(row.statusNote.trim())
+          .containing(0)
+          ?.segment.trim() ?? row.statusNote)
+      : row.statusNote,
+  );
+
   const progress = $derived(row.progress);
+  const hasPrintProgress = $derived(
+    progress !== null || printActivityOf(row) === 'active',
+  );
+  const showProgressBar = $derived(hasPrintProgress && shows('progress'));
 
   const stateLabel = $derived(t(PRINTER_STATE_LABEL_KEY[row.state]));
 
-  // A machine that reports nothing at all is a different sentence from one.
-  const noJobLine = $derived(
-    row.nozzle === undefined && row.bed === undefined
-      ? t('printers.noData')
-      : t('printers.noJob'),
-  );
+  const noJobLine = $derived(jobFallbackOf(row));
 
   // The bar names the print it measures.
   const progressLabel = $derived(
@@ -101,7 +125,7 @@
   role="region"
   aria-labelledby={titleId}
   tone={cardToneOf(row.tier)}
-  density="compact"
+  density="snug"
   class="@container/printer-card relative isolate overflow-hidden"
 >
   <CardHeader class="grid-cols-1">
@@ -144,7 +168,7 @@
                  retired printer takes no command. -->
             {#if !row.retired && (canPause || canStop || row.removable)}
               <span class={[ABOVE_ROW_LINK, '-my-2.5']}>
-                <RowActions name={row.name}>
+                <RowActions name={row.name} onOpenChange={onMenuOpenChange}>
                   {#if canPause}
                     <DropdownMenuItem
                       onSelect={() => {
@@ -199,16 +223,44 @@
     </div>
   </CardHeader>
 
-  <!-- The figure sits on the seam it measures. -->
-  <div class="flex flex-col gap-1">
+  <div
+    class={[
+      row.state === 'IDLE' &&
+      !row.retired &&
+      shows('state') &&
+      row.jobName === undefined &&
+      !showProgressBar
+        ? 'hidden'
+        : 'flex',
+      'flex-col',
+      showProgressBar ? 'gap-2' : 'gap-1',
+      (showProgressBar || (shows('job') && row.jobName !== undefined)) &&
+        !row.retired &&
+        'mt-3',
+    ]}
+  >
     <div
-      class="flex h-4 items-baseline justify-between gap-3 px-6 font-mono text-xs leading-4 text-muted-foreground"
+      class="flex h-4 items-baseline justify-between gap-3 px-4 font-mono text-xs leading-4 text-muted-foreground @[24rem]/card:px-6"
     >
       {#if shows('job')}
         {#if row.jobName === undefined}
-          <span class="min-w-0 truncate">{noJobLine}</span>
+          {#if noJobLine !== undefined}<span class="min-w-0 truncate"
+              >{noJobLine}</span
+            >{/if}
         {:else}
-          <ClippedName name={row.jobName} class="min-w-0" />
+          <div class="flex min-w-0 items-baseline gap-2">
+            <ClippedName name={row.jobName} class="min-w-0" />
+            {#if row.remaining !== undefined && !row.retired}
+              <span
+                class="shrink-0 whitespace-nowrap"
+                title={t('dashboard.printer.left', {
+                  time: formatDuration(row.remaining),
+                })}
+              >
+                {formatRemainingCompact(row.remaining)}
+              </span>
+            {/if}
+          </div>
         {/if}
       {:else}
         <span></span>
@@ -218,23 +270,38 @@
       {/if}
     </div>
 
-    <div class="flex h-0.5 items-center">
-      {#if progress === null}
-        <Separator />
-      {:else}
+    <div
+      class={[
+        'items-center px-4 @[24rem]/card:px-6',
+        showProgressBar ? 'h-1' : 'h-0.5',
+        !showProgressBar &&
+        row.jobName === undefined &&
+        (noJobLine === t('printers.printStatusUnavailable') ||
+          noJobLine === t('printers.noJob'))
+          ? 'hidden'
+          : 'flex',
+      ]}
+    >
+      {#if showProgressBar}
         <Progress
           value={progress}
           aria-label={progressLabel}
           tone={PRINTER_STATE_PROGRESS_TONE[row.state]}
-          class="h-0.5 rounded-none"
+          size="sm"
+          class={[
+            row.state === 'PRINTING' &&
+              '[&>[data-slot=progress-indicator]]:bg-primary',
+          ]}
         />
+      {:else}
+        <Separator />
       {/if}
     </div>
   </div>
 
-  <CardContent class="flex flex-col gap-4">
+  <CardContent class="flex flex-1 flex-col gap-4">
     {#if shows('nozzle') || shows('bed') || shows('material')}
-      <dl class="grid grid-cols-3 gap-2 font-mono text-xs">
+      <dl class="order-last mbs-auto grid grid-cols-3 gap-2 font-mono text-xs">
         {#if shows('nozzle')}
           <div class={BOX}>
             <dt class="sr-only">{t('printers.nozzle')}</dt>
@@ -263,8 +330,15 @@
           <div class={BOX}>
             <dt class="sr-only">{t('printers.material')}</dt>
             <dd class={VALUE}>
-              <SpoolIcon aria-hidden="true" class="me-1" />
-              {#if row.material === undefined}&mdash;{:else}{row.material}{/if}
+              <SpoolIcon
+                aria-hidden="true"
+                class="me-1"
+                filamentColor={filament.color?.[1]}
+              />
+              {#if filament.color}<span class="sr-only"
+                  >{t(filament.color[2])}</span
+                >{/if}
+              {#if filament.material === undefined}&mdash;{:else}{filament.material}{/if}
             </dd>
           </div>
         {/if}
@@ -292,11 +366,17 @@
               {t(SEVERITY_LABEL_KEY[row.severity])}
             </Badge>
           {/if}
-          <span class="min-w-0">{row.statusNote}</span>
+          <span class="line-clamp-2 min-w-0">{issueSummary}</span>
+          <a
+            class={[
+              ABOVE_ROW_LINK,
+              'shrink-0 text-sm underline underline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+            ]}
+            href={row.detailHref}
+            aria-label={t('printers.issues.moreFor', { name: row.name })}
+            >{t('printers.issues.more')}</a
+          >
         </p>
-        {#if row.statusAction !== undefined}
-          <p class="text-sm text-muted-foreground">{row.statusAction}</p>
-        {/if}
       </div>
     {/if}
 

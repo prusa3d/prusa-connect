@@ -189,3 +189,24 @@
     onPrint={() => Promise.resolve(started)}
   />
 </Story>
+
+<Story name="Choose from a large farm" asChild>
+  <PrintDialog
+    open
+    onOpenChange={() => undefined}
+    {file}
+    devices={[
+      ...farm,
+      ...Array.from({ length: 5 }, (_, index) =>
+        printer(
+          `extra-${String(index)}`,
+          `CoreOne #${String(index + 1)}`,
+          'IDLE',
+          'COREONE',
+        ),
+      ),
+    ]}
+    {transfers}
+    onPrint={() => Promise.resolve(started)}
+  />
+</Story>

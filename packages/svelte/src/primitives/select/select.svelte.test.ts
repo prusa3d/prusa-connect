@@ -146,21 +146,23 @@ describe('Select', () => {
     expect(surface()).toBe(null);
   });
 
-  it('gives each step of the control scale its own height', async () => {
-    const small = await render(SelectProbe, { props: { size: 'sm' } });
-    expect(
-      small.container.querySelector('[data-size=sm]')?.className,
-    ).toContain('h-7');
+  // Every step of the control scale is drawn at one height. A larger step
+  // is never the shorter one.
+  it('never shrinks from one step of the control scale to the next', async () => {
+    const heightOf = async (size: 'sm' | 'md' | 'lg'): Promise<number> => {
+      const { container } = await render(SelectProbe, { props: { size } });
+      const found = container.querySelector(`[data-size=${size}]`);
+      if (found === null) throw new Error('no trigger rendered');
+      return found.getBoundingClientRect().height;
+    };
 
-    const medium = await render(SelectProbe);
-    expect(
-      medium.container.querySelector('[data-size=md]')?.className,
-    ).toContain('h-9');
+    const small = await heightOf('sm');
+    const medium = await heightOf('md');
+    const large = await heightOf('lg');
 
-    const large = await render(SelectProbe, { props: { size: 'lg' } });
-    expect(
-      large.container.querySelector('[data-size=lg]')?.className,
-    ).toContain('h-11');
+    expect(small).toBeGreaterThan(0);
+    expect(small).toBeLessThanOrEqual(medium);
+    expect(medium).toBeLessThanOrEqual(large);
   });
 
   // The React classes read Radix custom properties. bits-ui publishes the same
@@ -204,7 +206,7 @@ describe('Select', () => {
     );
   });
 
-  // The viewport carries React's popper-mode `h-[var(--radix-select-trigger-height)]`.
+  // The viewport carries React's popper-mode `h-(--radix-select-trigger-height)`.
   // bits-ui's inline `flex: 1` decides the height instead; were that to change,
   // the list would stand one row tall and every option but the first would be
   // out of reach.

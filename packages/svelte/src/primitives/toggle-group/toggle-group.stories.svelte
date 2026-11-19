@@ -60,6 +60,22 @@
   </div>
 </Story>
 
+<!-- `primary` is for a choice that sets the machine, such as a fan mode.
+     The default tone is for one that only changes what the page shows. -->
+<Story name="Primary Tone" asChild>
+  <ToggleGroup
+    type="single"
+    variant="outline"
+    tone="primary"
+    value="auto"
+    aria-label="Chamber fan"
+  >
+    <ToggleGroupItem value="off">Off</ToggleGroupItem>
+    <ToggleGroupItem value="auto">Auto</ToggleGroupItem>
+    <ToggleGroupItem value="manual">Manual</ToggleGroupItem>
+  </ToggleGroup>
+</Story>
+
 <Story
   name="Arrow Keys Move Focus And Space Selects For Single Type"
   tags={['!dev', '!autodocs']}

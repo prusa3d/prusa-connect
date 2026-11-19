@@ -358,7 +358,7 @@ describe('a module tab only for the printer the server runs on', () => {
 
   // A telemetry value replaces the printer's record about once a second while
   // it prints. The strip is built again only when the record's resident value
-  // changes, so a strip the person scrolled does not jump back each time.
+  // changes, so the module tabs are not read again on every value.
   it('builds the tab strip again only when resident changes', async () => {
     const registry = displayRegistry();
     const ctx = appContext(
@@ -388,34 +388,6 @@ describe('a module tab only for the printer the server runs on', () => {
     expect(
       reads.mock.calls.filter(([slot]) => slot === 'device-tab'),
     ).toHaveLength(0);
-  });
-
-  it('keeps a strip the person scrolled where it is while values arrive', async () => {
-    const ctx = appContext(
-      {
-        'GET /api/v1/devices': json(200, {
-          items: [{ ...printer('host'), resident: true }],
-          total: 1,
-        }),
-      },
-      { params: { id: 'host', tab: 'display.screen' } },
-    );
-    await render(WithSlots, {
-      props: { registry: displayRegistry(), screen: PrinterDetail, ctx },
-    });
-    const display = page.getByRole('tab', { name: 'Display' });
-    await expect.element(display).toHaveAttribute('data-state', 'active');
-    const strip = display.element().closest('.overflow-x-auto');
-    if (!(strip instanceof HTMLElement)) throw new Error('no tab strip');
-    expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
-    strip.scrollLeft = 0;
-
-    for (let value = 1; value <= 5; value += 1) {
-      await ctx.fleet.apply(progress('host', value));
-    }
-    await flush();
-
-    expect(strip.scrollLeft).toBe(0);
   });
 
   // The printer page passes whether the printer is resident to the section

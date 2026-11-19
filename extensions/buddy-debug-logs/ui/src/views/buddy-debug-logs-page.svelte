@@ -134,7 +134,9 @@
             disabled={downloads.busy}
           >
             <DownloadIcon aria-hidden="true" />
-            {t('buddyDebugLogs.action.download')}
+            <span class="max-sm:sr-only"
+              >{t('buddyDebugLogs.action.download')}</span
+            >
           </Button>
         {/snippet}
       </DropdownMenuTrigger>
@@ -166,7 +168,9 @@
             aria-busy={purges.busy}
           >
             <Trash2Icon aria-hidden="true" />
-            {t('buddyDebugLogs.purge.action')}
+            <span class="max-sm:sr-only"
+              >{t('buddyDebugLogs.purge.action')}</span
+            >
           </Button>
         {/snippet}
       </DropdownMenuTrigger>

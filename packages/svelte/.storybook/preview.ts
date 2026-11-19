@@ -1,11 +1,10 @@
-// What every story in this Storybook shares: the theme, the two toolbar
-// switches and the language.
+// What every story in this Storybook shares: the theme, its toolbar switch
+// and the language.
 import './preview.css';
 
 import type { Decorator, Preview } from '@storybook/svelte';
 
 import { locale } from '../src/i18n';
-import { DEFAULT_SKIN } from '../src/styles/skin';
 import StoryFrame from './story-frame.svelte';
 
 // Every text on a screen is `t('key')` (frontend-i18n.md), and the store
@@ -22,14 +21,13 @@ const withTheme: Decorator = (_story, context) => {
     Component: StoryFrame,
     props: {
       dark: globals.theme === 'dark',
-      skin: globals.skin ?? DEFAULT_SKIN,
     },
   };
 };
 
 const preview: Preview = {
   decorators: [withTheme],
-  initialGlobals: { theme: 'light', skin: DEFAULT_SKIN },
+  initialGlobals: { theme: 'light' },
   globalTypes: {
     theme: {
       description: 'Colour theme',
@@ -38,17 +36,6 @@ const preview: Preview = {
         items: [
           { value: 'light', title: 'Light' },
           { value: 'dark', title: 'Dark' },
-        ],
-      },
-    },
-    skin: {
-      description: 'Brand skin',
-      toolbar: {
-        icon: 'paintbrush',
-        items: [
-          { value: 'prusa', title: 'Prusa' },
-          { value: 'slicer', title: 'PrusaSlicer' },
-          { value: 'prusapro', title: 'Prusa PRO' },
         ],
       },
     },

@@ -11,6 +11,7 @@
 
   import { failed, pending, refused } from '../../../test/story/api';
   import AppAt from '../../../test/story/app-at.svelte';
+  import ControlsPrototype from '../../test/controls-prototype.svelte';
   import { json } from '../../test/stub';
 
   const { Story } = defineMeta({ title: 'Screens/Printer detail' });
@@ -20,6 +21,14 @@
   const HISTORY = `GET /api/v1/devices/${ID}/history`;
   const COMMANDS = `GET /api/v1/devices/${ID}/commands`;
 
+  // The core tables hold no transfers and no grants for a printer, and the
+  // History and Info tabs draw a not-found error in their place without them.
+  // A printer with nothing sent and no grant of its own answers both empty.
+  const printerRecords = {
+    [`GET /api/v1/devices/${ID}/transfers`]: () => json(200, { items: [] }),
+    [`GET /api/v1/grants/device/${ID}`]: () => json(200, { items: [] }),
+  };
+
   const minutesAgo = (minutes: number): string =>
     new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -27,6 +36,7 @@
   // without these rows. The window is the last two hours, so the times are
   // taken from now.
   const history = {
+    ...printerRecords,
     [`${HISTORY}/facts`]: () =>
       json(200, {
         cursor: '',
@@ -85,6 +95,12 @@
 
 <Story name="Status"><AppAt path="/printers/{ID}/status" /></Story>
 <Story name="Controls"><AppAt path="/printers/{ID}/controls" /></Story>
+<Story name="Controls prototype MK4S" globals={{ theme: 'dark' }}>
+  <ControlsPrototype />
+</Story>
+<Story name="Controls prototype Error" globals={{ theme: 'dark' }}>
+  <ControlsPrototype state="ERROR" />
+</Story>
 <Story name="Files"><AppAt path="/printers/{ID}/files" /></Story>
 <Story name="Commands"><AppAt path="/printers/{ID}/commands" /></Story>
 <Story name="History">
@@ -101,7 +117,9 @@
     }}
   />
 </Story>
-<Story name="Info"><AppAt path="/printers/{ID}/info" /></Story>
+<Story name="Info">
+  <AppAt path="/printers/{ID}/info" overrides={printerRecords} />
+</Story>
 
 <Story name="Loading">
   <AppAt path="/printers/{ID}" overrides={{ [DEVICES]: pending }} />

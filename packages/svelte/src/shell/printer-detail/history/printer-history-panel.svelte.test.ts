@@ -215,7 +215,7 @@ describe('PrinterHistoryPanel', () => {
       container.querySelectorAll('[data-slot="line-chart-series"]'),
     ).toHaveLength(1);
     await expect
-      .element(page.getByText('Nozzle, head 0', { exact: true }))
+      .element(page.getByText('Nozzle, tool 1', { exact: true }))
       .toBeVisible();
   });
 
@@ -402,7 +402,7 @@ describe('PrinterHistoryPanel', () => {
       },
     });
 
-    await getByRole('button', { name: 'Nozzle, head 0' }).click();
+    await getByRole('button', { name: 'Nozzle, tool 1' }).click();
 
     expect(chosen).toEqual(['/temperature/bed', '/tools/0/nozzle_temp']);
   });
@@ -456,7 +456,7 @@ describe('PrinterHistoryPanel', () => {
       .element(getByRole('button', { name: 'Bed' }))
       .toHaveAttribute('aria-pressed', 'true');
     await expect
-      .element(getByRole('button', { name: 'Nozzle, head 0' }))
+      .element(getByRole('button', { name: 'Nozzle, tool 1' }))
       .toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -506,7 +506,7 @@ describe('PrinterHistoryPanel', () => {
       .element(getByRole('button', { name: 'Z axis' }))
       .toHaveAttribute('aria-pressed', 'false');
     await expect
-      .element(getByRole('button', { name: 'Nozzle, head 0' }))
+      .element(getByRole('button', { name: 'Nozzle, tool 1' }))
       .toHaveAttribute('aria-pressed', 'false');
     await expect
       .element(getByRole('button', { name: 'Speed' }))

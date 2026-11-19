@@ -1,10 +1,11 @@
 import { getContext, setContext } from 'svelte';
 
-import type { ToggleSize, ToggleVariant } from '../toggle/types';
+import type { ToggleSize, ToggleTone, ToggleVariant } from '../toggle/types';
 
 /** What a group tells its own items to look like. */
 export interface ToggleGroupLook {
   variant: ToggleVariant;
+  tone: ToggleTone;
   size: ToggleSize;
 }
 

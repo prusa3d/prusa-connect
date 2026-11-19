@@ -90,7 +90,7 @@
     <button type="button" onclick={() => (wide = !wide)}>
       {wide ? 'Narrow the column' : 'Widen the column'}
     </button>
-    <div class={wide ? 'w-[48rem]' : 'w-[20rem]'} {@attach fit.measure}>
+    <div class={wide ? 'w-3xl' : 'w-xs'} {@attach fit.measure}>
       <ViewModeToggle
         value={fit.chosen}
         onValueChange={(next: string) => (fit.chosen = next)}

@@ -110,6 +110,29 @@ describe('Slider', () => {
     expect(track?.getAttribute('data-orientation')).toBe('vertical');
   });
 
+  it('fills the range in the primary colour under the primary tone', async () => {
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'var(--primary)';
+    document.body.append(probe);
+    const primary = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+
+    const fills = new Map<string, string>();
+    for (const tone of ['default', 'primary'] as const) {
+      const { container, unmount } = await render(Slider, {
+        props: { type: 'single', value: 50, tone, 'aria-label': 'Speed' },
+      });
+      const range = container.querySelector<HTMLElement>(
+        '[data-slot="slider-range"]',
+      );
+      fills.set(tone, getComputedStyle(range!).backgroundColor);
+      await unmount();
+    }
+
+    expect(fills.get('primary')).toBe(primary);
+    expect(fills.get('default')).not.toBe(primary);
+  });
+
   it('has nothing axe objects to', async () => {
     const { container } = await render(Slider, {
       props: { type: 'multiple', value: [25, 75], 'aria-label': 'Price range' },

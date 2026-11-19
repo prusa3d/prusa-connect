@@ -89,7 +89,7 @@
   <div aria-live="polite" class="flex flex-col gap-4">
     {#if quiet}
       <div
-        class="flex items-start gap-3 rounded-sm border border-dashed border-border p-4"
+        class="flex items-start gap-3 rounded-md border border-dashed border-border p-4"
         data-part="listening"
       >
         <Spinner size="md" tone="primary" class="mt-0.5" />
@@ -117,7 +117,7 @@
 
     {#each joining as printer (printer.code)}
       <div
-        class="flex items-start gap-3 rounded-sm border border-border p-4"
+        class="flex items-start gap-3 rounded-md border border-border p-4"
         data-part="joining"
       >
         <Spinner size="md" tone="primary" class="mt-0.5" />

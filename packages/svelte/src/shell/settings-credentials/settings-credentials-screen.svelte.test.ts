@@ -106,62 +106,72 @@ describe('SettingsCredentialsScreen', () => {
       .toBeInTheDocument();
   });
 
-  it('hands the token over once and says it cannot be recovered', async () => {
-    await render(SettingsCredentialsScreen, {
-      props: screen({
-        credentials: source({
-          minted: {
-            id: 'Lm5cF8jR3wP7yH1tV6zQaB',
-            name: 'Nightly export',
-            subject: 'user:alice',
-            created_at: at(0),
-            expires_at: at(90),
-            scopes: ['read'],
-            origin: 'mint',
-            token: 'pcl_9f3b21c7ae4d05e8b6f14a72c3d09e5b',
-          },
-        }),
-      }),
+  const TOKEN = 'pcl_9f3b21c7ae4d05e8b6f14a72c3d09e5b';
+
+  const minted = {
+    id: 'Lm5cF8jR3wP7yH1tV6zQaB',
+    name: 'Nightly export',
+    subject: 'user:alice',
+    created_at: at(0),
+    expires_at: at(90),
+    scopes: ['read'] as ApiCredential['scopes'],
+    origin: 'mint' as const,
+    token: TOKEN,
+  };
+
+  const showing = () =>
+    render(SettingsCredentialsScreen, {
+      props: screen({ credentials: source({ minted }) }),
     });
 
+  it('hands the token over in a dialog, masked, and says it is shown once', async () => {
+    await showing();
+
     await expect
-      .element(page.getByText('Copy this credential now'))
+      .element(page.getByRole('dialog', { name: 'Copy this credential now' }))
       .toBeVisible();
     await expect
       .element(
         page.getByText('This is the only time it is shown.', { exact: false }),
       )
       .toBeVisible();
-    // The token is in a field a person can select by hand, which is the way
-    // out when the clipboard refuses.
-    await expect
-      .element(page.getByLabelText('New credential'))
-      .toHaveValue('pcl_9f3b21c7ae4d05e8b6f14a72c3d09e5b');
+    const field = page.getByLabelText('New credential', { exact: true });
+    await expect.element(field).toHaveAttribute('type', 'password');
+
+    await page.getByRole('button', { name: 'Show New credential' }).click();
+
+    await expect.element(field).toHaveAttribute('type', 'text');
+    await expect.element(field).toHaveValue(TOKEN);
+  });
+
+  it('copies the token while it is masked', async () => {
+    const writeText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValue(undefined);
+    await showing();
+
+    await page.getByRole('button', { name: 'Copy' }).click();
+
+    expect(writeText).toHaveBeenCalledWith(TOKEN);
+    writeText.mockRestore();
   });
 
   it('drops the token when the reader is done', async () => {
     const onDismiss = vi.fn();
-    await render(SettingsCredentialsScreen, {
-      props: screen({
-        onDismiss,
-        credentials: source({
-          minted: {
-            id: 'Lm5cF8jR3wP7yH1tV6zQaB',
-            name: 'Nightly export',
-            subject: 'user:alice',
-            created_at: at(0),
-            expires_at: at(90),
-            scopes: ['read'],
-            origin: 'mint',
-            token: 'pcl_9f3b21c7ae4d05e8b6f14a72c3d09e5b',
-          },
-        }),
-      }),
+    const { rerender } = await render(SettingsCredentialsScreen, {
+      props: screen({ onDismiss, credentials: source({ minted }) }),
     });
 
     await page.getByRole('button', { name: 'Done' }).click();
-
     expect(onDismiss).toHaveBeenCalledTimes(1);
+
+    // The store answers a dismissal by forgetting the token.
+    await rerender(screen({ onDismiss, credentials: source() }));
+
+    await expect.poll(() => document.body.textContent).not.toContain(TOKEN);
+    await expect
+      .poll(() => document.querySelector('[role="dialog"]'))
+      .toBeNull();
   });
 
   it('drops the token when the reader leaves the screen', async () => {

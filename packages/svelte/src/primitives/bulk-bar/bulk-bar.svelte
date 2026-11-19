@@ -29,9 +29,9 @@
 
 <div
   class={[
-    'flex min-h-9 items-center gap-3',
+    'flex h-auto min-h-input-height items-center gap-3',
     count > 0 &&
-      'overflow-x-auto rounded-sm border border-border bg-accent px-3',
+      'overflow-x-auto rounded-md border border-border bg-accent px-3',
   ]}
 >
   {#if count > 0}

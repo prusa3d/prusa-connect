@@ -1,10 +1,9 @@
 /* The theme of @prusa/connect-ui: the colour scales, the semantic tokens
-   for light and dark, the three skins, motion, and their registration with
-   Tailwind.
+   for light and dark, the shape and type rhythm, motion, and their
+   registration with Tailwind.
 
-   Copied value for value from the React design system at
-   `frontend/src/next/styles/tokens.css` on the `legacy/main` branch. That
-   Storybook is the specification; a value here that differs from it is a bug.
+   The colour scales are copied value for value from the React design system
+   at `frontend/src/next/styles/tokens.css` on the `legacy/main` branch.
    `tokens.test.ts` beside this file pins every value.
 
    This file is the theme alone, which is what a module imports. An application
@@ -12,7 +11,7 @@
    components. src/styles/index.css shows the lines a consumer writes.
 
    A component never reads a colour step from block 1: it reads a semantic name
-   from block 2, and the step behind the name is what a theme or a skin swaps. */
+   from block 2, and the step behind the name is what the dark theme swaps. */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -29,6 +28,49 @@
 @custom-variant state-closed (&[data-state='closed']);
 @custom-variant state-delayed-open (&[data-state='delayed-open']);
 @custom-variant state-instant-open (&[data-state='instant-open']);
+
+/* Every other `data-` attribute a component styles by its value has a named
+   variant too, on the same pattern: the attribute's name without `data-`, then
+   the value. `group-`, `peer-` and `has-` compound with each of them, so
+   `group-state-open/name:` and `has-slot-card-action:` need no line of their
+   own. An attribute styled by its presence alone needs none either, since
+   Tailwind reads a bare `data-placeholder:` as it reads `data-disabled:`. */
+@custom-variant state-active (&[data-state='active']);
+@custom-variant state-checked (&[data-state='checked']);
+@custom-variant state-disabled (&[data-state='disabled']);
+@custom-variant state-dragging-over (&[data-state='dragging-over']);
+@custom-variant state-indeterminate (&[data-state='indeterminate']);
+@custom-variant state-on (&[data-state='on']);
+@custom-variant state-rejected (&[data-state='rejected']);
+@custom-variant state-selected (&[data-state='selected']);
+@custom-variant state-unchecked (&[data-state='unchecked']);
+@custom-variant orientation-horizontal (&[data-orientation='horizontal']);
+@custom-variant orientation-vertical (&[data-orientation='vertical']);
+@custom-variant side-bottom (&[data-side='bottom']);
+@custom-variant side-left (&[data-side='left']);
+@custom-variant side-right (&[data-side='right']);
+@custom-variant side-top (&[data-side='top']);
+@custom-variant size-default (&[data-size='default']);
+@custom-variant size-md (&[data-size='md']);
+@custom-variant size-sm (&[data-size='sm']);
+@custom-variant slot-alert-dialog-media (&[data-slot='alert-dialog-media']);
+@custom-variant slot-card-action (&[data-slot='card-action']);
+@custom-variant slot-select-value (&[data-slot='select-value']);
+@custom-variant variant-default (&[data-variant='default']);
+@custom-variant variant-destructive (&[data-variant='destructive']);
+@custom-variant variant-outline (&[data-variant='outline']);
+@custom-variant reference-state-hover (&[data-reference-state='hover']);
+@custom-variant disabled-true (&[data-disabled='true']);
+
+/* A component styled by what it holds names the condition too, as `with-`
+   and the thing found: `with-icon` is a direct `svg` child, and each
+   `with-*-focus` is that descendant showing the keyboard focus ring
+   (`:focus-visible`), so a row or a tile lights up while its own link has it. */
+@custom-variant with-icon (&:has(> svg));
+@custom-variant with-link-focus (&:has(a:focus-visible));
+@custom-variant with-button-focus (&:has(button:focus-visible));
+@custom-variant with-activate-focus (&:has([data-slot='data-row-activate']:focus-visible));
+@custom-variant with-press-focus (&:has([data-slot='tile-press']:focus-visible));
 
 /* ── Block 1: raw Prusa Design System scales, copied verbatim from the React tree's src/styles/global.css. Static; do not edit. ── */
 :root {
@@ -154,8 +196,8 @@
   --color-green-light-2: #f3fbf7;
   --color-green-light-3: #e4f7ed;
   --color-green-light-5: #c0e9d5;
-  /* Source global.css repeats #a9dec5 at steps 6 and 7; step 7 is the one this
-     tree spends, as the prusapro skin's pressed fill. */
+  /* Source global.css repeats #a9dec5 at steps 6 and 7; this tree keeps step
+     7. */
   --color-green-light-7: #a9dec5;
   --color-green-light-8: #88cfaf;
   --color-green-light-9: #00a072;
@@ -175,65 +217,53 @@
   --color-green-dark-12: #aaf2d1;
 }
 
-/* ── Block 2: shadcn's canonical contract, Prusa DS values. Dark background is pure black; raised surfaces sit one step up at gray-dark-2, superseding the old tree's gray-dark-1/-3. ── */
+/* ── Block 2: shadcn's canonical contract. The page is a light grey with white cards over it; in dark, a near-black page with raised surfaces one grey step up. ── */
 
-/* @tokens prusa light */
+/* @tokens light */
 :root {
-  --background: #fff;
-  --foreground: var(--color-gray-light-12);
-  --card: #fff;
-  --card-foreground: var(--color-gray-light-12);
-  --popover: #fff;
-  --popover-foreground: var(--color-gray-light-12);
-  --primary: var(--color-orange-light-9);
-  /* The fill of the one thing to press. It names --primary and no skin
-     redeclares it, so a skin that moves --primary moves this with it. Having
-     the name at all is what lets a check ask the theme what a primary button
-     is painted, instead of writing a colour of its own down beside it. */
-  --primary-fill: var(--primary);
-  /* The Prusa Design System's --color-semantic-primary-*, step for step:
-     white on the brand orange, hover a step darker. Press goes one step
-     darker again, where the design system lightens to orange-light-8 and
-     its white fades to 2.34:1. Every brand-orange fill carries this white. It
-     sits under WCAG AA's 4.5:1; contrast.test.ts holds each pair to the
-     ratio it measures. */
-  --primary-foreground: var(--color-orange-light-1);
-  --primary-hovered: var(--color-orange-light-10);
-  --primary-pressed: var(--color-orange-light-11);
+  --background: oklch(93.402524% 0 0);
+  --foreground: oklch(22.212874% 0 0);
+  --card: oklch(99.999999% 0 0);
+  --card-foreground: oklch(22.212874% 0 0);
+  --popover: oklch(99.999999% 0 0);
+  --popover-foreground: oklch(22.212874% 0 0);
+  --primary: oklch(64% 0.2194 37.8);
+  /* The fill of the one thing to press: the button accent, not --primary.
+     Having the name at all is what lets a check ask the theme what a primary
+     button is painted, instead of writing a colour of its own down beside
+     it. */
+  --primary-fill: var(--color-button-accent);
+  /* Dark text on the brand orange, which lightens a step on hover and
+     another on press. */
+  --primary-foreground: oklch(22.212874% 0 0);
+  --primary-hovered: var(--color-orange-light-8);
+  --primary-pressed: var(--color-orange-light-7);
   /* Where the person currently is: the nav item, the tab, the selected row.
      Kept apart from --primary because "this is the brand" and "you are here"
-     are two different claims that share a colour in this skin only by
-     accident. The slicer skin's reference paints its current destination a
-     navy that owes its orange brand nothing, so a skin that keeps them the
-     same says so by repeating the value instead of the component reaching
-     for --primary. */
-  --selected: var(--color-orange-light-9);
-  --selected-foreground: var(--color-orange-light-1);
-  --selected-hovered: var(--color-orange-light-10);
+     are two different claims: the brand is orange, where you are is a
+     blue. */
+  --selected: oklch(89.758125% 0.050058 257.676519);
+  --selected-foreground: oklch(22.212874% 0 0);
+  --selected-hovered: oklch(85.403746% 0.057175 257.45333);
   /* What a checkbox, a radio or a switch shows once it is on. A third claim
-     again, distinct from the brand and the current destination: the slicer
-     skin's reference paints its switch knob and radio dot a blue that has
-     nothing to do with its orange or its navy. */
-  --control-on: var(--color-orange-light-9);
-  --control-on-foreground: var(--color-orange-light-1);
-  /* Work advancing on its own, a fourth claim. Tracks --primary here because
-     nothing in this skin says otherwise; the slicer skin spends its own blue
-     on it, which having the token at all is what lets it do. */
-  --progress: var(--color-orange-light-9);
-  /* Link text, a fifth claim. The brand orange reads 3.32:1 as text on white
-     and the palette's darkest orange, orange-light-11, 4.43:1; this is that
-     hue a notch darker, which clears 4.5:1 on white and on the slicer skin's
-     gray page. */
-  --link: #cf3c00;
-  --secondary: var(--color-orange-light-3);
-  --secondary-foreground: var(--color-orange-light-12);
-  --secondary-hovered: var(--color-orange-light-5);
-  --muted: var(--color-gray-light-2);
-  --muted-foreground: var(--color-gray-light-11);
-  --accent: var(--color-gray-light-3);
-  /* A filled, quieter panel for a container that groups other things, so the hairline border can mean "interactive or alarming" elsewhere. No --surface-foreground: this fill is the page's own surface, one step quieter, so text on it stays --foreground (14.44:1 light, 13.59:1 dark) / --muted-foreground (5.22:1 light, 7.60:1 dark). Shares --accent's value; nothing that groups is also hoverable. */
-  --surface: var(--color-gray-light-3);
-  /* red-light-9 measured 3.91:1 (text vs --background) and 3.84:1 (hover fill vs --destructive-foreground), both under 4.5:1. red-light-11 clears both: 5.21:1, 5.11:1. */
+     again, distinct from the brand and the current destination. */
+  --control-on: oklch(62.964222% 0.186235 264.278496);
+  --control-on-foreground: oklch(22.212874% 0 0);
+  /* Work advancing on its own, a fourth claim. */
+  --progress: oklch(59.842125% 0.147407 264.655225);
+  /* Link text, a fifth claim. The brand orange is too light to read as text
+     on the grey page; this is the same hue dark enough to clear 4.5:1 on it
+     and on a card. */
+  --link: #b63100;
+  --secondary: oklch(96.415349% 0 0);
+  --secondary-foreground: oklch(22.212874% 0 0);
+  --secondary-hovered: oklch(90.365199% 0 0);
+  --muted: oklch(93.402524% 0 0);
+  --muted-foreground: oklch(52.080655% 0 0);
+  --accent: oklch(93.402524% 0 0);
+  /* A filled, quieter panel for a container that groups other things, so the hairline border can mean "interactive or alarming" elsewhere. No --surface-foreground: text on it stays --foreground / --muted-foreground, which contrast.test.ts measures on it. */
+  --surface: oklch(96.415349% 0 0);
+  /* Step 11 rather than the scale's step 9, so --destructive-foreground clears 4.5:1 on it and on its hover step; contrast.test.ts measures each pair. */
   --destructive: var(--color-red-light-11);
   /* A tinted plane for a toned notice, one per tone, rather than laying every
      tone on --card and colouring only the edge and the text. Step 3 of each
@@ -245,57 +275,58 @@
      the way --primary does, for a tablet with no hover: a Stop that
      acknowledges a tap with nothing gets tapped twice. */
   --destructive-pressed: var(--color-red-light-12);
-  /* Reuses --destructive's step: clears --background/--card/--popover (all #fff here) at 5.21:1. */
-  --destructive-text: var(--color-red-light-11);
-  --border: var(--color-gray-light-5);
-  --input: var(--color-gray-light-9);
-  /* orange-alpha-light-8 over #fff measures rgb(250,121,82), 2.66:1 — under WCAG 1.4.11's 3:1. orange-light-9 (opaque) clears all three surfaces at 3.33:1. Dark's translucent ring stays: 5.93:1/7.09:1. */
-  --ring: var(--color-orange-light-9);
+  /* One step darker than --destructive, so it clears 4.5:1 on the grey page as well as on a card. */
+  --destructive-text: var(--color-red-light-12);
+  --border: oklch(78.260371% 0 0);
+  --input: var(--color-gray-light-10);
+  /* Opaque, so it clears WCAG 1.4.11's 3:1 on every surface it is offset from. */
+  --ring: oklch(59.842125% 0.147407 264.655225);
   /* Keyboard focus lifts a control off the page instead of ringing it: a cast
      shadow that puts air under it, a lit top edge that turns its face toward
      the light, and a hairline that keeps the silhouette crisp once it has
      left the surface. Theme-specific because the two halves swap roles: on a
-     white page the cast shadow does the work and a white top edge is
+     light page the cast shadow does the work and a white top edge is
      invisible, so this pair is a literal per theme rather than a shared
      alpha. */
   --focus-lift:
     0 3px 6px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.55),
     0 0 0 1px rgb(0 0 0 / 0.14);
-  --disabled: var(--color-gray-light-1);
-  --disabled-foreground: var(--color-gray-light-8);
+  --disabled: oklch(93.402524% 0 0);
+  --disabled-foreground: var(--color-gray-light-10);
 
-  /* Replaces the ds-* bridge. Named -text, not -foreground: these are step-11 text tones for the page background, not the fill itself (1.08-3.27:1 there). */
+  /* Named -text, not -foreground: these are text tones for the page, a card and a popover, not for the fill itself; contrast.test.ts measures each on those surfaces. */
   --success: var(--color-green-light-9);
   --success-surface: var(--color-green-light-3);
   /* #fff (upstream default) measures 3.35:1 against --success — under 4.5:1. #000 clears it at 6.27:1; identical in both themes. */
   --success-foreground: #000;
-  --success-text: var(--color-green-light-11);
+  --success-text: var(--color-green-light-12);
   --warning: var(--color-yellow-light-9);
   --warning-surface: var(--color-yellow-light-3);
   /* #fff measures 1.35:1 — under 4.5:1. #000 clears it at 15.59:1. */
   --warning-foreground: #000;
-  /* yellow-light-11 measures 4.39:1 against #fff — under 4.5:1. yellow-light-12 clears it at 10.98:1. */
+  /* Step 12, which clears 4.5:1 as text on the page, a card and a popover; contrast.test.ts measures it. */
   --warning-text: var(--color-yellow-light-12);
   --info: var(--color-blue-light-9);
   --info-surface: var(--color-blue-light-3);
   /* #fff measures 3.92:1 — under 4.5:1. #000 clears it at 5.36:1; identical in both themes. */
   --info-foreground: #000;
-  --info-text: var(--color-blue-light-11);
+  --info-text: var(--color-blue-light-12);
 
   /* Printer-state tints: a step-3 fill under its own hue's step-11 text, and a
      step-8 `-edge` that badge.tsx paints as a 4px left rule. Light theme takes
      step 12, not 11: Radix guarantees step 11 against steps 1-2 only, and green's
      11-on-3 measures 4.34:1 in light — under AA. printer-state.ts maps the twelve
-     states onto these six families. */
+     states onto these families and the per-state palette below; idle is its
+     own teal, and offline is drawn hollow from the -offline edge. */
   --state-active: var(--color-blue-light-3);
   --state-active-text: var(--color-blue-light-12);
   --state-active-edge: var(--color-blue-light-8);
   --state-done: var(--color-green-light-3);
   --state-done-text: var(--color-green-light-12);
   --state-done-edge: var(--color-green-light-8);
-  --state-idle: var(--color-yellow-light-3);
-  --state-idle-text: var(--color-yellow-light-12);
-  --state-idle-edge: var(--color-yellow-light-8);
+  --state-idle: oklch(94.5% 0.035 195);
+  --state-idle-text: oklch(30% 0.06 195);
+  --state-idle-edge: oklch(72% 0.11 195);
   --state-attention: var(--color-orange-light-3);
   --state-attention-text: var(--color-orange-light-12);
   --state-attention-edge: var(--color-orange-light-8);
@@ -313,60 +344,61 @@
      shared PRINTING's blue. Each family is a fill and an edge; the edge is
      Connect's own base colour verbatim, the text is --foreground. No -text
      token: unlike the six families above, the fill here never carries text of
-     its own hue. MOVING has no colour in Connect's table, which stops at
-     eleven states, so it takes BUSY's, being the same kind of claim. */
+     its own hue. Busy (indigo) and moving (sky) are this tree's own cool tones: the machine
+     is working but not printing. Stopped is a warm grey, an end a person chose,
+     apart from the red of a fault. */
   --state-unknown: #d3d7de;
   --state-unknown-edge: #9daabd;
   --state-offline: #d8d8d8;
   --state-offline-edge: #adadad;
-  --state-ready: #cbdfc9;
-  --state-ready-edge: #92c78c;
-  --state-busy: #e6d5ca;
-  --state-busy-edge: #d5a585;
+  --state-ready: #c4e8da;
+  --state-ready-edge: #55c29c;
+  --state-busy: #d9dbf3;
+  --state-busy-edge: #8f95db;
   --state-printing: #c5d4e7;
   --state-printing-edge: #7da7d9;
   --state-paused: #e0d0e0;
   --state-paused-edge: #c396c4;
-  --state-stopped: #f2c4ba;
-  --state-stopped-edge: #f8795f;
+  --state-stopped: #e2dbd4;
+  --state-stopped-edge: #a89d92;
   --state-finished: #d4eec3;
   --state-finished-edge: #a1ea70;
   --state-error: #e9c5c6;
   --state-error-edge: #dd7b7d;
-  --state-moving: #e6d5ca;
-  --state-moving-edge: #d5a585;
+  --state-moving: #cfe6f3;
+  --state-moving-edge: #5fb4dd;
 }
 
-/* @tokens prusa dark */
+/* @tokens dark */
 .dark {
-  --background: #000;
-  --foreground: var(--color-gray-dark-12);
-  --card: var(--color-gray-dark-2);
-  --card-foreground: var(--color-gray-dark-12);
-  --popover: var(--color-gray-dark-2);
-  --popover-foreground: var(--color-gray-dark-12);
-  --primary: var(--color-orange-dark-9);
-  /* The design system's dark primary: its inverse foreground, gray-dark-12,
-     on the brand orange. */
-  --primary-foreground: var(--color-gray-dark-12);
-  --primary-hovered: var(--color-orange-dark-10);
-  --primary-pressed: var(--color-orange-dark-8);
-  --selected: var(--color-orange-dark-9);
-  --selected-foreground: var(--color-gray-dark-12);
-  --selected-hovered: var(--color-orange-dark-10);
-  --control-on: var(--color-orange-dark-9);
-  --control-on-foreground: var(--color-gray-dark-12);
-  --progress: var(--color-orange-dark-9);
-  /* Every skin's dark brand colour clears 4.5:1 as text on its dark ground. */
+  --background: #0f0f0f;
+  --foreground: #fff;
+  --card: oklch(22.212874% 0 0);
+  --card-foreground: #fff;
+  --popover: oklch(22.212874% 0 0);
+  --popover-foreground: #fff;
+  --primary: #fa6831;
+  --primary-fill: var(--color-button-accent);
+  /* Near-black text on the brand orange, as in light. */
+  --primary-foreground: #0f0f0f;
+  --primary-hovered: #ff7b4a;
+  --primary-pressed: #e05a26;
+  --selected: #364976;
+  --selected-foreground: #fff;
+  --selected-hovered: #425890;
+  --control-on: #4e81f8;
+  --control-on-foreground: #0f0f0f;
+  --progress: #7397ec;
+  /* The dark brand colour clears 4.5:1 as text on the dark ground. */
   --link: var(--primary);
-  --secondary: var(--color-orange-dark-3);
-  --secondary-foreground: var(--color-orange-dark-12);
-  --secondary-hovered: var(--color-orange-dark-5);
-  --muted: var(--color-gray-dark-2);
-  --muted-foreground: var(--color-gray-dark-11);
-  --accent: var(--color-gray-dark-3);
-  /* One step above --card (gray-dark-2): a grouping panel sits inside a card, and --background is already pure black. */
-  --surface: var(--color-gray-dark-3);
+  --secondary: #2a2a2a;
+  --secondary-foreground: #fff;
+  --secondary-hovered: #323232;
+  --muted: #1b1b1b;
+  --muted-foreground: #b8b8b8;
+  --accent: oklch(28.50174% 0 0);
+  /* Between --background and --card: a grouping panel sits a step off the page. */
+  --surface: oklch(20.019309% 0 0);
   --destructive: var(--color-red-dark-9);
   --destructive-surface: var(--color-red-dark-3);
   /* #fff measured 3.91:1 as a hover fill — under 4.5:1. red-dark-1 clears it at 4.83:1. */
@@ -377,19 +409,19 @@
      than toward it: red-dark-10 measures 4.07:1, under AA, where 12 clears it
      at 13.83:1. */
   --destructive-pressed: var(--color-red-dark-12);
-  /* red-dark-9 measures 5.37:1 against --background but only 4.48:1 against --card/--popover — under 4.5:1. red-dark-10 fixes --background (4.52:1) but drops further against --card/--popover (3.77:1). red-dark-11 clears all three: 9.55:1 / 7.97:1. */
+  /* Step 11, which clears 4.5:1 on --background, --card and --popover; contrast.test.ts measures all three. */
   --destructive-text: var(--color-red-dark-11);
-  --border: var(--color-gray-dark-5);
-  --input: var(--color-gray-dark-9);
-  --ring: var(--color-orange-alpha-dark-8);
+  --border: oklch(28.50174% 0 0);
+  --input: var(--color-gray-dark-10);
+  --ring: #fa6831;
   /* The dark half of the pair above: a deeper cast shadow that still barely
      registers on this ground, with a lit edge and hairline doing most of the
      work. */
   --focus-lift:
     0 3px 7px rgb(0 0 0 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.28),
     0 0 0 1px rgb(255 255 255 / 0.14);
-  --disabled: var(--color-gray-dark-1);
-  --disabled-foreground: var(--color-gray-dark-8);
+  --disabled: #1b1b1b;
+  --disabled-foreground: #808080;
 
   --success: var(--color-green-dark-9);
   --success-surface: var(--color-green-dark-3);
@@ -413,9 +445,9 @@
   --state-done: var(--color-green-dark-3);
   --state-done-text: var(--color-green-dark-11);
   --state-done-edge: var(--color-green-dark-8);
-  --state-idle: var(--color-yellow-dark-3);
-  --state-idle-text: var(--color-yellow-dark-11);
-  --state-idle-edge: var(--color-yellow-dark-8);
+  --state-idle: oklch(29% 0.045 195);
+  --state-idle-text: oklch(87% 0.08 195);
+  --state-idle-edge: oklch(62% 0.1 195);
   --state-attention: var(--color-orange-dark-3);
   --state-attention-text: var(--color-orange-dark-11);
   --state-attention-edge: var(--color-orange-dark-8);
@@ -434,57 +466,45 @@
   --state-unknown-edge: #9daabd;
   --state-offline: #454545;
   --state-offline-edge: #adadad;
-  --state-ready: #3f4a3e;
-  --state-ready-edge: #92c78c;
-  --state-busy: #4e443d;
-  --state-busy-edge: #d5a585;
+  --state-ready: #34493f;
+  --state-ready-edge: #55c29c;
+  --state-busy: #3d3f5a;
+  --state-busy-edge: #8f95db;
   --state-printing: #3b444e;
   --state-printing-edge: #7da7d9;
   --state-paused: #4a404a;
   --state-paused-edge: #c396c4;
-  --state-stopped: #543a35;
-  --state-stopped-edge: #f8795f;
+  --state-stopped: #47423d;
+  --state-stopped-edge: #a89d92;
   --state-finished: #435238;
   --state-finished-edge: #a1ea70;
   --state-error: #4f3b3b;
   --state-error-edge: #dd7b7d;
-  --state-moving: #4e443d;
-  --state-moving-edge: #d5a585;
+  --state-moving: #34475a;
+  --state-moving-edge: #5fb4dd;
 }
 
-/* ── Block 2b: skins. A skin swaps token *values*; every name above keeps its
-   meaning, so no component knows one is in play. The default skin carries no
-   attribute — a second one is selected with `data-skin` on the root element.
+/* ── Block 2b: shape and rhythm. Nothing under `.dark` rebinds them, so they
+   are declared once. ── */
 
-   `:root[data-skin='slicer']` scores 0-2-0 against `.dark`'s 0-1-0, so a token
-   this skin sets for light would win in dark too. Every token a skin declares
-   below in light is therefore declared again in its dark block, and
-   `tokens.test.ts` holds that rule mechanically. A token neither block names
-   inherits the value above: the block is the difference and nothing else. ── */
-
-/* Shape and rhythm belong to the skin, not the theme — nothing under `.dark`
-   rebinds them, so they are declared once per skin rather than twice. */
-
-/* @shape prusa */
+/* @shape */
 :root {
-  /* Nothing above 4px in this skin — the largest visual difference from the
-     old tree's 14px scale. */
-  --corner-xs: 0px;
-  --corner-sm: 2px;
-  --corner-md: 4px;
+  --corner-xs: 2px;
+  --corner-sm: 3px;
+  --corner-md: 5px;
 
-  /* One multiplier over the type scale and the spacing unit rather than a size
-     per step, so the ratios between the steps cannot drift between skins.
-     Deliberately not `html { font-size }`: this tree's layout tiers are
-     rem-valued container queries, and a rem that moves changes which tier a
-     pixel width lands in — a 640px listing would stop clearing `@[40rem]` and
-     silently swap its table for the dense-row tier. */
-  --density: 1;
+  /* One multiplier over the spacing unit and the type scale rather than a size
+     per step, so the ratios between the steps cannot drift. Deliberately not
+     `html { font-size }`: this tree's layout tiers are rem-valued container
+     queries, and a rem that moves changes which tier a pixel width lands in —
+     a 640px listing would stop clearing `@[40rem]` and silently swap its
+     table for the dense-row tier. */
+  --density: 0.73;
 
   /* The app shell's header height, measured by `app-shell.tsx` and written
      back onto the shell's own element. Declared here so the rail that sticks
      under it has a sane value on the very first frame, before the measure
-     lands: 52px is what this skin's header actually is. */
+     lands. */
   --app-header-height: 52px;
 
   /* Phone bar height, measured by `app-shell.tsx`. Sheets and their overlays
@@ -496,206 +516,41 @@
      44px control between 8px of padding a side comes to anyway. */
   --app-phone-bar-height: 64px;
 
-  /* Type only, on top of --density. The two are separate because they answer
-     to different limits: --density also drives --spacing, and a spacing unit
-     below 1 takes a 44px control under the touch floor, which is why the boxes
-     stay at density 1 however small the type gets.
-
-     The raw steps below are 1.2x Tailwind's stock rem values, so 5/6 cancels
-     that factor exactly and every step lands on the scale the rest of the
-     product uses — 12 / 14 / 16 / 18 / 24px, the design system's own numbers
-     (`globals_prusa.css`) and the unmodified Tailwind scale Connect runs on.
-     Line heights are unitless ratios, so the vertical rhythm tightens with
-     them. */
-  --text-scale: 0.8333;
+  /* Type only, on top of --density. The raw steps below are 1.2x Tailwind's
+     stock rem values, so 5/6 cancels that factor, and dividing by --density
+     cancels the density the type steps also multiply by: every step lands on
+     12 / 14 / 16 / 18 / 24px however tight the spacing is. The reader's text
+     size setting scales the whole set through the factor below. Line heights
+     are unitless ratios, so the vertical rhythm follows. */
+  --text-scale-default: 0.8333;
+  --text-size-factor: 1;
+  --text-scale: calc(
+    var(--text-scale-default) / var(--density) * var(--text-size-factor)
+  );
+  --text-xs-min: 0.75rem;
+  --identity-value-size: max(
+    0.75rem,
+    calc(0.8125rem * var(--text-size-factor))
+  );
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Tailwind's own weights, declared here because Tailwind emits a theme
+     variable only for a utility it finds, and scoped styles read these. */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
 }
 
-/* @shape slicer */
-:root[data-skin='slicer'] {
-  /* The reference's own radii: 2px on the smallest chips, 3px on controls,
-     5px where it rounds a tab or a panel (`--radius-xl` there). This skin's
-     cap is therefore 5px, not the prusa skin's 4px; tokens.test.ts caps each
-     skin against its own number. */
-  --corner-xs: 2px;
-  --corner-sm: 3px;
-  --corner-md: 5px;
-
-  /* The reference runs a 14px interface where this skin's `--text-base` is
-     1.2rem, 19.2px: 14 / 19.2 = 0.73. */
-  --density: 0.73;
-  --text-scale: 1;
+body {
+  font-size: var(--text-base);
 }
 
-/* @shape prusapro */
-:root[data-skin='prusapro'] {
-  /* The same shape and rhythm as the default skin, deliberately: PRO is the
-     same product for the same hands on the same wall tablet, and only its
-     palette differs. Declared rather than inherited because a skin's shape is
-     the one thing `tokens.test.ts` reads per skin — an absent block would read
-     as a skin with no shape at all. */
-  --corner-xs: 0px;
-  --corner-sm: 2px;
-  --corner-md: 4px;
-  --density: 1;
+:root[data-text-size='small'] {
+  --text-size-factor: 0.9;
 }
 
-/* @tokens slicer light */
-:root[data-skin='slicer'] {
-  /* The page recedes and cards rise off it, rather than white cards on a white
-     page told apart by a hairline. */
-  --background: var(--color-gray-light-2);
-  --muted: var(--color-gray-light-3);
-  --border: var(--color-gray-light-6);
-
-  /* Secondary is a raised white chip on that grey page, not an orange tint. */
-  --secondary: #fff;
-  --secondary-foreground: var(--color-gray-light-12);
-  --secondary-hovered: var(--color-gray-light-3);
-
-  /* Two groups the reference gets wrong for our bar, left inherited:
-     - --destructive: its red-light-9 under red-light-1 measures 3.84:1;
-       red-light-11 clears it at 5.11:1.
-     - --input: its #fff is a field *fill*, while this tree spends --input on
-       the field's border, where white would leave the field with no edge. */
-}
-
-/* @tokens slicer dark */
-:root[data-skin='slicer'].dark {
-  /* PrusaSlicer v3's own neutrals, hueless where this tree's greys sit at hue
-     277.7 — a panel that is subtly blue beside Slicer's is the seam this skin
-     exists to remove. Empty background #0f0f0f, sidebar #1b1b1b, panel
-     #2a2a2a, separator #3c3c3c, accent #fa6831. */
-  --background: #0f0f0f;
-  --foreground: #fff;
-  --card: #2a2a2a;
-  --card-foreground: #fff;
-  --popover: #2a2a2a;
-  --popover-foreground: #fff;
-  --primary: #fa6831;
-  /* The reference's own white on its orange, as the design system does. */
-  --primary-foreground: #fff;
-  --primary-hovered: #ff7b4a;
-  --primary-pressed: #e05a26;
-  /* The reference's `Tree -- active`, and the one place this skin parts with
-     the default skin's "current destination is the brand fill": PrusaSlicer
-     paints a selected tree row, a selected tab and the active rail item this
-     navy and keeps its orange for the brand mark and the primary action.
-     #fff clears it at 8.86:1, where this skin's own #0f0f0f manages only
-     2.16:1. Declared in dark only: the reference has no light theme to read
-     a light value off, so light stays on the default skin's orange. */
-  --selected: #364976;
-  --selected-foreground: #fff;
-  /* The reference's switch knob and radio dot, a third claim distinct from
-     both the brand and the current row. The mark on it is dark rather than
-     white: #fff measures 3.61:1 here, under AA, where #0f0f0f clears it at
-     5.31:1. */
-  --control-on: #4e81f8;
-  --control-on-foreground: #0f0f0f;
-  /* A lighter blue than --control-on's, kept at the reference's own value
-     rather than folded into it: a bar that fills on its own is not a control
-     someone switched. */
-  --progress: #7397ec;
-  /* Lightens on hover, the direction this skin's --primary-hovered runs.
-     #fff clears it at 6.93:1. */
-  --selected-hovered: #425890;
-  --secondary: #2a2a2a;
-  --secondary-foreground: #fff;
-  --secondary-hovered: #323232;
-  --muted: #1b1b1b;
-  --muted-foreground: #b8b8b8;
-  --accent: #323232;
-  /* One step above --card, the same relation the prusa skin's surface keeps. */
-  --surface: #323232;
-  --border: #3c3c3c;
-  /* Opaque, not the prusa skin's translucent ring: clears the three surfaces
-     it lands on at 6.47:1 / 4.85:1 / 4.33:1, past WCAG 1.4.11's 3:1. */
-  --ring: #fa6831;
-  --disabled: #1b1b1b;
-  --disabled-foreground: #808080;
-
-  /* --destructive and --destructive-pressed stay inherited: the reference's
-     own #fff foreground on red-dark-9 measures 3.91:1, under 4.5:1, where
-     red-dark-1 clears it at 4.83:1. The reference's own press step (#c33232)
-     was tuned against that #fff foreground, not against the inherited
-     red-dark-1 this skin actually uses, and paired with red-dark-1 it drops
-     to 3.44:1 — under AA. The default skin's red-dark-12 stays correct here
-     at 13.83:1 against the same red-dark-1, so it is left in place rather
-     than replaced with a value that fails. */
-}
-
-/* @tokens prusapro light */
-:root[data-skin='prusapro'] {
-  /* Green is what can be acted on, and nothing else. The page, its cards and
-     its hairlines stay on the default skin's neutrals: green surfaces made
-     `--surface` and `--state-done` the same value, so a finished printer's
-     tinted panel was indistinguishable from any grouping panel, and a page and
-     card a green step apart separated at 1.07:1 where the default skin's
-     separate at 1.18:1. What is left green is the brand fill, the quiet chip
-     beside it, the focus ring and the current destination.
-
-     The fills and the text on them are the Prusa Design System's Connect
-     theme: green-light-1 on green, hover a step darker. */
-  --primary: var(--color-green-light-9);
-  --primary-foreground: var(--color-green-light-1);
-  --primary-hovered: var(--color-green-light-10);
-  /* Darker again on press, as the default skin does: the design system's
-     lighter green-light-8 leaves its white at 1.78:1. */
-  --primary-pressed: var(--color-green-light-11);
-
-  /* The current destination follows the brand here, as it does in the
-     default skin: this skin's whole argument is that green is what can be
-     acted on, and where you are is part of that. Repeated rather than
-     inherited because the default skin's value is orange, the one colour
-     this skin has none of. */
-  --selected: var(--color-green-light-9);
-  --selected-foreground: var(--color-green-light-1);
-  --selected-hovered: var(--color-green-light-10);
-  --control-on: var(--color-green-light-9);
-  --control-on-foreground: var(--color-green-light-1);
-  --progress: var(--color-green-light-9);
-  /* green-light-11 clears white at 4.85:1, where green-light-9 does not. */
-  --link: var(--color-green-light-11);
-
-  /* The default skin's secondary is an orange tint, which a green skin cannot
-     inherit. Step 5 rather than step 3: step 3 is `--state-done`'s own fill,
-     and a quiet button that matches a state badge is the collision this skin
-     was corrected for. green-light-12 clears both at 9.30:1 / 8.18:1. */
-  --secondary: var(--color-green-light-5);
-  --secondary-foreground: var(--color-green-light-12);
-  --secondary-hovered: var(--color-green-light-7);
-
-  /* A step off the brand fill, so a success badge is a quiet mint chip rather
-     than something that looks like the primary button. Its meaning still
-     travels in `--success-text` and the badge's own word; what moves here is
-     only the fill. #000 (inherited) clears it at 11.59:1. */
-  --success: var(--color-green-light-8);
-
-  /* Opaque, as in the default skin's light theme: a translucent ring over a
-     near-white page falls under WCAG 1.4.11's 3:1. */
-  --ring: var(--color-green-light-9);
-}
-
-/* @tokens prusapro dark */
-:root[data-skin='prusapro'].dark {
-  --primary: var(--color-green-dark-9);
-  --primary-foreground: var(--color-gray-dark-12);
-  --primary-hovered: var(--color-green-dark-10);
-  --primary-pressed: var(--color-green-dark-8);
-  --selected: var(--color-green-dark-9);
-  --selected-foreground: var(--color-gray-dark-12);
-  --selected-hovered: var(--color-green-dark-10);
-  --control-on: var(--color-green-dark-9);
-  --control-on-foreground: var(--color-gray-dark-12);
-  --progress: var(--color-green-dark-9);
-  --link: var(--primary);
-  --secondary: var(--color-green-dark-5);
-  --secondary-foreground: var(--color-green-dark-12);
-  --secondary-hovered: var(--color-green-dark-7);
-  /* green-dark-8 would be the mirror of light's step 8, but #000 measures
-     4.17:1 on it, under 4.5:1; green-dark-11 clears it at 10.39:1 and reads as
-     the same quiet chip. */
-  --success: var(--color-green-dark-11);
-  --ring: var(--color-green-dark-9);
+:root[data-text-size='large'] {
+  --text-size-factor: 1.125;
 }
 
 /* ── Motion, theme-independent. Plain `@theme`, not `inline`: Radix's Presence defers unmounting only while it detects a CSS `animation-name`, so reduced-motion below must redefine the property, not shorten it — `inline` bakes the literal value in at build time, leaving nothing to redefine. ── */
@@ -879,6 +734,7 @@
 
 /* ── Block 3: Tailwind registration. `inline` resolves each token at the use site, so utilities follow the .dark rebinding without a dark: counterpart; missing here emits no utility and no error. ── */
 @theme inline {
+  --shadow-settings-pane: 0 1px 2px oklch(0% 0 0 / 0.015);
   /* Tailwind's built-in scales ship regardless of what a project declares; reset then redeclare, since Tailwind keeps a name written again after its namespace's `initial`. */
   --color-*: initial;
   --radius-*: initial;
@@ -886,6 +742,11 @@
   /* `transparent`/`current`/`inherit` are static Tailwind v4 values and survive the reset above; `white`/`black` don't, so bg-white and the whole keyword-coloured utility family would silently compile to nothing. Literal, not theme-aware, on purpose — a themed surface uses bg-background/bg-card/text-foreground instead. */
   --color-white: #fff;
   --color-black: #000;
+
+  /* The light shell's canvas, its chrome and its panel edges. */
+  --color-shell-canvas: var(--color-gray-light-2);
+  --color-shell-chrome: var(--color-gray-light-3);
+  --color-panel-outline: var(--color-gray-light-6);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -908,6 +769,10 @@
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary-hovered: var(--secondary-hovered);
+  /* The Connect mark's orange, #FD5000 in the logo files, which is the
+     Prusa orange step 9 exactly. A logo is not themed, so no skin and no
+     theme redeclares it: the mark is the same orange on every ground. */
+  --color-logo: var(--color-orange-light-9);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -977,8 +842,9 @@
   --color-info-foreground: var(--info-foreground);
   --color-info-text: var(--info-text);
 
-  /* Values live per skin in Block 2b; `inline` resolves each at the use site,
-     so `rounded-sm` follows the skin the way a colour utility follows .dark. */
+  /* Values live in Block 2b; `inline` resolves each at the use site, so
+     `rounded-sm` reads the corner token the way a colour utility follows
+     .dark. */
   --radius-xs: var(--corner-xs);
   --radius-sm: var(--corner-sm);
   --radius-md: var(--corner-md);
@@ -986,7 +852,10 @@
   /* This package names the three families and ships no font file. A licensed
      face reaches a page from a private package downstream of this one, which
      redefines --font-sans and brings its own @font-face rules. See ADR-20260915-4an
-     rule 11, and fonts.test.ts beside this file. */
+     rule 11, and fonts.test.ts beside this file. `inline` bakes this value into
+     the `font-sans` utility, while the unlayered `:root` in Block 2b redefines
+     --font-sans as Inter for everything that reads the variable, the page's
+     body included. */
   --font-sans:
     'Atlas Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
@@ -1000,7 +869,7 @@
      the same way it already redefines --font-sans. */
   --font-heading: var(--font-sans);
 
-  /* Tailwind's own unit for every p-*, gap-* and size-*. Declared so the skin's
+  /* Tailwind's own unit for every p-*, gap-* and size-*. Declared so
      --density reaches the spacing rhythm as well as the type scale. */
   --spacing: calc(0.25rem * var(--density));
 
@@ -1018,9 +887,10 @@
 
   /* The smallest a control may be when a finger has to hit it: 44px, WCAG
      2.5.5's and the platforms' own floor. Fixed rem: a finger is not subject
-     to a skin's --density, so a `min-h-11` written against the spacing scale
-     reads as 44px in one skin and less in another. */
+     to --density, so a `min-h-11` written against the spacing scale would
+     read as less than 44px. */
   --spacing-touch-target: 2.75rem;
+  --spacing-detail-tab-height: 2.625rem;
 
   /* The phone bar's three cells: brand, menu, bell. The outer two share `1fr`
      so the menu sits in the bar's true centre rather than in whatever the
@@ -1028,16 +898,15 @@
      stretches. */
   --grid-template-columns-bar: 1fr auto 1fr;
 
-  /* A wall of printer cards: as many 24rem columns as the room takes, and one
-     column filling the width where 24rem does not. */
+  /* A wall of printer cards: as many 21rem columns as the room takes, and one
+     column filling the width where 21rem does not. */
   --grid-template-columns-printers: repeat(
     auto-fill,
-    minmax(min(24rem, 100%), 1fr)
+    minmax(min(21rem, 100%), 1fr)
   );
 
-  /* The camera wall's own floor, 2rem under the cards'. A farm being watched
-     wants tiles on screen rather than detail in each, and at a typical window
-     22rem is a whole extra tile per row. */
+  /* The camera wall's own floor, 22rem. A farm being watched wants tiles on
+     screen rather than detail in each. */
   --grid-template-columns-frames: repeat(
     auto-fill,
     minmax(min(22rem, 100%), 1fr)
@@ -1051,12 +920,130 @@
 
   /* 1.2x Tailwind's stock rem values at density 1 and text-scale 1, line
      heights scaled to match. Only the steps in use are declared. The line
-     heights stay unitless ratios, so a skin's two multipliers move every step
+     heights stay unitless ratios, so the two multipliers move every step
      together and leave the scale's own proportions alone. */
-  --text-xs: calc(0.9rem * var(--density) * var(--text-scale));
+  --spacing-control-height: 1.625rem;
+  --spacing-button-compact: 2rem;
+  --spacing-button-compact-inline: 1rem;
+  --spacing-button-medium: 2.3125rem;
+  --spacing-button-large: 2.875rem;
+  --spacing-button-large-inline: calc(
+    (
+        var(--spacing-button-large) - var(--text-base) *
+          var(--text-base--line-height)
+      ) /
+      2
+  );
+  --spacing-button-icon-inset: 0.25rem;
+  --spacing-button-large-text-inline: calc(
+    var(--spacing-button-large-inline) + var(--spacing-button-icon-inset)
+  );
+  --spacing-button-wide: 17.5rem;
+  --color-button-accent: oklch(69.28223955% 0.19099415 39.52978483);
+  --color-button-accent-hovered: oklch(63.86902922% 0.17473868 39.27365057);
+  --color-button-neutral-hovered: oklch(35.61792524% 0 0);
+  --spacing-input-height: 2.25rem;
+  /* The empty textarea's four-line floor. A rem value, so --density
+     does not shrink it the way it shrinks min-h-16. */
+  --spacing-textarea-min: 4rem;
+  --spacing-password-end: 1.875rem;
+  --spacing-icon-min: 1.125rem;
+  --spacing-checkbox: 1rem;
+  --spacing-checkbox-mark: 0.875rem;
+  --radius-checkbox: 0.125rem;
+  --color-checkbox-on: var(--control-on);
+  --spacing-scrollbar: 0.375rem;
+  --spacing-scrollbar-lane: 0.125rem;
+  --radius-scrollbar: 999px;
+  --color-scrollbar-thumb: var(--color-gray-dark-9);
+  --color-scrollbar-thumb-hovered: var(--color-gray-dark-10);
+  --spacing-password-icon: 1rem;
+  --spacing-control-inline: 0.625rem;
+  /* The switch: a larger white thumb and a coloured active track. */
+  --spacing-switch-inset: 0.125rem;
+  --spacing-switch-width: 1.5rem;
+  --spacing-switch-height: 0.875rem;
+  --spacing-switch-thumb: 0.625rem;
+  --spacing-switch-travel: 0.625rem;
+  --spacing-switch-width-sm: 1.25rem;
+  --spacing-switch-height-sm: 0.75rem;
+  --spacing-switch-thumb-sm: 0.5rem;
+  --spacing-switch-inset-sm: 0.125rem;
+  --spacing-switch-travel-sm: 0.5rem;
+  --radius-switch: 0.75rem;
+  --color-switch-track: oklch(55% 0 0);
+  --color-switch-on: oklch(74.513513% 0.22027865 135.672252);
+  --spacing-form-gap: 0.625rem;
+  --spacing-form-note: 0.3125rem;
+  --spacing-section-gap: 1.25rem;
+  --spacing-listing-footer: 1rem;
+  --spacing-listing-column: 1rem;
+  --spacing-printer-print-preview: 3.5rem;
+  --spacing-printer-card-padding: 1rem;
+  --spacing-printer-card-min: 13rem;
+  --spacing-dashboard-heading: 1.5rem;
+  --spacing-dashboard-summary-label: 1rem;
+  --spacing-dashboard-issue-gap: 0.125rem;
+  --spacing-dashboard-summary-padding: 0.75rem;
+  --spacing-dashboard-summary-gap: 0.25rem;
+  --spacing-dashboard-panel-padding: 1.25rem;
+  --spacing-dashboard-padding-block: 1rem;
+  --spacing-dashboard-heading-gap: 0.75rem;
+  --spacing-panel-padding: 2.5rem;
+  --spacing-panel-padding-mobile: 1.875rem;
+  --spacing-section-inline: 1.25rem;
+  --spacing-section-block: 1.875rem;
+  --spacing-form-indent: 2.5rem;
+  --spacing-profile-avatar: 6rem;
+  --spacing-profile-edit-icon: 1rem;
+  --spacing-role-help-icon: 1.125rem;
+  --spacing-identity-column: 0.75rem;
+  --grid-template-columns-account-identity: var(--spacing-profile-avatar)
+    minmax(0, 1fr);
+  --grid-template-columns-identity-fields: minmax(0, 6.875rem) minmax(0, 1fr);
+  --spacing-settings-header: 2.25rem;
+  --spacing-settings-header-inset: 0.375rem;
+  --spacing-settings-header-inline: 0.875rem;
+  --container-form-control: 19.375rem;
+  --container-avatar-crop: 16rem;
+  --container-appearance-columns: 57.25rem;
+  /* A file's preview in a list row: at most 35% of its container's width. */
+  --container-file-preview: 35cqw;
+  --grid-template-columns-settings-panels: repeat(
+    auto-fit,
+    minmax(min(100%, 28rem), 1fr)
+  );
+  --grid-template-columns-settings-switch: minmax(0, 1fr) auto;
+  --grid-template-columns-settings-form: minmax(0, 11.25rem) minmax(0, 1fr);
+
+  /* Printers, printer detail and jobs (shell). */
+  --spacing-sort-direction: 24px;
+  --spacing-picker-field: 36px;
+  --spacing-picker-control: 40px;
+  --spacing-picker-search: 44px;
+  --spacing-picker-search-icon: 20px;
+  /* The picker's height: 43rem, or the viewport, or the room bits-ui reports
+     beside its trigger. */
+  --spacing-filament-picker: min(
+    43rem,
+    calc(100dvh - 1rem),
+    var(--bits-popover-content-available-height, 80dvh)
+  );
+  /* The material picker's results list scrolls inside this height. */
+  --spacing-picker-list: 420px;
+  --container-color-wheel: 240px;
+  --grid-template-columns-label-field: auto minmax(0, 1fr);
+  --grid-template-columns-content-action: minmax(0, 1fr) auto;
+
+  --text-xs: max(
+    var(--text-xs-min, 0rem),
+    calc(0.9rem * var(--density) * var(--text-scale))
+  );
   --text-xs--line-height: calc(1.2 / 0.9);
   --text-sm: calc(1.05rem * var(--density) * var(--text-scale));
   --text-sm--line-height: calc(1.5 / 1.05);
+  --text-identity-value: var(--identity-value-size, 0.8125rem);
+  --text-identity-value--line-height: calc(1.25 / 0.8125);
   --text-base: calc(1.2rem * var(--density) * var(--text-scale));
   --text-base--line-height: calc(1.8 / 1.2);
   --text-lg: calc(1.35rem * var(--density) * var(--text-scale));
@@ -1074,6 +1061,88 @@
 }
 
 @layer base {
+  :root,
+  :root :where(*):not([data-slot='scroll-area-viewport']) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) transparent;
+  }
+
+  :root {
+    scrollbar-color: var(--color-scrollbar-thumb) var(--background);
+  }
+
+  :root ::-webkit-scrollbar {
+    width: var(--spacing-scrollbar);
+    height: var(--spacing-scrollbar);
+  }
+
+  :root ::-webkit-scrollbar-track,
+  :root ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  :root ::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-scrollbar);
+    background: var(--color-scrollbar-thumb);
+  }
+
+  :root ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-scrollbar-thumb-hovered);
+  }
+
+  /* Reserve scrollbar space only when the list overflows. */
+  :root
+    [data-slot='dashboard-card']
+    :is(
+      [data-part='printer-cards'],
+      [data-part='printer-rows'],
+      [data-part='issues'],
+      [data-part='finishing']
+    ) {
+    scrollbar-gutter: auto;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--card);
+  }
+
+  @supports selector(::-webkit-scrollbar) {
+    :root
+      [data-slot='dashboard-card']
+      :is(
+        [data-part='printer-cards'],
+        [data-part='printer-rows'],
+        [data-part='issues'],
+        [data-part='finishing']
+      ) {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    :root
+      [data-slot='dashboard-card']
+      :is(
+        [data-part='printer-cards'],
+        [data-part='printer-rows'],
+        [data-part='issues'],
+        [data-part='finishing']
+      )::-webkit-scrollbar {
+      width: calc(var(--spacing-scrollbar) + var(--spacing-scrollbar-lane));
+    }
+
+    :root
+      [data-slot='dashboard-card']
+      :is(
+        [data-part='printer-cards'],
+        [data-part='printer-rows'],
+        [data-part='issues'],
+        [data-part='finishing']
+      )::-webkit-scrollbar-thumb {
+      border: calc(var(--spacing-scrollbar-lane) / 2) solid transparent;
+      border-radius: calc(
+        (var(--spacing-scrollbar) + var(--spacing-scrollbar-lane)) / 2
+      );
+      background-clip: padding-box;
+    }
+  }
+
   html,
   body {
     background-color: var(--background);
@@ -1090,8 +1159,131 @@
     cursor: pointer;
   }
 
+  /* Keep pictograms legible even when the density reduces spacing.
+     Internal checkbox/radio marks retain the geometry of their controls. */
+  :root
+    :is(
+      svg.lucide,
+      [data-slot='control-icon'],
+      [data-slot='telemetry-icon'],
+      [data-slot='printer-icon'],
+      [data-slot='password-visibility-icon']
+    ):not(
+      :where(
+        [data-slot='checkbox'] *,
+        [data-slot='facet-row-indicator'] *,
+        [data-slot='radio-group-item'] *,
+        [data-slot='table-sort-directions'] *,
+        [role='menuitemradio'] *
+      )
+    ) {
+    min-inline-size: var(--spacing-icon-min);
+    min-block-size: var(--spacing-icon-min);
+    flex-shrink: 0;
+  }
+
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
   }
+}
+
+/* Extend the scrollport into half the panel inset. Matching padding
+   preserves the content edge when there is no scrollbar. */
+@layer utilities {
+  :root
+    [data-slot='dashboard-card']
+    :is(
+      [data-part='printer-cards'],
+      [data-part='printer-rows'],
+      [data-part='issues'],
+      [data-part='finishing']
+    ) {
+    --dashboard-scrollbar-offset: calc(
+      var(--dashboard-panel-padding, var(--spacing-dashboard-panel-padding)) / 2
+    );
+    margin-inline-end: calc(-1 * var(--dashboard-scrollbar-offset));
+    padding-inline-end: var(--dashboard-scrollbar-offset);
+  }
+}
+
+@utility file-preview-grid {
+  grid-template-columns: repeat(
+    auto-fill,
+    min(
+      calc(13.5rem + var(--thumbnail-step, 0) * 2rem),
+      calc(70% + var(--thumbnail-step, 0) * 10%)
+    )
+  );
+  gap: var(--spacing-section-inline);
+}
+
+:root {
+  --file-upload-pane-width: calc(331px + var(--spacing-panel-padding));
+  /* The swatch of a colour filter that stands for every colour. */
+  --filament-all-colors: conic-gradient(
+    oklch(0.561 0.138 243.9),
+    oklch(0.733 0.181 136),
+    oklch(0.96 0.164 106.9),
+    oklch(0.686 0.199 41.9),
+    oklch(0.507 0.203 15.8),
+    oklch(0.437 0.149 311.5),
+    oklch(0.561 0.138 243.9)
+  );
+}
+
+/* ── Primitives: the sizes the primitives draw themselves at. A rem value here
+   is fixed rem and does not follow --density, as a spacing step
+   would. ── */
+@theme inline {
+  /* A dialog stays 1rem clear of each edge of the viewport. */
+  --container-dialog: calc(100% - 2rem);
+  --spacing-dialog-height: calc(100dvh - 2rem);
+  /* Title, a body that is the one row to shrink, footer. */
+  --grid-template-rows-dialog: auto minmax(0, 1fr) auto;
+  /* An alert dialog's header: the title over the description, with the media
+     row above both when there is one. */
+  --grid-template-rows-alert-dialog-header: auto 1fr;
+  --grid-template-rows-alert-dialog-header-media: auto auto 1fr;
+
+  /* An alert's icon column, shut until the alert holds an icon. */
+  --grid-template-columns-alert: 0 1fr;
+  --grid-template-columns-alert-icon: calc(var(--spacing) * 4) 1fr;
+
+  --grid-template-rows-card-header: auto auto;
+  --grid-template-columns-card-header-action: 1fr auto;
+
+  /* The narrowest a menu or a select's list is drawn. */
+  --container-menu: 8rem;
+
+  /* The file preview popover: 20rem, or the room beside its anchor. */
+  --container-thumbnail-popover: min(
+    20rem,
+    var(--radix-popper-available-width)
+  );
+  /* The heater row's own floor; heater-rows.svelte says how it was found. */
+  --container-heater-row: 14.25rem;
+  --grid-template-columns-heater-rows: repeat(
+    auto-fit,
+    minmax(min(var(--container-heater-row), 100%), 1fr)
+  );
+
+  /* The wordmark's second line and how far it is pulled up under the first;
+     logo.svelte says how both were chosen. */
+  --text-logo-name: 0.49em;
+  --spacing-logo-name-pull: 0.22em;
+  --text-logo-lg: calc(var(--text-2xl) * 1.6);
+
+  /* The notification list: the phone sheet, then the header popover, which
+     leaves more of the page in view. notifications.svelte says why. */
+  --spacing-notifications-sheet-height: min(72svh, 34rem);
+  --spacing-notifications-popover-height: min(30rem, calc(100svh - 6rem));
+  --container-notifications-popover: min(26rem, calc(100vw - 1.5rem));
+
+  --blur-scrim: 3px;
+  /* The scroll viewport rounds as its root does. */
+  --radius-scroll-viewport: inherit;
+  --tracking-facet-heading: 0.06em;
+  /* Sets a checkbox in a table cell level with the text beside it. */
+  --spacing-checkbox-baseline: 2px;
 }

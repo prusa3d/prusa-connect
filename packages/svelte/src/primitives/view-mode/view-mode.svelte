@@ -33,7 +33,6 @@
     onValueChange,
     options,
     label,
-    size = 'sm',
     class: className,
   }: ViewModeToggleProps = $props();
 
@@ -47,7 +46,6 @@
   <ToggleGroup
     type="single"
     variant="outline"
-    {size}
     {value}
     onValueChange={(next: string) => {
       // A single-select group lets its own active item be deselected, which
@@ -65,6 +63,7 @@
           {#snippet child({ props })}
             <ToggleGroupItem
               {...props}
+              size="icon"
               value={option.value}
               aria-label={option.label}
               aria-disabled={option.unavailableReason === undefined
@@ -78,12 +77,17 @@
                 }
               }}
               class={[
+                '[&_svg]:size-icon-min',
                 'aria-checked:border-selected aria-checked:bg-selected aria-checked:text-selected-foreground aria-checked:hover:border-selected-hovered aria-checked:hover:bg-selected-hovered',
                 option.unavailableReason !== undefined &&
                   'cursor-not-allowed text-disabled-foreground hover:bg-transparent hover:text-disabled-foreground',
               ]}
             >
-              <Icon aria-hidden="true" />
+              {#if option.iconSrc}
+                <img src={option.iconSrc} alt="" class="invert dark:invert-0" />
+              {:else}
+                <Icon aria-hidden="true" />
+              {/if}
             </ToggleGroupItem>
           {/snippet}
         </TooltipTrigger>

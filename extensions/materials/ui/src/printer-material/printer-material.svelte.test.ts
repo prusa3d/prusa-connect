@@ -1,9 +1,11 @@
 import type { Device, ReadonlyFleet } from '@prusa/connect-ui/domain';
+import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import setup from '../index';
+import PrinterMaterial from './printer-material.svelte';
 import { type Answer, type Stub, stubHost } from '../test/host';
 
 // The Tools tab of the printer page, over the module's own setup, as
@@ -195,6 +197,238 @@ const sent = (stub: Stub, method: string): unknown[] =>
     );
 
 describe('the material section', () => {
+  it('selects a catalogue material and spool in the compact header', async () => {
+    const stub = started({
+      [TOOLS]: [printer([tool('0')])],
+      [`${M}/materials/a/spools`]: [
+        {
+          status: 200,
+          body: { spools: [spool(7)], total: 1 },
+        },
+      ],
+      [`${TOOLS}/0`]: [{ status: 200, body: assignment({ spool_id: 7 }) }],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+    await page.getByRole('button', { name: /^PLA a/ }).click();
+
+    const spoolPicker = page.getByRole('combobox', {
+      name: 'Spool',
+      exact: true,
+    });
+    await spoolPicker.click();
+    await page.getByRole('option', { name: /Spool #7/ }).click();
+    expect(spoolPicker.element().textContent).toContain('Spool #7 · 400');
+
+    await page.getByRole('button', { name: 'Confirm selection' }).click();
+    await expect.poll(() => sent(stub, 'PUT')).toEqual([{ spool_id: 7 }]);
+  });
+
+  it('lists favourites, then the catalogue, from one search', async () => {
+    const stub = started({
+      [TOOLS]: [printer([tool('0')])],
+      [`${M}/materials`]: [
+        {
+          status: 200,
+          body: {
+            rows: [{ ...row('a', 2), is_favourite: true }, row('b', 0)],
+            total: 2,
+            stock_g: 800,
+            stock_spools: 2,
+          },
+        },
+      ],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+    await page.getByRole('searchbox').fill('Prusa');
+
+    await expect
+      .element(page.getByRole('heading', { name: 'Favourites' }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('heading', { name: 'Catalogue' }))
+      .toBeVisible();
+    const buttons = [
+      ...document.querySelectorAll(
+        '[data-part="header-material-assignment"] button',
+      ),
+    ].map((b) => b.textContent.trim());
+    expect(buttons[0]).toContain('Use printer reading');
+    expect(buttons.findIndex((x) => x.startsWith('PLA a'))).toBeLessThan(
+      buttons.findIndex((x) => x.startsWith('PLA b')),
+    );
+
+    const asked = stub.calls
+      .map((c) => new URL(c.url, 'http://x'))
+      .filter((u) => u.pathname === `${M}/materials`);
+    const searched = asked.filter((u) => u.searchParams.get('q') === 'Prusa');
+    expect(searched).toHaveLength(1);
+    expect(searched[0]!.searchParams.has('favourites')).toBe(false);
+    expect(searched[0]!.searchParams.has('in_stock')).toBe(false);
+    expect(
+      page.getByRole('button', { name: 'Full catalogue' }).query(),
+    ).toBeNull();
+    expect(page.getByRole('tab').query()).toBeNull();
+  });
+
+  it('previews five catalogue rows until asked, searched or filtered', async () => {
+    const stub = started({
+      [TOOLS]: [printer([tool('0')])],
+      [`${M}/materials`]: [
+        {
+          status: 200,
+          body: {
+            rows: ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((u) => row(u, 0)),
+            total: 7,
+            stock_g: 0,
+            stock_spools: 0,
+          },
+        },
+      ],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+    const names = (): string[] =>
+      [
+        ...document.querySelectorAll(
+          '[data-part="header-material-assignment"] .choice > button:first-child',
+        ),
+      ].map((b) => b.textContent.trim());
+    await expect.poll(() => names().length).toBe(6);
+    expect(names()[5]).toContain('PLA e');
+
+    await page.getByRole('button', { name: 'Show more' }).click();
+    await expect.poll(() => names().length).toBe(8);
+    expect(page.getByRole('button', { name: 'Show more' }).query()).toBeNull();
+
+    // The colour wheel and the selects are on screen without opening anything.
+    await page.getByRole('button', { name: 'Black' }).click();
+    await expect
+      .poll(() =>
+        stub.calls.some(
+          (c) =>
+            new URL(c.url, 'http://x').searchParams.get('color') === 'black',
+        ),
+      )
+      .toBe(true);
+    await expect
+      .element(page.getByRole('button', { name: 'Black' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .element(page.getByRole('button', { name: 'Clear filters' }))
+      .toBeVisible();
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await expect
+      .element(page.getByRole('button', { name: 'Black' }))
+      .toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('stars a material from its row', async () => {
+    const stub = started({
+      [TOOLS]: [printer([tool('0')])],
+      [`${M}/favourites/b`]: [{ status: 204, body: undefined }],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+    const star = page.getByRole('button', { name: 'Favourite: PLA b' });
+    await star.click();
+
+    await expect
+      .poll(() =>
+        stub.calls.some(
+          (c) => c.method === 'PUT' && c.url === `${M}/favourites/b`,
+        ),
+      )
+      .toBe(true);
+    await expect.element(star).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .element(page.getByRole('heading', { name: 'Favourites' }))
+      .toBeVisible();
+  });
+
+  it('gives the tool back to the printer reading', async () => {
+    const stub = started({
+      [TOOLS]: [
+        printer([
+          tool('0', { assignment: assignment(), reported: reported() }),
+        ]),
+      ],
+      [`${TOOLS}/0`]: [{ status: 204, body: undefined }],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+    const confirm = page.getByRole('button', { name: 'Confirm selection' });
+    await page.getByRole('button', { name: /^Use printer reading/ }).click();
+    await confirm.click();
+
+    await expect.poll(() => sent(stub, 'DELETE')).toEqual([undefined]);
+  });
+
+  it('keeps Confirm off while the tool already follows the printer', async () => {
+    started({ [TOOLS]: [printer([tool('0', { reported: reported() })])] });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await page.getByTestId('filament-position').click();
+
+    await expect
+      .element(page.getByRole('button', { name: 'Confirm selection' }))
+      .toBeDisabled();
+  });
+
+  // A reason the module may add later is not a filament change.
+  it('gives a refusal it does not know the generic reason in the compact header', async () => {
+    started({
+      [TOOLS]: [printer([tool('0', { assign: 'something-new' })])],
+    });
+    await render(PrinterMaterial, { deviceId: 'core', compact: true });
+
+    await expect
+      .element(page.getByTestId('filament-position'))
+      .toHaveAttribute(
+        'title',
+        "The material on this tool cannot be changed in the printer's current state.",
+      );
+  });
+
+  // A cell of the Tools table holds the chip of its own tool, and the plain
+  // reading stands in for a tool the module does not list.
+  it('draws only the chip of the tool a table cell asks for', async () => {
+    started({ [TOOLS]: [printer([tool('0'), tool('1')])] });
+    await render(PrinterMaterial, {
+      deviceId: 'core',
+      compact: true,
+      toolId: '1',
+      fallback: createRawSnippet(() => ({
+        render: () => '<span>plain</span>',
+      })),
+    });
+
+    await expect
+      .element(page.getByTestId('filament-position'))
+      .toHaveAttribute('data-tool', '1');
+    expect(page.getByTestId('filament-position').elements()).toHaveLength(1);
+  });
+
+  it('falls back to the plain reading for a tool it does not list', async () => {
+    started({ [TOOLS]: [printer([tool('0')])] });
+    await render(PrinterMaterial, {
+      deviceId: 'core',
+      compact: true,
+      toolId: '7',
+      fallback: createRawSnippet(() => ({
+        render: () => '<span>plain</span>',
+      })),
+    });
+
+    await expect.element(page.getByText('plain')).toBeVisible();
+  });
+
   it('draws one row per tool, with what is on it', async () => {
     const stub = started({
       [TOOLS]: [
@@ -226,7 +460,9 @@ describe('the material section', () => {
     await expect.element(page.getByText('Galaxy Black')).toBeVisible();
     expect(rows()).toHaveLength(2);
     await expect.element(page.getByText('Tool 1')).toBeVisible();
-    await expect.element(page.getByText('S2', { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByText('Slot 2', { exact: true }))
+      .toBeVisible();
     // A spool on the tool is marked and weighed; a bare report names no
     // material, and its circle shows the type.
     await expect.element(page.getByTitle('From Materials')).toBeVisible();
@@ -240,7 +476,7 @@ describe('the material section', () => {
       .toBeEnabled();
   });
 
-  it('describes a one-tool printer in full and unloads it', async () => {
+  it('shows what is left of the one tool of a printer and unloads it', async () => {
     const stub = started({
       [TOOLS]: [
         printer([
@@ -265,15 +501,14 @@ describe('the material section', () => {
     await draw(stub);
 
     await expect.element(page.getByText('Extruder')).toBeVisible();
+    await expect.element(page.getByText('967 / 1,000 g')).toBeVisible();
+    // The Tools table of the printer page shows the nozzle and its flags.
     await expect
-      .element(page.getByText('967 g remaining (97 %)'))
-      .toBeVisible();
-    const settings = page.getByRole('definition');
-    await expect.element(settings.nth(0)).toHaveTextContent('0.4 mm');
-    await expect.element(settings.nth(1)).toHaveTextContent('Print head');
-    await expect.element(settings.nth(2)).toHaveTextContent('On');
-    await expect.element(settings.nth(3)).toHaveTextContent('Off');
-    await expect.element(page.getByText('Material details')).toBeVisible();
+      .element(page.getByText('Tool settings'))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByText('Material details'))
+      .not.toBeInTheDocument();
 
     await page.getByRole('button', { name: 'Unload' }).click();
     await expect
@@ -344,7 +579,7 @@ describe('the material section', () => {
 
     for (const n of [1, 2, 3, 4, 5]) {
       await expect
-        .element(page.getByText(`S${String(n)}`, { exact: true }))
+        .element(page.getByText(`Slot ${String(n)}`, { exact: true }))
         .toBeVisible();
     }
     expect(rows()).toHaveLength(5);
@@ -354,6 +589,29 @@ describe('the material section', () => {
       .element(page.getByRole('button', { name: 'Unload filament' }))
       .toBeDisabled();
     await expect.element(page.getByText('Tool 1')).not.toBeInTheDocument();
+  });
+
+  it("gives the MMU's Unload filament the generic reason for a refusal it does not know", async () => {
+    const stub = started({
+      [TOOLS]: [
+        printer([
+          tool('0.0', { unassign: 'something-new' }),
+          ...['0.1', '0.2'].map((id) => tool(id)),
+        ]),
+      ],
+    });
+    await draw(stub);
+
+    await expect
+      .element(page.getByRole('button', { name: 'Unload filament' }))
+      .toBeDisabled();
+    await expect
+      .element(
+        page.getByText(
+          "The material on this tool cannot be changed in the printer's current state.",
+        ),
+      )
+      .toBeInTheDocument();
   });
 
   it('reads the tools again when the printer starts printing', async () => {
@@ -399,48 +657,6 @@ describe('the material section', () => {
       .element(page.getByRole('button', { name: 'Change' }))
       .toBeDisabled();
     expect(stub.calls.filter((c) => c.url === TOOLS)).toHaveLength(2);
-  });
-
-  it('drops the details of the material a tool held once it holds another', async () => {
-    const live = $state({
-      devices: [
-        { id: 'core', connected: true, state: { '/state': 'IDLE' } },
-      ] as unknown as Device[],
-    });
-    const fleet: ReadonlyFleet = {
-      get devices() {
-        return live.devices;
-      },
-      loading: false,
-      loaded: true,
-      error: undefined,
-      device: (id) => live.devices.find((d) => d.id === id),
-    };
-    const stub = started(
-      {
-        [TOOLS]: [
-          printer([tool('0', { assignment: assignment() })]),
-          printer([
-            tool('0', { assignment: assignment({ material_uuid: 'c' }) }),
-          ]),
-        ],
-        [`${M}/materials/c`]: [refused(500, 'materials/INTERNAL')],
-      },
-      fleet,
-    );
-    await draw(stub);
-    await expect.element(page.getByText('Material details')).toBeVisible();
-
-    live.devices = [
-      { id: 'core', connected: true, state: { '/state': 'BUSY' } },
-    ] as unknown as Device[];
-
-    await expect
-      .poll(() => stub.calls.filter((c) => c.url === `${M}/materials/c`))
-      .not.toHaveLength(0);
-    await expect
-      .element(page.getByText('Material details'))
-      .not.toBeInTheDocument();
   });
 
   it('keeps the newer weight of a spool when an older read lands late', async () => {
@@ -571,88 +787,25 @@ describe('the material section', () => {
       .toBeVisible();
   });
 
-  it('opens the spools of a material that has them and assigns the one picked', async () => {
+  it('opens the header chip picker in a dialog and assigns the spool picked', async () => {
     const stub = started({
       [TOOLS]: [printer([tool('0')])],
-      [`${TOOLS}/0`]: [{ status: 200, body: assignment({ spool_id: 1 }) }],
+      [`${TOOLS}/0`]: [{ status: 200, body: assignment({ spool_id: 7 }) }],
       [`${M}/materials/a/spools`]: [
-        {
-          status: 200,
-          body: {
-            spools: [
-              spool(1),
-              spool(2, { tool: { device_id: 'other', tool_id: '0' } }),
-            ],
-            total: 2,
-          },
-        },
+        { status: 200, body: { spools: [spool(7)], total: 1 } },
       ],
     });
     await draw(stub);
 
     await page.getByRole('button', { name: 'Assign' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: /PLA a/u }).click();
-    await dialog.getByRole('button', { name: 'Continue' }).click();
+    await dialog.getByRole('button', { name: /^PLA a/ }).click();
+    await dialog.getByRole('combobox', { name: 'Spool', exact: true }).click();
+    await page.getByRole('option', { name: /Spool #7/ }).click();
+    await dialog.getByRole('button', { name: 'Confirm selection' }).click();
 
-    await expect
-      .element(dialog.getByRole('button', { name: /Spool #2/u }))
-      .toBeDisabled();
-    await expect
-      .element(dialog.getByText('Already loaded on another printer'))
-      .toBeVisible();
-    await dialog.getByRole('button', { name: /Spool #1/u }).click();
-
-    await expect.poll(() => sent(stub, 'PUT')).toEqual([{ spool_id: 1 }]);
+    await expect.poll(() => sent(stub, 'PUT')).toEqual([{ spool_id: 7 }]);
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('assigns a material with no spools as itself', async () => {
-    const stub = started({
-      [TOOLS]: [printer([tool('0')])],
-      [`${TOOLS}/0`]: [
-        { status: 200, body: assignment({ material_uuid: 'b' }) },
-      ],
-    });
-    await draw(stub);
-
-    await page.getByRole('button', { name: 'Assign' }).click();
-    const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: /PLA b/u }).click();
-    await dialog.getByRole('button', { name: 'Continue' }).click();
-
-    await expect
-      .poll(() => sent(stub, 'PUT'))
-      .toEqual([{ material_uuid: 'b' }]);
-    expect(stub.calls.some((c) => c.url.includes('/materials/b/spools'))).toBe(
-      false,
-    );
-  });
-
-  it('says the material does not match what the printer reports', async () => {
-    const stub = started({
-      [TOOLS]: [printer([tool('0', { reported: reported() })])],
-      [`${TOOLS}/0`]: [
-        refused(409, 'materials/TOOL_REFUSED', {
-          reason: 'reported-loaded',
-          state: 'IDLE',
-        }),
-      ],
-    });
-    await draw(stub);
-
-    await page.getByRole('button', { name: 'Assign' }).click();
-    const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: /PLA b/u }).click();
-    await dialog.getByRole('button', { name: 'Continue' }).click();
-
-    await expect
-      .element(
-        dialog.getByText(
-          'The material does not match the material the printer reports (PETG). Pick a PETG material, or unload the filament first.',
-        ),
-      )
-      .toBeVisible();
   });
 
   it('adds an unknown NFC spool to Materials once', async () => {

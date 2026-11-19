@@ -14,9 +14,9 @@ import (
 // document.
 const appSettingsPath = "/api/v1/ui"
 
-// AppSettings is core.frontend on the wire: the name, the language, the theme
-// and the brand file the page draws with, the address printers dial, and how
-// a new printer joins.
+// AppSettings is core.frontend on the wire: the name, the language and the
+// theme the page draws with, the address printers dial, and how a new printer
+// joins.
 //
 // It takes no credential, and it carries nothing private. Whether printers are
 // approved on arrival is not a secret: anybody who can dial /p/ws learns it
@@ -30,7 +30,6 @@ type AppSettings struct {
 	Title              string         `json:"title"                          doc:"The name in the browser tab and at the head of the sidebar."`
 	DefaultLanguage    string         `json:"default_language"               doc:"The catalogue the page falls back to when the browser asks for one this app does not ship."`
 	Theme              string         `json:"theme"                          doc:"system, light or dark. system follows whatever the operating system asks for."`
-	Skin               string         `json:"skin"                           doc:"The brand file the component library reads its primary colour out of, named without its .css. \"default\" is the orange seed in the theme itself."`
 	PrinterAddress     string         `json:"printer_address,omitempty"      doc:"The origin a printer dials, which the add-printer page writes into the printer's settings file. Absent means the origin the page was opened on."`
 	SupportURL         string         `json:"support_url,omitempty"          doc:"Where the app's Support link points. Empty keeps the assistant on the beta portal."`
 	APIReference       string         `json:"api_reference,omitempty"        doc:"The path of this server's API reference page. Absent in a build that leaves the page out."                                                                                                                                                    readOnly:"true"`
@@ -68,7 +67,7 @@ func registerAppSettings(
 		Method:      http.MethodGet,
 		Path:        appSettingsPath,
 		Summary:     "How this deployment's web app looks",
-		Description: "Reports the name, the fallback language, the theme and the brand file this " +
+		Description: "Reports the name, the fallback language and the theme this " +
 			"server's own page draws with, and whether that page is served here at all. It takes no " +
 			"credential, because the page reads it before it paints and before anybody has signed in. " +
 			"It names no account, no printer and no module. It does say whether a new printer waits " +

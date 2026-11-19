@@ -33,7 +33,7 @@
           role="tooltip"
           data-slot="tooltip-content"
           class={[
-            'z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-sm bg-foreground px-3 py-1.5 text-xs text-balance text-background data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
+            'z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-sm bg-foreground px-3 py-1.5 text-xs text-balance text-background state-open:animate-scale-in state-closed:animate-scale-out',
             className,
           ]}
         >

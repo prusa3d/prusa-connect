@@ -11,8 +11,7 @@
  * left over. The header and the footer take what they need, and the middle row
  * is the one that shrinks.
  */
-export const DIALOG_SCROLLS =
-  'max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]';
+export const DIALOG_SCROLLS = 'max-h-dialog-height grid-rows-dialog';
 
 /**
  * The one part that scrolls. `min-h-0` is what lets it shrink inside the grid;

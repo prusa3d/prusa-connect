@@ -1,0 +1,8 @@
+{
+  "printPicker.selection.search": "Search printers",
+  "printPicker.selection.searchPlaceholder": "Name or model",
+  "printPicker.selection.only": "Selected only",
+  "printPicker.selection.noMatch": "No printers match this view. Change the search or turn off Selected only.",
+  "printPicker.selection.count": "{count, plural, =0 {No printers selected} one {# printer selected} other {# printers selected}}",
+  "printPicker.selection.send": "{count, plural, one {Print on # printer} other {Print on # printers}}"
+}

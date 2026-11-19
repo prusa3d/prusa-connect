@@ -8,8 +8,6 @@
   } from '../../i18n';
   import {
     Button,
-    Card,
-    CardContent,
     Checkbox,
     ConfirmDialog,
     FaultAlert,
@@ -41,40 +39,34 @@
     );
 </script>
 
+{#snippet create()}
+  <Button
+    disabled={working}
+    onclick={() =>
+      void source.createBackup(source.upgrade?.to_version, postgresAck)}
+  >
+    {t('settingsMaintenance.backups.create')}
+  </Button>
+{/snippet}
+
 <SettingsPane
   class="w-full"
   title={t('settingsMaintenance.backups.heading')}
-  description={t('settingsMaintenance.backups.description')}
+  actions={create}
 >
-  <div class="flex flex-col gap-5 pb-6">
-    <Card>
-      <CardContent class="flex flex-col gap-3">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 class="text-sm font-semibold">
-              {t('settingsMaintenance.backups.createHeading')}
-            </h3>
-            <p class="text-sm text-muted-foreground">
-              {t('settingsMaintenance.backups.createDescription')}
-            </p>
-          </div>
-          <Button
-            disabled={working}
-            onclick={() =>
-              void source.createBackup(source.upgrade?.to_version, postgresAck)}
-          >
-            {t('settingsMaintenance.backups.create')}
-          </Button>
-        </div>
-        <!-- Asked only where a PostgreSQL database lies outside the backup. -->
-        {#if source.version?.postgres_backup_ack_required === true}
-          <Label variant="option">
-            <Checkbox bind:checked={postgresAck} class="mt-0.5" />
-            <span>{t('settingsMaintenance.apply.postgres')}</span>
-          </Label>
-        {/if}
-      </CardContent>
-    </Card>
+  <div
+    class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
+    <p class="text-body max-w-3xl text-muted-foreground">
+      {t('settingsMaintenance.backups.createDescription')}
+    </p>
+    <!-- Asked only where a PostgreSQL database lies outside the backup. -->
+    {#if source.version?.postgres_backup_ack_required === true}
+      <Label variant="option">
+        <Checkbox bind:checked={postgresAck} class="mt-0.5" />
+        <span>{t('settingsMaintenance.apply.postgres')}</span>
+      </Label>
+    {/if}
 
     {#if source.backupLoading}
       <div class="flex flex-col gap-2" aria-busy="true">
@@ -94,33 +86,31 @@
         </Button>
       </div>
     {:else if source.backups.length === 0}
-      <div class="border-y border-border py-6">
-        <p class="text-sm font-medium">
+      <div>
+        <p class="text-body font-medium">
           {t('settingsMaintenance.backups.empty')}
         </p>
-        <p class="mt-1 text-sm text-muted-foreground">
+        <p class="text-body text-muted-foreground">
           {t('settingsMaintenance.backups.emptyAction')}
         </p>
       </div>
     {:else}
-      <ul class="divide-y divide-border border-y border-border">
+      <ul class="divide-y divide-border">
         {#each source.backups as backup (backup.id)}
           <li
-            class="flex flex-col gap-3 py-4 @md/pane:flex-row @md/pane:items-center @md/pane:justify-between"
+            class="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 @md/pane:flex-row @md/pane:items-center @md/pane:justify-between"
           >
-            <div class="min-w-0 text-sm">
+            <div class="text-body min-w-0">
               <p class="truncate font-mono font-medium">{backup.id}</p>
-              <p class="mt-1 text-xs text-muted-foreground">
+              <p class="text-caption text-muted-foreground">
                 {formatDateTime(backup.created_at)}
                 · {formatBytes(backupSize(backup))}
                 · {formatNumber((backup.files ?? []).length)}
                 {t('settingsMaintenance.backups.files')}
+                {#if (backup.from_version ?? backup.to_version) !== undefined}
+                  · {backup.from_version ?? '—'} → {backup.to_version ?? '—'}
+                {/if}
               </p>
-              {#if (backup.from_version ?? backup.to_version) !== undefined}
-                <p class="mt-1 text-xs text-muted-foreground">
-                  {backup.from_version ?? '—'} → {backup.to_version ?? '—'}
-                </p>
-              {/if}
             </div>
             <div class="flex shrink-0 gap-2">
               <Button

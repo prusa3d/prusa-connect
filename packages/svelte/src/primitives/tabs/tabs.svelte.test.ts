@@ -84,7 +84,7 @@ describe('Tabs', () => {
     expect(tab('Camera').element().getAttribute('data-state')).toBe('inactive');
     // The underline is the only mark, and it is drawn by this variant alone.
     expect(tab('Printer').element().getAttribute('class')).toContain(
-      'data-[state=active]:border-selected',
+      'state-active:border-selected',
     );
   });
 

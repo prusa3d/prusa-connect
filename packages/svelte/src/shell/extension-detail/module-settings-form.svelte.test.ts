@@ -22,7 +22,7 @@ describe('ModuleSettingsForm', () => {
       onreload: vi.fn(),
     });
 
-    const field = page.getByLabelText('shelf_size (required)');
+    const field = page.getByLabelText('Shelf size (required)');
     await field.fill('1.5');
     await page.getByRole('button', { name: 'Save' }).click();
     expect(onsave).not.toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe('ModuleSettingsForm', () => {
       onreload: vi.fn(),
     });
 
-    await expect.element(page.getByLabelText('token')).toHaveValue('');
+    await expect.element(page.getByLabelText('Token')).toHaveValue('');
     await page.getByRole('button', { name: 'Save' }).click();
     expect(onsave).toHaveBeenCalledWith({ token: 'xxxxx' });
   });
@@ -91,11 +91,11 @@ describe('ModuleSettingsForm', () => {
       onreload: vi.fn(),
     });
 
-    await page.getByLabelText('name').fill('mine');
+    await page.getByLabelText('Name').fill('mine');
     await page.getByRole('button', { name: 'Save' }).click();
     await screen.rerender({ conflict: true, config: { name: 'theirs' } });
 
-    await expect.element(page.getByLabelText('name')).toHaveValue('mine');
+    await expect.element(page.getByLabelText('Name')).toHaveValue('mine');
   });
 
   it('leaves a cleared secret out of the config', async () => {

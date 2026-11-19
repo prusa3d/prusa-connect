@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { expectNoViolations } from '../../test/axe';
@@ -22,6 +22,63 @@ const draw = (selected?: string) =>
   });
 
 describe('Table', () => {
+  it('resizes the column and its rows from the header, then resets it', async () => {
+    const { container } = await draw();
+    const header = container.querySelector<HTMLTableCellElement>('thead th')!;
+    const cell = container.querySelector<HTMLTableCellElement>('tbody th')!;
+    const handle = page
+      .getByRole('columnheader', { name: 'Name', exact: true })
+      .getByRole('button', { name: 'Resize column' });
+    const start = header.getBoundingClientRect().width;
+    await expect.element(handle).toBeVisible();
+    (handle.element() as HTMLButtonElement).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(header.getBoundingClientRect().width).toBeCloseTo(start + 16);
+    expect(cell.getBoundingClientRect().width).toBeCloseTo(start + 16);
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(cell.getBoundingClientRect().width).toBeCloseTo(start);
+    await userEvent.keyboard('{ArrowRight}{Enter}');
+    expect(header.getBoundingClientRect().width).toBeCloseTo(start);
+    await expectNoViolations(container);
+  });
+
+  it('lets a tick box in a narrow first column take its click', async () => {
+    const { container } = await render(TableProbe, {
+      props: {
+        caption,
+        columns: [...columns, 'Printer', 'Location', 'Notes'],
+        rows: rows.map((row) => [
+          ...row,
+          'MK4S',
+          'Shelf two',
+          'For the bracket',
+        ]),
+        total,
+        selectAll: 'Select every file',
+      },
+    });
+    const tick = page.getByRole('checkbox', { name: 'Select every file' });
+    const selectHandle = container.querySelector(
+      'thead th:first-child > button[data-slot="table-column-resize"]',
+    )!;
+    await expect.element(page.elementLocator(selectHandle)).not.toBeVisible();
+    await tick.click();
+    await expect.element(tick).toBeChecked();
+
+    const header = container.querySelector<HTMLTableCellElement>(
+      'thead th:nth-child(2)',
+    )!;
+    const start = header.getBoundingClientRect().width;
+    (
+      page
+        .getByRole('columnheader', { name: 'Name', exact: true })
+        .getByRole('button', { name: 'Resize column' })
+        .element() as HTMLButtonElement
+    ).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(header.getBoundingClientRect().width).toBeCloseTo(start + 16);
+  });
+
   it('scrolls sideways in a box of its own', async () => {
     const { container } = await draw();
 
@@ -89,7 +146,7 @@ describe('Table', () => {
     const resting = fill(plain);
     expect(fill(selected)).not.toBe(resting);
 
-    // `data-[state=selected]:hover:bg-accent` is a compound selector, so a
+    // `state-selected:hover:bg-accent` is a compound selector, so a
     // selected row under the pointer still reads as hovered. A plain
     // `hover:bg-accent` ties with the selected rule on specificity and loses
     // on order.

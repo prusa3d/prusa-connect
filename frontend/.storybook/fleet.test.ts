@@ -4,8 +4,15 @@ import fixtures from '../test/ux/fixtures/api.json';
 import { devicesAnswer, fleetOf } from './fleet';
 
 const recorded = (
-  JSON.parse(fixtures['GET /api/v1/devices'].body) as { items: unknown[] }
+  JSON.parse(fixtures['GET /api/v1/devices'].body) as {
+    items: { id: string; name: string; serial: string }[];
+  }
 ).items;
+const identity = ({ id, name, serial }: (typeof recorded)[number]) => ({
+  id,
+  name,
+  serial,
+});
 
 describe('the fleet', () => {
   it('holds one, two or twelve printers', () => {
@@ -21,7 +28,10 @@ describe('the fleet', () => {
   });
 
   it('starts with the recorded printers, so the rest of the table still points at them', () => {
-    expect(fleetOf('many').slice(0, 5)).toEqual(recorded);
+    // The demo decorates their jobs and tools, so only who they are is compared.
+    expect(fleetOf('many').slice(0, 5).map(identity)).toEqual(
+      recorded.map(identity),
+    );
   });
 
   it('answers a listing whose total is its length', async () => {

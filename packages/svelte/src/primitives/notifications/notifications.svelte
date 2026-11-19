@@ -84,8 +84,8 @@
   //
   // The header popover leaves the page it floats over visible, which is the
   // point of a popover, so it stops sooner.
-  const SHEET_PANEL_HEIGHT = 'max-h-[min(72svh,34rem)]';
-  const POPOVER_PANEL_HEIGHT = 'max-h-[min(30rem,calc(100svh-6rem))]';
+  const SHEET_PANEL_HEIGHT = 'max-h-notifications-sheet-height';
+  const POPOVER_PANEL_HEIGHT = 'max-h-notifications-popover-height';
 
   let {
     items,
@@ -186,7 +186,7 @@
   <Button
     variant="ghost"
     size="icon-sm"
-    class="shrink-0 pointer-coarse:size-11"
+    class="shrink-0 pointer-coarse:size-touch-target"
     label={item.read
       ? t('primitives.notifications.markUnread.label', { title: item.title })
       : t('primitives.notifications.markRead.label', { title: item.title })}
@@ -221,10 +221,12 @@
       <BellIcon class={triggerSize === 'icon-md' ? 'size-4' : 'size-5'} />
     {/if}
     {#if !showsClose && triggerCount > 0}
+      <!-- Hung from the bell's middle and lifted over the button's edge, so it
+           covers the bell's shoulder and never the whole glyph. -->
       <Badge
-        variant={needsAttention > 0 ? 'warning' : 'secondary'}
+        variant={needsAttention > 0 ? 'warning' : 'default'}
         aria-hidden="true"
-        class="absolute top-0.5 right-0.5 min-w-4 justify-center px-1 py-0 leading-4 tabular-nums"
+        class="absolute start-1/2 -top-1 min-w-4 justify-center px-1 py-0 leading-4 tabular-nums"
       >
         {triggerCountLabel}
       </Badge>
@@ -257,7 +259,7 @@
       <Button
         variant="ghost"
         size="sm"
-        class="shrink-0 pointer-coarse:h-11"
+        class="shrink-0"
         onclick={onMarkAllRead}
       >
         <CheckCheckIcon aria-hidden="true" />
@@ -316,7 +318,7 @@
          is more. -->
     <div
       data-slot="notification-list"
-      class="min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:var(--muted-foreground)_transparent] overflow-y-auto overscroll-contain"
+      class="min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:var(--color-scrollbar-thumb)_transparent] overflow-y-auto overscroll-contain"
     >
       <!-- The one thing left saying where unread stops: a rule between the two
            groups, since each group's own rows are divided from each other and
@@ -350,7 +352,7 @@
       showCloseButton={false}
       preventScroll={false}
       trapFocus={false}
-      class={['z-[55] gap-0 bg-popover p-0', SHEET_PANEL_HEIGHT, sheetClass]}
+      class={['z-55 gap-0 bg-popover p-0', SHEET_PANEL_HEIGHT, sheetClass]}
       overlayClass={sheetOverlayClass}
       children={panel}
     />
@@ -364,7 +366,7 @@
       sideOffset={8}
       collisionPadding={12}
       class={[
-        'flex w-[min(26rem,calc(100vw-1.5rem))] flex-col p-0',
+        'flex w-notifications-popover flex-col p-0',
         POPOVER_PANEL_HEIGHT,
       ]}
       children={panel}

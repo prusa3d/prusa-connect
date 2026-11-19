@@ -33,16 +33,17 @@
  * through the header as the list scrolled under it.
  */
 export const LINKED_ROW =
-  'relative isolate cursor-pointer has-[a:focus-visible]:bg-accent has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-ring has-[button:focus-visible]:bg-accent';
+  'relative isolate cursor-pointer with-link-focus:bg-accent with-link-focus:ring-2 with-link-focus:ring-inset with-link-focus:ring-ring with-button-focus:bg-accent';
 
 /**
  * On the row's primary link or button: stretches its hit area over the whole
  * row.
  *
- * `content-['']` is what makes the pseudo-element exist at all. Without a
- * content box it paints nothing and the hit area is never there.
+ * A pseudo-element exists only with a `content` value. Tailwind's `after:`
+ * variant writes `content: var(--tw-content)`, which is the empty string until
+ * a `content-*` utility sets it, so the hit area needs no utility of its own.
  */
-export const ROW_LINK = "after:absolute after:inset-0 after:content-['']";
+export const ROW_LINK = 'after:absolute after:inset-0';
 
 /** On any other control in the row: an actions menu, a preview trigger, a second link. */
 export const ABOVE_ROW_LINK = 'relative z-10';

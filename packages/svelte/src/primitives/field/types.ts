@@ -50,6 +50,11 @@ export interface FieldProps extends Omit<
   description?: string;
   /** What is wrong with the value. It also paints the control as invalid. */
   error?: string;
+  /**
+   * `stack` draws the label above the control. `row` sets the label beside
+   * the control on a wide settings pane, in a settings row's columns.
+   */
+  layout?: 'stack' | 'row' | undefined;
   class?: ClassValue | undefined;
   /** The control itself, as a component the field renders. */
   control: FieldControl;

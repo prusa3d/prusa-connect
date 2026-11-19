@@ -12,10 +12,15 @@ packages/svelte/src/primitives/listing-search/listing-search.svelte
 packages/svelte/src/primitives/select-facet/select-facet.svelte
 extensions/materials/ui/src/add-dialog/choose-material.svelte
 extensions/parts/ui/src/cards/chosen-card-editor.svelte
+packages/svelte/src/shell/printer-detail/filament-position.svelte
+extensions/materials/ui/src/printer-material/material-picker.svelte
 '
 # listing-search.svelte: the primitive itself.
 # select-facet.svelte: the search inside a facet panel.
-# choose-material.svelte, chosen-card-editor.svelte: pickers, not listings.
+# choose-material.svelte, chosen-card-editor.svelte, filament-position.svelte:
+#   pickers, not listings.
+# material-picker.svelte: a selector that focuses the ListingSearch input it
+#   draws, which holds no input of its own.
 
 cd "$(dirname "$0")/.."
 found=$(grep -rnE "type=[\"']search[\"']" --include='*.svelte' \

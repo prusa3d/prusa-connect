@@ -115,7 +115,9 @@ func TestADeleteThatKeepsFailingKeepsTheModuleInstalled(t *testing.T) {
 type stoppedPlane struct {
 	root    string
 	stopped []ref.Ref
-	held    bool
+	// restarted is every instance rebuilt in place.
+	restarted []ref.Ref
+	held      bool
 }
 
 func (p *stoppedPlane) Database(ref.Ref) (wirerpc.DatabaseState, bool) {
@@ -154,4 +156,10 @@ func TestRemovingOverHTTPStopsTheProcessBeforeItDeletesTheFiles(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, rows)
 	require.NoDirExists(t, plane.root)
+}
+
+func (p *stoppedPlane) Restart(instance ref.Ref) bool {
+	p.restarted = append(p.restarted, instance)
+
+	return true
 }

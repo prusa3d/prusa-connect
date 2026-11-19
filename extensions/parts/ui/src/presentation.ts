@@ -78,7 +78,10 @@ export const fileThumbnail = (
   file: PartFile,
 ): string | undefined => {
   if (IMAGE.test(file.name)) return files.contentUrl(file.storage, file.path);
-  if (canCover(file.name)) return files.thumbnailUrl(file.storage, file.path);
+  // The storage said it found no picture inside the file: no request is made.
+  if (canCover(file.name) && file.thumbnail !== false) {
+    return files.thumbnailUrl(file.storage, file.path);
+  }
 
   return undefined;
 };

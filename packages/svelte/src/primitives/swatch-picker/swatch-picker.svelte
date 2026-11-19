@@ -15,6 +15,12 @@
     size = 'sm',
     class: className,
   }: SwatchPickerProps = $props();
+
+  const SIZES = {
+    xs: 'size-5 rounded-full',
+    sm: 'size-6 rounded-sm',
+    md: 'size-8 rounded-sm',
+  } as const;
 </script>
 
 <div
@@ -32,8 +38,8 @@
       title={swatch.label}
       aria-pressed={on}
       class={[
-        'cursor-pointer rounded-sm border border-border bg-(--swatch) focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-        size === 'md' ? 'size-8' : 'size-6',
+        'cursor-pointer border border-border bg-(--swatch) focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
+        SIZES[size],
         on && 'ring-2 ring-primary',
       ]}
       style="--swatch: {swatch.hex};"

@@ -11,10 +11,10 @@ export const base = 'inline-flex w-fit min-w-0 flex-col leading-none';
 /**
  * One ratio serves all three sizes, because a width match is a proportion and
  * a proportion does not care how big the thing is. `lg` is `--text-2xl` times
- * 1.6, so a skin that changes the type scale carries the wordmark with it.
+ * 1.6, so whatever changes the type scale carries the wordmark with it.
  */
 export const sizes: Record<LogoSize, string> = {
   sm: 'text-lg',
   md: 'text-2xl',
-  lg: 'text-[calc(var(--text-2xl)*1.6)]',
+  lg: 'text-logo-lg',
 };

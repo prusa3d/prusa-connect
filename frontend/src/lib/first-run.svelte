@@ -35,7 +35,7 @@
   <lib.SetupWizard {...wizard} />
 {:catch}
   <div
-    class="flex min-h-svh items-center justify-center bg-background p-4"
+    class="flex min-h-svh items-center justify-center bg-background p-4 not-dark:bg-shell-canvas"
     data-part="setup-wizard-unloaded"
   >
     <Alert variant="destructive" class="max-w-xl">

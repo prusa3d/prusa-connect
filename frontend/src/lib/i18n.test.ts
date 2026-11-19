@@ -52,7 +52,7 @@ test('the rail reads Czech when the browser asks for it', () => {
     'Účet',
     'Vzhled',
     'Rozšíření',
-    'Přístupové údaje k API',
+    'Přístup k API',
     'Uživatelé',
     'Server',
     ...(FEATURES.diagnostics ? ['Diagnostika'] : []),

@@ -83,6 +83,7 @@
         value: text,
         oninput: write,
         rows: 4,
+        resizable: true,
         spellcheck: false,
         class: 'font-mono',
       }}

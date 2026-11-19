@@ -80,6 +80,16 @@
 <Story name="Api Credentials" args={{ credentials: source(), ...ports }} />
 
 <Story
+  name="Duplicate Names"
+  args={{
+    credentials: source({
+      items: items.map((item) => ({ ...item, name: 'demo' })),
+    }),
+    ...ports,
+  }}
+/>
+
+<Story
   name="None Yet"
   args={{ credentials: source({ items: [] }), ...ports }}
 />

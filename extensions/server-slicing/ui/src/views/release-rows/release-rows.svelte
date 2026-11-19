@@ -6,7 +6,6 @@
   import type { Translate } from '../../api';
   import type { ReleaseActs } from '../../release-acts.svelte';
   import type { ReleaseRow } from '../../releases';
-  import { channelVariant } from '../channel';
   import { DigestBadge } from '../digest-badge';
   import { ReleaseActions } from '../release-actions';
   import { ReleaseState } from '../release-state';
@@ -35,11 +34,9 @@
   {#each rows as row (row.version)}
     {#snippet state()}<ReleaseState {row} {t} />{/snippet}
     {#snippet channel()}
-      <Badge variant={channelVariant(row.channel)}
-        >{t(`slicer.channel.${row.channel}`)}</Badge
-      >
+      <Badge variant="outline">{t(`slicer.channel.${row.channel}`)}</Badge>
     {/snippet}
-    {#snippet marker()}<Badge variant="default">{t('slicer.default')}</Badge
+    {#snippet marker()}<Badge variant="secondary">{t('slicer.default')}</Badge
       >{/snippet}
     {#snippet digest()}<DigestBadge digest={row.digest} {t} />{/snippet}
     <DataRow

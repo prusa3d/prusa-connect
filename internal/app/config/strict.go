@@ -29,7 +29,7 @@ var (
 )
 
 // retiredKeys are the keys this build does not read, each with the sentence
-// that names the key that replaced it.
+// that names the key that replaced it, or that no key does.
 //
 // A retired key is refused like any other key this build does not read, and
 // the message adds the replacement, so the operator can fix the file with a
@@ -51,6 +51,7 @@ var retiredKeys = map[string]string{
 	"observability": "The metrics client and the exposition at /metrics are core.observability.enabled",
 	"fractal": "A link to a parent is declared like every other resource instance: " +
 		"resources.link.<name>.enabled, with the address under its config",
+	"core.frontend.skin": "The web app has one appearance and no key chooses it. Delete the line",
 }
 
 // decodeStrictly fills target from one block of the operator's file and refuses

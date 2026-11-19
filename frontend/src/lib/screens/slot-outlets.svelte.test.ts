@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
@@ -281,6 +281,12 @@ const DRAW: Record<Screen, (registry: SlotRegistry) => Promise<void>> = {
 };
 
 describe('every slot has an outlet on its screen', () => {
+  // Wide enough for the file rows to draw their acts on the row: a
+  // phone-width pane folds them into the row's menu.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });

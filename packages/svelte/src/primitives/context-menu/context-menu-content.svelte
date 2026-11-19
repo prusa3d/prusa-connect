@@ -31,7 +31,7 @@
     {preventScroll}
     style="--radix-context-menu-content-transform-origin: var(--bits-context-menu-content-transform-origin); --radix-context-menu-content-available-height: var(--bits-context-menu-content-available-height);"
     class={[
-      'z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-sm border border-border bg-popover p-1 text-popover-foreground data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
+      'z-50 max-h-(--radix-context-menu-content-available-height) min-w-menu origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground state-open:animate-scale-in state-closed:animate-scale-out',
       className,
     ]}
     {...rest}

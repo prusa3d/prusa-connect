@@ -43,7 +43,6 @@
   "fileDetail.tools.nozzle": "Nozzle",
   "fileDetail.tools.nozzleTemperature": "Nozzle temperature",
   "fileDetail.tools.tool": "Filament",
-  "fileDetail.tools.toolNumber": "T{n}",
   "fileDetail.tools.unknown": "Not given",
   "fileDetail.tools.unused": "Not used",
   "fileDetail.tools.use": "Use",

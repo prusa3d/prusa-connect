@@ -51,7 +51,7 @@
   <ul class="flex flex-col gap-2">
     {#each contributions as one (one.key)}
       <li class="flex items-center justify-between gap-3">
-        <span class="flex flex-col">
+        <span class="flex min-w-0 flex-col break-all">
           <span class="text-sm">{one.title}</span>
           <span class="text-xs text-muted-foreground">
             {t(`app.settings.extensions.visibility.kind.${one.kind}`)}

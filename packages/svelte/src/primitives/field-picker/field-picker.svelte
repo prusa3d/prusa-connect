@@ -64,10 +64,10 @@
       .map((field) => field.id),
   );
 
-  // What decides whether there is a way back to offer.
+  // What decides whether there is a way back to offer. Only the fields
+  // offered here count: a listing may hold an id it does not offer.
   const isDefault = $derived(
-    fieldState.visible.length === defaults.length &&
-      defaults.every((id) => shows(id)),
+    fields.every((field) => shows(field.id) === defaults.includes(field.id)),
   );
 
   const name = $derived(label ?? t('primitives.fieldPicker.label'));
@@ -89,7 +89,10 @@
         variant="secondary"
         size={triggerSize}
         label={triggerName}
-        class={['relative', className]}
+        class={[
+          'relative h-input-height w-input-height p-0 [&_svg]:size-icon-min',
+          className,
+        ]}
       >
         <SlidersHorizontalIcon aria-hidden="true" />
         {#if hiddenCount > 0}

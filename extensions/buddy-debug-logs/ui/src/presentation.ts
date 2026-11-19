@@ -10,7 +10,7 @@ export type Severity = LogLine['severity'];
 export const FILTER_LEVELS = ['error', 'warning', 'info', 'debug'] as const;
 export type FilterLevel = (typeof FILTER_LEVELS)[number];
 
-/** The look of a severity badge. One variant per state, so an unstyled one shows. */
+/** The look of a severity badge: only warnings and errors draw colour. */
 export const severityVariant = (severity: Severity): BadgeVariant => {
   switch (severity) {
     case 'emergency':
@@ -22,7 +22,6 @@ export const severityVariant = (severity: Severity): BadgeVariant => {
       return 'warning';
     case 'notice':
     case 'info':
-      return 'info';
     case 'debug':
     case 'unknown':
       return 'outline';

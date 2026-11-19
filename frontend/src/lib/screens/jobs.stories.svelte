@@ -1,34 +1,31 @@
 <!--
   The jobs screen, all printers and one printer, over the story core.
-  States: populated (every printer's history), one printer's jobs, no jobs
-  anywhere, loading, failed, refused. The history read is per printer, so each
-  state answers the history of every printer of the chosen fleet.
+  States: populated (every printer's jobs), one printer's jobs, no jobs
+  anywhere, loading, failed, refused. The screen reads the fleet's jobs in one
+  list, so each state answers that list.
 -->
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
   import { fleetOf } from '../../../.storybook/fleet';
   import {
-    emptyList,
     failed,
     type Overrides,
     pending,
     refused,
   } from '../../../test/story/api';
   import AppAt from '../../../test/story/app-at.svelte';
+  import { json } from '../../test/stub';
   import { jobsOfPrinterHref, PATHS } from '../routes';
 
   const { Story } = defineMeta({ title: 'Screens/Jobs' });
 
-  // The history of every printer of the largest fleet, so a smaller fleet is
-  // covered too.
-  const everyHistory = (answer: Overrides[string]): Overrides =>
-    Object.fromEntries(
-      fleetOf('many').map((device) => [
-        `GET /api/v1/devices/${device.id}/jobs/history`,
-        answer,
-      ]),
-    );
+  const everyJob = (answer: Overrides[string]): Overrides => ({
+    'GET /api/v1/jobs': answer,
+  });
+
+  // An empty cursor is the last page; a list without one reads as cut short.
+  const noJobs = () => json(200, { items: [], cursor: '', limit: 200 });
 
   const first = fleetOf('one')[0]?.id ?? '';
 </script>
@@ -38,14 +35,14 @@
   <AppAt path={jobsOfPrinterHref(first)} />
 </Story>
 <Story name="Empty">
-  <AppAt path={PATHS.jobs} overrides={everyHistory(emptyList)} />
+  <AppAt path={PATHS.jobs} overrides={everyJob(noJobs)} />
 </Story>
 <Story name="Loading">
-  <AppAt path={PATHS.jobs} overrides={everyHistory(pending)} />
+  <AppAt path={PATHS.jobs} overrides={everyJob(pending)} />
 </Story>
 <Story name="Failed">
-  <AppAt path={PATHS.jobs} overrides={everyHistory(failed)} />
+  <AppAt path={PATHS.jobs} overrides={everyJob(failed)} />
 </Story>
 <Story name="Refused">
-  <AppAt path={PATHS.jobs} overrides={everyHistory(refused)} />
+  <AppAt path={PATHS.jobs} overrides={everyJob(refused)} />
 </Story>

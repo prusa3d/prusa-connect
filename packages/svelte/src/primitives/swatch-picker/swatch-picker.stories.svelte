@@ -28,3 +28,5 @@
 <Story name="Deselectable" args={{ value: 'blue', deselectable: true }} />
 
 <Story name="Medium" args={{ value: 'green', size: 'md' }} />
+
+<Story name="Small Round" args={{ value: 'red', size: 'xs' }} />

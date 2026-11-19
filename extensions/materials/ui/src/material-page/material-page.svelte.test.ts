@@ -1,10 +1,11 @@
+import type { Device, ReadonlyFleet } from '@prusa/connect-ui/domain';
 import { formatting } from '@prusa/connect-ui/i18n';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import setup from '../index';
-import { type Answer, type Stub, stubHost } from '../test/host';
+import { type Answer, gate, type Stub, stubHost } from '../test/host';
 
 const NS = 'com.github.aux.prusa3d.materials';
 const M = `/api/v1/modules/${NS}`;
@@ -90,7 +91,7 @@ const refused = (status: number, code: string): Answer => ({
 const started = (
   uuid: string | undefined,
   routed: Record<string, readonly Answer[]>,
-  options: { mayOperate?: boolean } = {},
+  options: { mayOperate?: boolean; fleet?: ReadonlyFleet } = {},
 ): Stub => {
   history.replaceState(null, '', uuid === undefined ? '/' : `/?uuid=${uuid}`);
   const stub = stubHost([{ status: 200, body: {} }], {
@@ -106,6 +107,20 @@ const started = (
       [`${M}/types`]: [{ status: 200, body: { types: [] } }],
       [`${M}/locations`]: [{ status: 200, body: { locations: [] } }],
       [`${M}/printers`]: [{ status: 200, body: { printers: [] } }],
+      // A spool on Core One reads its tools to know what its row offers.
+      [`${M}/printers/core/tools`]: [
+        {
+          status: 200,
+          body: {
+            id: 'core',
+            name: 'Core One',
+            connected: true,
+            state: 'IDLE',
+            may_operate: true,
+            tools: [],
+          },
+        },
+      ],
       ...routed,
     },
   });
@@ -145,6 +160,70 @@ describe('the material page', () => {
     expect(stub.calls.some((c) => c.url.endsWith('/materials/a'))).toBe(true);
     expect(stub.calls.some((c) => c.url.endsWith('/materials/a/spools'))).toBe(
       true,
+    );
+  });
+
+  it('refreshes a masked spool location when a tool changes during loading', async () => {
+    const first = gate();
+    const changed = gate();
+    const spoolsRoute = `${M}/materials/a/spools`;
+    const stub = started(
+      'a',
+      standard({
+        [spoolsRoute]: [
+          {
+            status: 200,
+            body: { spools: [spool(1)], total: 1 },
+            held: first.held,
+          },
+          {
+            status: 200,
+            body: {
+              spools: [
+                spool(1, {
+                  tool: { device_id: '', tool_id: '0', gone: false },
+                }),
+              ],
+              total: 1,
+            },
+          },
+        ],
+      }),
+    );
+    stub.host.client.events = () => ({
+      lastEventId: undefined,
+      close: () => {
+        changed.open();
+      },
+      async *[Symbol.asyncIterator]() {
+        await changed.held;
+        yield {
+          type: `${NS}.tool`,
+          payload: {
+            device_id: 'masked-printer',
+            tool_id: '0',
+            material_uuid: 'a',
+            spool_id: 1,
+          },
+        } as never;
+      },
+    });
+    await draw(stub);
+
+    try {
+      await expect
+        .poll(() => stub.calls.filter((call) => call.url.endsWith(spoolsRoute)))
+        .toHaveLength(1);
+      changed.open();
+      await expect
+        .element(page.getByText('Unknown printer · Tool 1'))
+        .toBeVisible();
+    } finally {
+      changed.open();
+      first.open();
+    }
+    expect(stub.calls.some((call) => call.url.includes('masked-printer'))).toBe(
+      false,
     );
   });
 
@@ -815,6 +894,7 @@ const toolOf = (id: string, extra: Record<string, unknown> = {}) => ({
 const toolsOf = (
   device: string,
   tools: ReturnType<typeof toolOf>[],
+  extra: Record<string, unknown> = {},
 ): Answer => ({
   status: 200,
   body: {
@@ -824,7 +904,25 @@ const toolsOf = (
     state: 'IDLE',
     may_operate: true,
     tools,
+    ...extra,
   },
+});
+
+/** Spool 1 on a tool, as GET /printers/{device}/tools answers it. */
+const holding = (extra: Record<string, unknown> = {}) => ({
+  device_id: 'core',
+  tool_id: '0',
+  spool_id: 1,
+  material_uuid: 'a',
+  material_source: 'catalogue',
+  material_name: 'Galaxy Black',
+  brand_name: 'Prusament',
+  type: 'PLA',
+  abbreviation: 'PLA',
+  color_rgba: '#3d3e3dff',
+  by: 'person',
+  updated_at: '2026-11-02T10:00:00Z',
+  ...extra,
 });
 
 /** A spool a printer read off its NFC tag. */
@@ -1012,6 +1110,343 @@ describe('a spool and the printers', () => {
         page.getByRole('button', { name: 'Assign spool 1 to a printer' }),
       )
       .toBeVisible();
+  });
+
+  it('offers Unassign for a spool on a printer on the host', async () => {
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/printers`]: [printers(printerRow('core'))],
+        [`${M}/materials/a/spools`]: [
+          {
+            status: 200,
+            body: { spools: [spool(1, on('core', '0.1'))], total: 1 },
+          },
+          { status: 200, body: { spools: [spool(1)], total: 1 } },
+        ],
+        [`${M}/printers/core/tools`]: [
+          toolsOf('core', [
+            toolOf('0.1', {
+              kind: 'slot',
+              active: false,
+              assignment: holding({ tool_id: '0.1' }),
+            }),
+          ]),
+        ],
+        [`${M}/printers/core/tools/0.1`]: [{ status: 204, body: null }],
+      }),
+    );
+    await draw(stub);
+
+    await page.getByRole('button', { name: 'Unassign spool 1' }).click();
+
+    await expect
+      .poll(() => stub.calls.find((c) => c.method === 'DELETE')?.url)
+      .toContain('/printers/core/tools/0.1');
+    await expect
+      .element(
+        page.getByRole('button', { name: 'Assign spool 1 to a printer' }),
+      )
+      .toBeVisible();
+  });
+
+  it('offers Unassign for a spool on an offline printer', async () => {
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/printers`]: [
+          printers(printerRow('core', { connected: false, state: 'OFFLINE' })),
+        ],
+        [`${M}/materials/a/spools`]: [
+          {
+            status: 200,
+            body: { spools: [spool(1, on('core', '0'))], total: 1 },
+          },
+        ],
+        [`${M}/printers/core/tools`]: [
+          toolsOf(
+            'core',
+            [
+              toolOf('0', {
+                kind: 'head',
+                active: true,
+                assignment: holding(),
+              }),
+            ],
+            { connected: false, state: 'OFFLINE' },
+          ),
+        ],
+        [`${M}/printers/core/tools/0`]: [{ status: 204, body: null }],
+      }),
+    );
+    await draw(stub);
+
+    await expect
+      .element(page.getByRole('button', { name: 'Unload spool 1' }))
+      .not.toBeInTheDocument();
+    await page.getByRole('button', { name: 'Unassign spool 1' }).click();
+
+    await expect
+      .poll(() => stub.calls.find((c) => c.method === 'DELETE')?.url)
+      .toContain('/printers/core/tools/0');
+  });
+
+  it('offers Unload for a spool in a connected print head', async () => {
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/printers`]: [printers(printerRow('core'))],
+        [`${M}/materials/a/spools`]: [
+          {
+            status: 200,
+            body: { spools: [spool(1, on('core', '0'))], total: 1 },
+          },
+        ],
+        [`${M}/printers/core/tools`]: [
+          toolsOf('core', [
+            toolOf('0', { kind: 'head', active: false, assignment: holding() }),
+          ]),
+        ],
+        '/api/v1/devices/core/commands': [{ status: 200, body: { ok: true } }],
+      }),
+    );
+    await draw(stub);
+
+    const unload = page.getByRole('button', { name: 'Unload spool 1' });
+    await expect.element(unload).toHaveTextContent('Unload');
+    // The printer keeps the material on a head it unloads: a head offers no
+    // Unassign while its printer is connected.
+    await expect
+      .element(page.getByRole('button', { name: 'Unassign spool 1' }))
+      .not.toBeInTheDocument();
+    await unload.click();
+
+    await expect
+      .poll(() =>
+        stub.calls.find((c) => c.url === '/api/v1/devices/core/commands'),
+      )
+      .toBeDefined();
+    const command = stub.calls.find(
+      (c) => c.url === '/api/v1/devices/core/commands',
+    );
+    expect(JSON.parse(command?.body ?? '{}')).toMatchObject({
+      verb: 'core.command.unload_filament',
+    });
+  });
+
+  it('disables Unload on a printing head and says why', async () => {
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/printers`]: [
+          printers(printerRow('core', { state: 'PRINTING' })),
+        ],
+        [`${M}/materials/a/spools`]: [
+          {
+            status: 200,
+            body: { spools: [spool(1, on('core', '0'))], total: 1 },
+          },
+        ],
+        [`${M}/printers/core/tools`]: [
+          toolsOf(
+            'core',
+            [
+              toolOf('0', {
+                kind: 'head',
+                active: true,
+                unassign: 'printing',
+                assign: 'printing',
+                assignment: holding(),
+              }),
+            ],
+            { state: 'PRINTING' },
+          ),
+        ],
+      }),
+    );
+    await draw(stub);
+
+    await expect
+      .element(page.getByRole('button', { name: 'Unload spool 1' }))
+      .toBeDisabled();
+    const mark = page
+      .getByRole('row')
+      .filter({ hasText: 'note 1' })
+      .element()
+      .querySelector('[data-part="reasons"]')
+      ?.closest<HTMLElement>('[data-part="tap-tooltip"]');
+    expect(mark).toBeDefined();
+    mark!.click();
+    await expect
+      .element(page.getByRole('tooltip'))
+      .toHaveTextContent('Cannot unload while printing');
+  });
+
+  it.each(['PRINTING', 'PAUSED'])(
+    'refuses with the reason while the printer prints or is paused (%s)',
+    async (state) => {
+      const stub = started(
+        'a',
+        standard({
+          [`${M}/printers`]: [printers(printerRow('core', { state }))],
+          [`${M}/materials/a/spools`]: [
+            {
+              status: 200,
+              body: { spools: [spool(1, on('core', '0.1'))], total: 1 },
+            },
+          ],
+          [`${M}/printers/core/tools`]: [
+            toolsOf(
+              'core',
+              [
+                toolOf('0.1', {
+                  kind: 'slot',
+                  active: true,
+                  unassign: 'printing',
+                  assign: 'printing',
+                  assignment: holding({ tool_id: '0.1' }),
+                }),
+              ],
+              { state },
+            ),
+          ],
+        }),
+      );
+      await draw(stub);
+
+      await expect
+        .element(page.getByRole('button', { name: 'Unassign spool 1' }))
+        .toBeDisabled();
+      const row = page.getByRole('row').filter({ hasText: 'note 1' });
+      const mark = row
+        .element()
+        .querySelector('[data-part="reasons"]')
+        ?.closest<HTMLElement>('[data-part="tap-tooltip"]');
+      expect(mark).toBeDefined();
+      mark!.click();
+      await expect
+        .element(page.getByRole('tooltip'))
+        .toHaveTextContent('Cannot remove material while printing');
+    },
+  );
+
+  it('reads the tools again when the printer starts printing', async () => {
+    const live = $state({
+      devices: [
+        { id: 'core', connected: true, state: { '/state': 'IDLE' } },
+      ] as unknown as Device[],
+    });
+    const fleet: ReadonlyFleet = {
+      get devices() {
+        return live.devices;
+      },
+      loading: false,
+      loaded: true,
+      error: undefined,
+      device: (id) => live.devices.find((d) => d.id === id),
+    };
+    const slot = toolOf('0.1', {
+      kind: 'slot',
+      active: true,
+      assignment: holding({ tool_id: '0.1' }),
+    });
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/printers`]: [printers(printerRow('core'))],
+        [`${M}/materials/a/spools`]: [
+          {
+            status: 200,
+            body: { spools: [spool(1, on('core', '0.1'))], total: 1 },
+          },
+        ],
+        [`${M}/printers/core/tools`]: [
+          toolsOf('core', [slot]),
+          toolsOf(
+            'core',
+            [{ ...slot, assign: 'printing', unassign: 'printing' }],
+            { state: 'PRINTING' },
+          ),
+        ],
+      }),
+      { fleet },
+    );
+    await draw(stub);
+    const unassign = page.getByRole('button', { name: 'Unassign spool 1' });
+    await expect.element(unassign).toBeEnabled();
+
+    live.devices = [
+      { id: 'core', connected: true, state: { '/state': 'PRINTING' } },
+    ] as unknown as Device[];
+
+    await expect.element(unassign).toBeDisabled();
+    await expect
+      .element(page.getByText('Cannot remove material while printing'))
+      .toBeInTheDocument();
+  });
+
+  it('reads the tools again on the poll when the first read after a print starts is stale', async () => {
+    // The module answers the tools from what it last heard of the printer,
+    // so the read right after the state moves may still say IDLE.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const live = $state({
+        devices: [
+          { id: 'core', connected: true, state: { '/state': 'IDLE' } },
+        ] as unknown as Device[],
+      });
+      const fleet: ReadonlyFleet = {
+        get devices() {
+          return live.devices;
+        },
+        loading: false,
+        loaded: true,
+        error: undefined,
+        device: (id) => live.devices.find((d) => d.id === id),
+      };
+      const head = toolOf('0', {
+        kind: 'head',
+        active: true,
+        assignment: holding(),
+      });
+      const stub = started(
+        'a',
+        standard({
+          [`${M}/printers`]: [printers(printerRow('core'))],
+          [`${M}/materials/a/spools`]: [
+            {
+              status: 200,
+              body: { spools: [spool(1, on('core', '0'))], total: 1 },
+            },
+          ],
+          [`${M}/printers/core/tools`]: [
+            toolsOf('core', [head]),
+            toolsOf('core', [head]),
+            toolsOf('core', [{ ...head, unassign: 'printing' }], {
+              state: 'PRINTING',
+            }),
+          ],
+        }),
+        { fleet },
+      );
+      await draw(stub);
+      const unload = page.getByRole('button', { name: 'Unload spool 1' });
+      await expect.element(unload).toBeEnabled();
+      const reads = (): number =>
+        stub.calls.filter((c) => c.url.endsWith('/printers/core/tools')).length;
+
+      live.devices = [
+        { id: 'core', connected: true, state: { '/state': 'PRINTING' } },
+      ] as unknown as Device[];
+      await expect.poll(reads).toBe(2);
+      await expect.element(unload).toBeEnabled();
+
+      vi.advanceTimersByTime(15_000);
+      await expect.poll(reads).toBe(3);
+      await expect.element(unload).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('disables Delete and the tick of a spool on a printer, and says why', async () => {

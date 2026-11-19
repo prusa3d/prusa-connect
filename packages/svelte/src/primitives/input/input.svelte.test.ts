@@ -38,6 +38,27 @@ describe('Input', () => {
     host.remove();
   });
 
+  // One disabled look for every field: the textarea's, greyed text in an
+  // unfilled box.
+  it('greys its text when disabled and leaves the box unfilled', async () => {
+    const live = await render(Input, {
+      props: { 'aria-label': 'Printer name' },
+    });
+    const liveStyle = getComputedStyle(control());
+    const liveColour = liveStyle.color;
+    expect(liveStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    await live.unmount();
+
+    await render(Input, {
+      props: { 'aria-label': 'Printer name', disabled: true },
+    });
+    const dead = getComputedStyle(control());
+
+    expect(dead.color).not.toBe(liveColour);
+    expect(dead.opacity).toBe('1');
+    expect(dead.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  });
+
   it('takes nothing while it is disabled', async () => {
     await render(Input, {
       props: { 'aria-label': 'Printer name', disabled: true },
@@ -49,7 +70,9 @@ describe('Input', () => {
     expect(control().value).toBe('');
   });
 
-  it('stands at its own height on each step of the control scale', async () => {
+  // The density may draw several steps at one height. A larger step is never the
+  // shorter one, and none falls under the 24px a pointer target needs.
+  it('never shrinks from one step of the control scale to the next', async () => {
     const heightOf = async (size: 'sm' | 'md' | 'lg'): Promise<number> => {
       const host = document.createElement('div');
       document.body.append(host);
@@ -70,9 +93,8 @@ describe('Input', () => {
       heightOf('lg'),
     ]);
 
-    expect(small).toBeLessThan(medium);
-    expect(medium).toBeLessThan(large);
-    // 44px is the floor a control reached with a gloved hand takes.
-    expect(large).toBe(44);
+    expect(small).toBeLessThanOrEqual(medium);
+    expect(medium).toBeLessThanOrEqual(large);
+    expect(small).toBeGreaterThanOrEqual(24);
   });
 });

@@ -81,7 +81,9 @@
                 {:else}
                   <span>{t('parts.card.noFiles')}</span>
                 {/if}
-                <span class="ms-auto">{formatDateTime(part.changed)}</span>
+                <span class="whitespace-nowrap"
+                  >{formatDateTime(part.changed)}</span
+                >
               </span>
             </span>
           </FolderLink>

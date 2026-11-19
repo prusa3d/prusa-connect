@@ -17,11 +17,6 @@
   heater told to go to zero is off, and `48°/0°` reads as a target rather than
   as the absence of one. It keeps `--muted-foreground` of its own, because it
   is a setting rather than a reading and should not pulse with one.
-
-  The file is named after the folder rather than after the component, because
-  `classes.fixture.json` keys every class name in the React file under one
-  `heating-display` slot and the class test reads a file's own name for markup
-  that carries no `data-slot` of its own.
 -->
 <script lang="ts">
   import { chamberState, heaterState } from '../../domain';

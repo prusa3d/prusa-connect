@@ -190,11 +190,11 @@ const TEMPLATE_CARDS: Readonly<
       x: 0,
       y: 2,
       w: 8,
-      h: 7,
+      h: 8,
       config: { order: 'state' },
     },
     { type: 'core/finishing', x: 8, y: 2, w: 4, h: 4 },
-    { type: 'core/issues', x: 8, y: 6, w: 4, h: 3 },
+    { type: 'core/issues', x: 8, y: 6, w: 4, h: 4 },
   ],
   printer: [
     { type: 'core/printer', x: 0, y: 0, w: 4, h: 6 },

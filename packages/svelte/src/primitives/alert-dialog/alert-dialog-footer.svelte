@@ -16,7 +16,7 @@
 <div
   data-slot="alert-dialog-footer"
   class={[
-    'flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end',
+    'flex flex-col-reverse gap-2 group-size-sm/alert-dialog-content:grid group-size-sm/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end',
     className,
   ]}
   {...rest}

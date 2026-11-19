@@ -1,5 +1,8 @@
 <!-- Everyone who can sign in, in whichever of the two shapes fits. -->
 <script lang="ts">
+  import SortableTableHead from '../../primitives/table/sortable-table-head.svelte';
+  import type { ListingState } from '../../primitives';
+
   import KeyRoundIcon from '@lucide/svelte/icons/key-round';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -27,12 +30,14 @@
     TableHead,
     TableHeader,
     TableRow,
+    SORT_DIRECTION,
   } from '../../primitives';
   import { roleLabelKey } from './presentation';
   import type { PeopleFieldId, PersonRow } from './types';
 
   let {
     rows,
+    listing,
     roles,
     view,
     busy,
@@ -43,6 +48,7 @@
     personHref,
   }: {
     rows: readonly PersonRow[];
+    listing: ListingState<PersonRow>;
     roles: readonly string[];
     /** `table` or `rows`, as the toolbar's view switch holds it. */
     view: string;
@@ -60,10 +66,6 @@
     roles.map((role) => ({ value: role, label: t(roleLabelKey(role)) })),
   );
 
-  /** Role by colour as well as by word, as the locked badge shows it. */
-  const roleTone = (row: PersonRow): 'info' | 'default' =>
-    row.role === 'admin' ? 'info' : 'default';
-
   /** Both verdicts lock the same two controls, so both are asked once. */
   const locked = (row: PersonRow): boolean => row.isSelf || row.isLastAdmin;
 
@@ -79,12 +81,27 @@
   ];
 </script>
 
+{#snippet sortHead(field: string, label: string)}
+  {@const order =
+    listing.sort?.field === field ? listing.sort.order : undefined}
+  <SortableTableHead
+    {label}
+    direction={order && SORT_DIRECTION[order]}
+    onSort={(order: 'asc' | 'desc' | undefined) => {
+      if (order !== undefined) listing.setSort(field, order);
+    }}
+  />
+{/snippet}
+
 {#snippet roleControl(row: PersonRow)}
   {#if locked(row)}
-    <!-- A role that cannot change is a reading and not a control. -->
-    <Badge variant={row.role === 'admin' ? 'info' : 'outline'}>
+    <!-- A role that cannot change is a reading and not a control: the select's
+         height and type, without its box and chevron. -->
+    <span
+      class="inline-flex h-input-height items-center px-control-inline text-sm @max-3xl/app-shell:min-h-touch-target pointer-coarse:min-h-touch-target"
+    >
       {t(roleLabelKey(row.role))}
-    </Badge>
+    </span>
   {:else}
     <Select
       value={row.role}
@@ -95,8 +112,6 @@
       }}
     >
       <SelectTrigger
-        size="sm"
-        tone={roleTone(row)}
         aria-label={t('settingsPeople.role.changeFor', { name: row.username })}
       >
         <!-- An account with no role holds none of the options. -->
@@ -163,13 +178,19 @@
     <TableCaption class="sr-only">{t('settingsPeople.caption')}</TableCaption>
     <TableHeader>
       <TableRow>
-        <TableHead>{t('settingsPeople.username')}</TableHead>
-        {#if shows('name')}<TableHead>{t('settingsPeople.name')}</TableHead
-          >{/if}
-        {#if shows('role')}<TableHead>{t('settingsPeople.role')}</TableHead
-          >{/if}
-        {#if shows('added')}<TableHead>{t('settingsPeople.added')}</TableHead
-          >{/if}
+        {@render sortHead('person', t('settingsPeople.username'))}
+        {#if shows('name')}{@render sortHead(
+            'name',
+            t('settingsPeople.name'),
+          )}{/if}
+        {#if shows('role')}{@render sortHead(
+            'role',
+            t('settingsPeople.role'),
+          )}{/if}
+        {#if shows('added')}{@render sortHead(
+            'added',
+            t('settingsPeople.added'),
+          )}{/if}
         <TableHead class="sr-only">{t('settingsPeople.actions')}</TableHead>
       </TableRow>
     </TableHeader>
@@ -177,7 +198,8 @@
       {#each rows as row (row.id)}
         <TableRow class={personHref === undefined ? undefined : LINKED_ROW}>
           <TableCell>
-            <span class="flex flex-wrap items-center gap-2">
+            <!-- One line, so a mark that comes and goes never changes the row's height. -->
+            <span class="flex items-center gap-2 whitespace-nowrap">
               {#if personHref === undefined}
                 <span class="font-mono">{row.username}</span>
               {:else}

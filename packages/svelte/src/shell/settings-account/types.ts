@@ -11,6 +11,8 @@ export interface AccountSource {
 
 /** The signed-in person's own account record. */
 export interface AccountIdentity {
+  /** Optional profile image supplied by the host application. */
+  avatarUrl?: string | undefined;
   username?: string | undefined;
   displayName?: string | undefined;
   /** The org role, `viewer`, `operator` or `admin`. */
@@ -21,6 +23,15 @@ export interface AccountIdentity {
 
 export interface SettingsAccountScreenProps {
   source: AccountSource;
+  /** Optional host-owned save; absent when profile updates are unsupported. */
+  onSaveIdentity?:
+    | ((identity: {
+        displayName: string;
+        username: string;
+      }) => Promise<void> | void)
+    | undefined;
+  /** Explains when a host saves only a local design preview. */
+  identityPreview?: boolean;
   /** The account behind the subject. */
   identity?: AccountIdentity | undefined;
   /** True while the identity is being read. It waits rather than saying absent. */

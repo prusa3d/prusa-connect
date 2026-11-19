@@ -1,3 +1,6 @@
+import type { components } from '@prusa/connect';
+import type { Snippet } from 'svelte';
+
 import type {
   Device,
   PrintAction,
@@ -31,6 +34,8 @@ export interface JobRecord {
   started: string;
   /** When the print stopped. Absent while it runs, which is what tells them apart. */
   ended?: string;
+  /** The reported outcome of an ended print. */
+  outcome?: components['schemas']['DeviceJob']['outcome'];
 }
 
 /** One printer and what it has printed. */
@@ -70,8 +75,9 @@ export interface JobRow {
   printerHref: string;
 }
 
-/** The two columns a reader may order the list by. */
-export type JobSortColumn = 'started' | 'duration';
+/** The columns a reader may order the list by. */
+export type JobSortColumn =
+  'file' | 'printer' | 'state' | 'started' | 'duration' | 'progress';
 
 export interface JobSort {
   column: JobSortColumn;
@@ -99,4 +105,6 @@ export interface JobsScreenProps {
   onPrinted?: ((deviceIds: readonly string[]) => void) | undefined;
   /** Where the picture inside a row's file is served from. Without it every row draws the glyph. */
   thumbnailFor?: ((row: JobRow) => string | undefined) | undefined;
+  /** A line under the heading, such as how much of the list is shown. */
+  notice?: Snippet | undefined;
 }

@@ -131,6 +131,7 @@
 
 <PrintersScreen
   {listing}
+  thumbnailFor={ctx.deviceThumbnail}
   issues={ctx.deviceIssues}
   printerCount={fleet.devices.length}
   tags={FEATURES.tags

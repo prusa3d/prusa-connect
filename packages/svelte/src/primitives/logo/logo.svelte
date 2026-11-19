@@ -61,6 +61,6 @@
 >
   <span class="font-bold tracking-tight">PRUSA</span>
   {#each nameLines as line, index (index)}
-    <span class="-mt-[0.22em] text-[0.49em] font-medium">{line}</span>
+    <span class="-mt-logo-name-pull text-logo-name font-medium">{line}</span>
   {/each}
 </span>

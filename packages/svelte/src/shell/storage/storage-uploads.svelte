@@ -25,7 +25,7 @@
 {#if uploads.length > 0}
   <section
     aria-label={t('storage.uploads.heading')}
-    class="flex flex-col gap-3 rounded-sm bg-surface p-3"
+    class="flex flex-col gap-3 rounded-md bg-surface p-3"
   >
     <div class="flex items-center justify-between gap-2">
       <h2 class="text-sm font-medium">
@@ -58,7 +58,8 @@
                   ? (sending.sent / sending.total) * 100
                   : null}
                 aria-label={t('storage.uploads.label', { name: sending.path })}
-                class="h-1 flex-1"
+                size="sm"
+                class="flex-1"
               />
               <Button
                 variant="ghost"

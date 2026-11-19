@@ -239,7 +239,7 @@
         {/if}
 
         <div class="grid min-w-0 grid-cols-1 content-start gap-6">
-          <KeyValueList rows={facts} />
+          <KeyValueList rows={facts} labelWidth="14rem" />
 
           {#if (object.extruders ?? []).length > 0 || painting.length > 0}
             <section class="grid grid-cols-1 content-start gap-2">

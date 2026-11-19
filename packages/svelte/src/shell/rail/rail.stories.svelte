@@ -60,6 +60,21 @@
       },
     ],
   };
+
+  // A module with several pages: its row folds them, as Settings does.
+  const grouped: RailNavItem[] = [
+    ...items,
+    {
+      id: 'queue',
+      label: 'Queue',
+      href: '/m/queue/plan',
+      icon: ListChecksIcon,
+      children: [
+        { id: 'plan', label: 'Plan', href: '/m/queue/plan' },
+        { id: 'queue-jobs', label: 'Jobs', href: '/m/queue/jobs' },
+      ],
+    },
+  ];
 </script>
 
 <Story name="Open" asChild>
@@ -69,6 +84,18 @@
       {groups}
       {settings}
       currentPath="/printers"
+      onToggle={() => undefined}
+    />
+  </div>
+</Story>
+
+<Story name="Open with sections" asChild>
+  <div class="h-96">
+    <Rail
+      items={grouped}
+      {groups}
+      settings={settingsWithSections}
+      currentPath="/m/queue/jobs"
       onToggle={() => undefined}
     />
   </div>

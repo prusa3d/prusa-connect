@@ -37,6 +37,11 @@ export interface HeaterRowProps extends Omit<
    */
   material?: string;
   /**
+   * The material drawn as a control the reader can act on, in place of the
+   * `material` text. The row only gives it room; what it opens is its own.
+   */
+  materialChip?: Snippet;
+  /**
    * Whether this is the tool head currently feeding filament. A bold label
    * carries it, because the row has neither a border nor a fill.
    */

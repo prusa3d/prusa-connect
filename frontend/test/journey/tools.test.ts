@@ -126,6 +126,8 @@ it("draws an XL's heads from the tree and heats one by its 0-based tool", async 
   await tools.waitFor({ timeout: 60_000 });
 
   // Each head has a row with its nozzle and the filament the simulator loads.
+  // The filament chips in the page header carry the same `data-tool`, so a
+  // row is asked for as a table row.
   for (const [head, material] of [
     ['0', 'PLA'],
     ['1', 'PETG'],
@@ -133,16 +135,17 @@ it("draws an XL's heads from the tree and heats one by its 0-based tool", async 
     ['3', 'PLA'],
     ['4', 'PVA'],
   ] as const) {
-    const row = page.locator(`[data-tool="${head}"]`);
+    const row = page.locator(`tr[data-tool="${head}"]`);
     await expect.poll(() => row.textContent()).toContain(material);
     await expect.poll(() => row.textContent()).toMatch(/0\.4\s*mm/);
     await expect.poll(() => row.textContent()).toMatch(/°C/);
   }
 
-  // The nozzle chip beside the name: T0 heats to the PETG figure. The editor
-  // is asked for its own buttons. The material chip in the header is a button
-  // too, and it reads PETG while the print runs on head 1, which holds PETG.
-  // A press on that chip opens the filament surface and closes this one.
+  // The nozzle chip beside the name: Tool 1, which is head 0, heats to the
+  // PETG figure. The editor is asked for its own buttons. The material chip in
+  // the header is a button too, and it reads PETG while the print runs on head
+  // 1, which holds PETG. A press on that chip opens the filament surface and
+  // closes this one.
   await page
     .getByRole('button', { name: /^Set extruder target/ })
     .first()
@@ -150,7 +153,7 @@ it("draws an XL's heads from the tree and heats one by its 0-based tool", async 
   const editor = page
     .locator('[data-slot="popover-content"]')
     .filter({ hasText: 'Extruder' });
-  await editor.getByRole('button', { name: /^T0 / }).click();
+  await editor.getByRole('button', { name: /^Tool 1 / }).click();
   await editor.getByRole('button', { name: 'PETG', exact: true }).click();
   await editor.getByRole('button', { name: 'Set', exact: true }).click();
 
@@ -197,7 +200,7 @@ it('draws the slots of an MMU3 under its one head', async () => {
     .getByRole('heading', { name: 'Tools' })
     .waitFor({ timeout: 60_000 });
 
-  const head = page.locator('[data-tool="0"]');
+  const head = page.locator('tr[data-tool="0"]');
   await expect
     .poll(() => head.textContent())
     .toMatch(/MMU3 with 5 slots|5 slots/);
@@ -205,14 +208,14 @@ it('draws the slots of an MMU3 under its one head', async () => {
 
   for (const slot of ['0.0', '0.1', '0.2', '0.3', '0.4']) {
     await expect
-      .poll(() => page.locator(`[data-tool="${slot}"]`).count())
+      .poll(() => page.locator(`tr[data-tool="${slot}"]`).count())
       .toBe(1);
   }
 
   await expect
-    .poll(() => page.locator('[data-tool="0.1"]').textContent())
+    .poll(() => page.locator('tr[data-tool="0.1"]').textContent())
     .toContain('PETG');
   await expect
-    .poll(() => page.locator('[data-tool="0.4"]').textContent())
+    .poll(() => page.locator('tr[data-tool="0.4"]').textContent())
     .toContain('Nothing loaded');
 });

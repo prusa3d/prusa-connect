@@ -86,6 +86,57 @@ describe('ClippedName', () => {
     expect(name.textContent).toBe(LONG);
   });
 
+  // A flex row or an auto table column sizes the name by its minimum. Below
+  // the tail the name would be clipped to nothing and drawn over its
+  // neighbour, so the tail is that minimum.
+  it('never gives up its tail in a box narrower than the tail', async () => {
+    const name = await drawIn('10px', { name: LONG });
+    name.parentElement!.style.display = 'flex';
+    const [head, tail] = [...name.children] as HTMLElement[];
+
+    // The head keeps room for its ellipsis, so the cut stays visible.
+    expect(head!.getBoundingClientRect().width).toBeGreaterThan(0);
+    expect(head!.scrollWidth).toBeGreaterThan(head!.clientWidth);
+    expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+      head!.getBoundingClientRect().width + tail!.scrollWidth,
+    );
+    expect(tail!.scrollWidth).toBe(tail!.clientWidth);
+  });
+
+  // A head narrower than a character and the ellipsis clips the ellipsis,
+  // and the character left reads as the start of a shorter name.
+  it('ends a fully squeezed head in its ellipsis', async () => {
+    const name = await drawIn('10px', { name: LONG });
+    name.parentElement!.style.display = 'flex';
+    const head = name.firstElementChild as HTMLElement;
+
+    const probe = document.createElement('span');
+    probe.style.font = getComputedStyle(head).font;
+    probe.style.whiteSpace = 'pre';
+    probe.textContent = `${LONG[0] ?? ''}\u2026`;
+    name.parentElement!.append(probe);
+    const needed = probe.getBoundingClientRect().width;
+    probe.remove();
+
+    expect(head.getBoundingClientRect().width).toBeGreaterThanOrEqual(needed);
+  });
+
+  it('keeps a name whole whose head would be three characters or fewer', async () => {
+    const name = await drawIn('120px', { name: 'v2tangle.bgcode' });
+
+    expect(name.children).toHaveLength(0);
+    expect(name.textContent).toBe('v2tangle.bgcode');
+  });
+
+  it('draws head and tail touching in a box wider than the name', async () => {
+    const name = await drawIn('2000px', { name: LONG });
+    const [head, tail] = [...name.children] as HTMLElement[];
+
+    expect(tail!.getBoundingClientRect().left).toBe(
+      head!.getBoundingClientRect().right,
+    );
+  });
+
   it('has nothing axe objects to', async () => {
     const name = await drawIn('120px', { name: LONG });
 

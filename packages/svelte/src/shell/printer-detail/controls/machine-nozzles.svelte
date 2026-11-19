@@ -6,6 +6,7 @@
     type ToolReading,
   } from '../../../domain';
   import { formatUnit, t } from '../../../i18n';
+  import { toolLabel } from '../../printers/tool-label';
   import {
     Select,
     SelectContent,
@@ -104,12 +105,12 @@
   ) => {
     if (value === '') return;
     sent[`${String(tool)}:${argument}`] = value;
-    onCommand(verb, { [argument]: value, tool: toolArgument(tool) });
+    void onCommand(verb, { [argument]: value, tool: toolArgument(tool) });
   };
 
   const nameOf = (tool: number): string =>
     tools.length > 1
-      ? t('printerDetailControls.tools.label', { n: tool })
+      ? toolLabel(tool)
       : t('printerDetailControls.nozzle.label');
 </script>
 
@@ -123,6 +124,7 @@
   <ToggleGroup
     type="single"
     variant="outline"
+    tone="primary"
     size="sm"
     value={shown(tool, argument)}
     onValueChange={(next: string) => send(verb, argument, tool, next)}
@@ -153,10 +155,14 @@
             <TableHead>{t('printerDetailControls.nozzles.diameter')}</TableHead>
           {/if}
           {#if highFlow.kind !== 'absent'}
-            <TableHead>{t('printerDetailControls.nozzles.highFlow')}</TableHead>
+            <TableHead class="whitespace-normal"
+              >{t('printerDetailControls.nozzles.highFlow')}</TableHead
+            >
           {/if}
           {#if hardened.kind !== 'absent'}
-            <TableHead>{t('printerDetailControls.nozzles.hardened')}</TableHead>
+            <TableHead class="whitespace-normal"
+              >{t('printerDetailControls.nozzles.hardened')}</TableHead
+            >
           {/if}
         </TableRow>
       </TableHeader>

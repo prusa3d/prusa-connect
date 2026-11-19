@@ -15,3 +15,25 @@ export const PALETTE = [
   { key: 'brown', hex: '#8b4513' },
   { key: 'natural', hex: '#f5f0dc' },
 ] as const;
+
+// The families as the colour wheel draws them: nine hues on the outer ring,
+// then black, grey and white inside.
+export const WHEEL_OUTER = 9;
+export const WHEEL = [
+  'red',
+  'pink',
+  'purple',
+  'blue',
+  'green',
+  'natural',
+  'yellow',
+  'orange',
+  'brown',
+  'black',
+  'grey',
+  'white',
+].flatMap((key) =>
+  PALETTE.filter((color) => color.key === key).map(
+    (color) => [color.key, color.hex, `materials.colour.${color.key}`] as const,
+  ),
+);

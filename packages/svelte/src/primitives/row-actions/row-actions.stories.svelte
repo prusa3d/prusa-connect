@@ -20,14 +20,15 @@
 <Story name="What A Row Can Do" asChild children={fileActions} />
 
 <!--
-  The trigger and every item clear this tree's 44px floor.
+  Under a coarse pointer the trigger and every item clear this tree's 44px
+  floor.
 
   Read off the computed style rather than the bounding rectangle: the test
   runner renders a story in a scaled frame, so a rectangle returns 41.8px for a
   box whose height is 44, and the thing under test is the rule.
 -->
 <Story
-  name="Everything Clears The Touch Floor"
+  name="Everything Clears The Touch Floor Under A Finger"
   tags={['!dev', '!autodocs']}
   asChild
   children={fileActions}

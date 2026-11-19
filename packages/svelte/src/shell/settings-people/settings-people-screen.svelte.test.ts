@@ -130,6 +130,20 @@ describe('SettingsPeopleScreen', () => {
       page.getByRole('combobox', { name: `Change role for ${SELF}` }).query(),
     ).toBeNull();
 
+    // The reading and the control stand at one height, so rows do not differ.
+    const height = (el: Element) => el.getBoundingClientRect().height;
+    const reading = page
+      .getByText('Administrator', { exact: true })
+      .elements()
+      .find((el) => el.tagName === 'SPAN' && el.checkVisibility());
+    const control = page
+      .getByRole('combobox', { name: `Change role for ${OTHER}` })
+      .elements()
+      .find((el) => el.checkVisibility());
+    expect(reading).toBeDefined();
+    expect(control).toBeDefined();
+    expect(height(reading as Element)).toBe(height(control as Element));
+
     const own = await openMenu(SELF);
     await expect
       .element(
@@ -270,7 +284,7 @@ describe('SettingsPeopleScreen', () => {
     expect(table.checkVisibility()).toBe(true);
 
     await expect
-      .element(page.getByRole('columnheader', { name: 'Username' }))
+      .element(page.getByRole('columnheader', { name: /^Username/ }))
       .toBeVisible();
   });
 

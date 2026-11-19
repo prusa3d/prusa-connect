@@ -32,7 +32,7 @@
   );
 </script>
 
-<TilePanel {title} fallback={t('dashboard.issues.title')}>
+<TilePanel {title} fallback={t('dashboard.issues.title')} gap="md">
   {#snippet trailing()}
     {#if printers.loaded && views.length > 0}
       <Badge variant="destructive" class="tabular-nums">{views.length}</Badge>
@@ -49,14 +49,21 @@
     {:else}
       <ul
         data-part="issues"
-        class="-me-1 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pe-1"
+        class="me-0 flex min-h-0 flex-1 flex-col gap-dashboard-issue-gap overflow-y-auto pe-0"
         aria-live="polite"
       >
         {#each views as view (view.id)}
           <li>
-            <Tile href={view.detailHref} size="sm">
+            <Tile
+              href={view.detailHref}
+              size="list"
+              quiet
+              class="@container/issue"
+            >
               <span class="flex flex-col gap-1">
-                <span class="flex items-center justify-between gap-2">
+                <span
+                  class="flex items-center justify-between gap-2 @max-3xs/issue:flex-col @max-3xs/issue:items-start @max-3xs/issue:gap-1"
+                >
                   <span class="min-w-0 truncate text-sm font-medium"
                     >{view.name}</span
                   >

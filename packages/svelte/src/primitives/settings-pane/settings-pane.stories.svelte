@@ -2,6 +2,7 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
   import Button from '../button/button.svelte';
+  import Switch from '../switch/switch.svelte';
   import SettingsPane from './settings-pane.svelte';
   import SettingsRow from './settings-row.svelte';
 
@@ -36,6 +37,20 @@
     {#snippet actions()}
       <Button size="sm">Save</Button>
     {/snippet}
+  </SettingsPane>
+</Story>
+
+<Story name="Switch Row" asChild>
+  <SettingsPane title="Network">
+    <SettingsRow
+      layout="switch"
+      label="Hide this server"
+      description="Printers on the network no longer find it."
+    >
+      {#snippet control()}
+        <Switch aria-label="Hide this server" />
+      {/snippet}
+    </SettingsRow>
   </SettingsPane>
 </Story>
 

@@ -56,15 +56,27 @@ describe('PageHeader', () => {
 
 describe('PageHeader actions row', () => {
   it('keeps the height of one button so a late action moves nothing', async () => {
-    await render(PageHeader, {
+    const rowHeight = (): number =>
+      document
+        .querySelector<HTMLElement>('[data-slot="page-header-actions"]')!
+        .getBoundingClientRect().height;
+
+    const waiting = await render(PageHeader, {
       props: {
         title: 'Materials',
         actions: createRawSnippet(() => ({ render: () => '<span></span>' })),
       },
     });
-    const row = document.querySelector<HTMLElement>(
-      '[data-slot="page-header-actions"]',
-    )!;
-    expect(row.getBoundingClientRect().height).toBe(36);
+    const empty = rowHeight();
+    await waiting.unmount();
+
+    await render(PageHeader, {
+      props: {
+        title: 'Materials',
+        action: { label: 'Add material', onclick: () => undefined },
+      },
+    });
+
+    expect(rowHeight()).toBeCloseTo(empty, 1);
   });
 });

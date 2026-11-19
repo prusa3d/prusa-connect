@@ -62,7 +62,10 @@
 </script>
 
 {#if state.kind !== 'none'}
-  <span class="flex items-center gap-2" data-part="extension-switch">
+  <span
+    class="flex min-w-0 flex-wrap items-center gap-2"
+    data-part="extension-switch"
+  >
     <Switch
       aria-label={t('app.settings.extensions.switch.label', {
         name: row.title,

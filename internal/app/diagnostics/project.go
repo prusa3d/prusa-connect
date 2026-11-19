@@ -38,7 +38,6 @@ var configRules = map[string]rule{
 	"log.format":                keep,
 	"frontend.theme":            keep,
 	"frontend.default_language": keep,
-	"frontend.skin":             keep,
 	"frontend.printer_address":  presence,
 }
 

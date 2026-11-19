@@ -2,7 +2,7 @@ import type { Collapsible as CollapsiblePrimitive } from 'bits-ui';
 
 export type CollapsibleProps = CollapsiblePrimitive.RootProps;
 
-export type CollapsibleTriggerVariant = 'default' | 'row' | 'inline';
+export type CollapsibleTriggerVariant = 'default' | 'row' | 'filled' | 'inline';
 
 export type CollapsibleTriggerTone = 'default' | 'warning';
 

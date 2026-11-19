@@ -743,7 +743,7 @@ func serveOver(
 	// which no key in the file can change.
 	logger.InfoContext(ctx, "the web app", "state", appState,
 		"title", core.Frontend.Title, "language", core.Frontend.DefaultLanguage,
-		"theme", core.Frontend.Theme, "skin", core.Frontend.Skin)
+		"theme", core.Frontend.Theme)
 
 	// The metrics the file asked for. `make build` reads the same key to decide
 	// whether the client is linked, so one line says what this binary was built

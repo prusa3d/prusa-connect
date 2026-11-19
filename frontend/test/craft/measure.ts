@@ -169,7 +169,11 @@ export const count = (sheet: Page): Promise<CraftCount> =>
           borders.add(colour);
       }
 
-      if (element.tagName === 'svg') {
+      // The product logo is a wordmark drawn as an svg, not an icon.
+      if (
+        element.tagName === 'svg' &&
+        element.getAttribute('data-slot') !== 'connect-logo'
+      ) {
         icons += 1;
         // The library draws every glyph with aria-hidden, which is right for a
         // glyph beside a word and wrong for the only thing in a button: the

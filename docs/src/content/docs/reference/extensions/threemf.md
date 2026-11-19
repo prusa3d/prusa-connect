@@ -27,7 +27,7 @@ Shows a 3MF project on the page of its file, with its beds, objects and settings
 
 | | |
 |---|---|
-| version | 0.1.11 |
+| version | 0.1.12 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/threemf` |
 | namespace | `com.github.aux.prusa3d.threemf` |

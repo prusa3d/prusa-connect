@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 
 import { expectNoViolations } from '../../test/axe';
 import FacetPopoverProbe from '../../test/facet-popover-probe.svelte';
+import Input from '../input/input.svelte';
 import { facetListSummary } from './summary';
 import type { FacetPopoverProps } from './types';
 
@@ -19,6 +20,18 @@ const draw = async (
   );
   if (trigger === null) throw new Error('no facet rendered');
   return trigger;
+};
+
+/** The height an Input of one size stands at, the scale a facet shares. */
+const inputHeight = async (size: 'sm' | 'lg'): Promise<number> => {
+  const { container, unmount } = await render(Input, {
+    props: { size, 'aria-label': size },
+  });
+  const height = parseFloat(
+    getComputedStyle(container.querySelector('input')!).height,
+  );
+  await unmount();
+  return height;
 };
 
 /** The panel, which bits-ui portals to the end of the document. */
@@ -75,11 +88,17 @@ describe('FacetPopover', () => {
   });
 
   it('stands at the height of the control scale it shares', async () => {
-    const small = await draw({ size: 'sm' });
-    const large = await draw({ size: 'lg' });
+    const small = parseFloat(
+      getComputedStyle(await draw({ size: 'sm' })).height,
+    );
+    const large = parseFloat(
+      getComputedStyle(await draw({ size: 'lg' })).height,
+    );
 
-    expect(getComputedStyle(small).height).toBe('28px');
-    expect(getComputedStyle(large).height).toBe('44px');
+    expect(small).toBe(await inputHeight('sm'));
+    expect(large).toBe(await inputHeight('lg'));
+    expect(small).toBeLessThanOrEqual(large);
+    expect(small).toBeGreaterThanOrEqual(24);
   });
 
   it('opens a panel of the width the caller asked for', async () => {

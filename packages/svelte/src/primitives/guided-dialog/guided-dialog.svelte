@@ -73,7 +73,7 @@
 <Dialog bind:open {onOpenChange}>
   <!-- The panel is capped at the height of the page so a long step scrolls
        inside the body instead of running off the top. -->
-  <DialogContent class={['max-h-[calc(100dvh-2rem)]', className]}>
+  <DialogContent class={['max-h-dialog-height', className]}>
     <DialogHeader>
       <DialogTitle>{title}</DialogTitle>
       {#if description}

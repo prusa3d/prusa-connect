@@ -124,11 +124,6 @@ var Keys = map[string]Key{
 		Choices:   []string{"system", "light", "dark"},
 		DependsOn: "core.frontend.enabled",
 	},
-	"core.frontend.skin": {
-		Doc:       "The brand style of the web app: prusa, slicer or prusapro.",
-		Choices:   []string{"prusa", "slicer", "prusapro"},
-		DependsOn: "core.frontend.enabled",
-	},
 	"core.frontend.printer_address": {
 		Doc: "The origin printers dial, such as http://192.168.1.50:8080, written into the add-printer " +
 			"page's settings file. Not a loopback name. Empty uses the page's own address.",

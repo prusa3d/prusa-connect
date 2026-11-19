@@ -128,7 +128,7 @@
            would otherwise push the card's height around as each loads. -->
       <div
         class={[
-          'h-5 overflow-hidden text-sm text-muted-foreground [&>*]:truncate',
+          'h-lh overflow-hidden text-sm text-muted-foreground [&>*]:truncate',
           props.class,
         ]}
         data-slot={props.name}

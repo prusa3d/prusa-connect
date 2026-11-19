@@ -22,3 +22,5 @@
 <Story name="Fallback Title" args={{ title: '  ', fallback: 'Clock' }} />
 
 <Story name="No Heading" args={{ title: '' }} />
+
+<Story name="Medium Gap" args={{ gap: 'md' }} />

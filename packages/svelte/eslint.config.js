@@ -14,18 +14,23 @@ export default [
   },
 
   {
-    // A primitive copies its class names from the React design system, and
-    // src/primitives/classes.fixture.json holds the exact set. React writes
-    // `data-[state=on]:bg-primary`, `h-[1.15rem]` and `[&_svg]:shrink-0`, and
-    // classes.test.ts fails on any difference. So the arbitrary-value rule is
-    // off in this folder. It still applies everywhere else in the package.
-    // The same rule carries the spinner and role="alert" bans, and a primitive
-    // is where Spinner and Alert draw them. The raw-control ban is off here
-    // too: the primitives are where the raw elements live.
+    // The raw-control ban is off here: the primitives are where the raw
+    // elements live.
     files: ['src/primitives/**'],
     rules: {
-      'no-restricted-syntax': 'off',
       'svelte/no-restricted-html-elements': 'off',
+    },
+  },
+  {
+    // Spinner and Alert are where the spinner and role="alert" are drawn. One
+    // rule carries those two bans and the arbitrary-value ban, so it is off
+    // for the two files; neither writes a class of its own with a bracket.
+    files: [
+      'src/primitives/spinner/spinner.svelte',
+      'src/primitives/alert/alert.svelte',
+    ],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
 

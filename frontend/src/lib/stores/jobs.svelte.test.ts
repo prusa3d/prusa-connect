@@ -114,7 +114,7 @@ describe('the jobs read', () => {
       (call) =>
         phaseOf(call) === 'running'
           ? page([runningOf('a', 2)])
-          : page([endedOf('a', 1)]),
+          : page([{ ...endedOf('a', 1), outcome: 'finished' }]),
     );
 
     await fleet.load();
@@ -126,6 +126,7 @@ describe('the jobs read', () => {
       'a-2',
       'a-1',
     ]);
+    expect(jobs.printers[0]?.jobs?.[1]?.outcome).toBe('finished');
     // A printer with no print is one the filter still offers, read as empty.
     expect(jobs.printers[1]?.jobs).toEqual([]);
     expect(reads().map(phaseOf)).toEqual(['running', 'ended']);

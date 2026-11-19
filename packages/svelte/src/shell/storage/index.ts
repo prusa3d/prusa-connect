@@ -5,6 +5,7 @@ export type {
   StorageFieldId,
   StoragePlace,
   StorageRow,
+  StorageRowFold,
   StorageScreenProps,
   StorageSource,
   StorageUpload,

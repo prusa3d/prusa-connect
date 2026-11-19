@@ -8,14 +8,7 @@ export * from './slots';
 // a module reads the card contract from the slots entry under its own name.
 export type { CardProps } from './primitives';
 export type { CardProps as DashboardCardProps } from './slots';
-export { applySkin, DEFAULT_SKIN, type Skin, SKIN_NAMES } from './styles/skin';
-export {
-  skin,
-  SKIN_STORAGE_KEY,
-  type SkinStorage,
-  SkinStore,
-  type SkinStoreOptions,
-} from './styles/skin-store.svelte';
+export { browserStorage, forgetRemembered } from './remembered';
 export {
   applyTheme,
   THEME_PREFERENCES,

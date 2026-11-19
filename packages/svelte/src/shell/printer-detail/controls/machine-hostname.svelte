@@ -33,7 +33,7 @@
 
 <Button
   variant="secondary"
-  size="lg"
+  size="md"
   disabled={blocked(projection, busy)}
   onclick={() => {
     open = true;
@@ -59,7 +59,7 @@
   error={problem === undefined ? undefined : t(problem, { max: HOSTNAME_MAX })}
   confirmLabel={t('printerDetailControls.hostname.confirm')}
   onConfirm={() => {
-    onCommand(VERBS.hostname, { hostname: typed });
+    void onCommand(VERBS.hostname, { hostname: typed });
     close();
   }}
 />

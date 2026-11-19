@@ -44,3 +44,5 @@
   tags={['!dev', '!autodocs']}
   args={{ value: null }}
 />
+
+<Story name="Small" args={{ size: 'sm' }} />

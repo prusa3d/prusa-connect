@@ -58,18 +58,18 @@ describe('PageTrail', () => {
     expect(document.querySelectorAll('a')).toHaveLength(0);
   });
 
-  it('draws the page in the value face when it is a file name', async () => {
+  it('keeps the page in the sans face when it is a file name', async () => {
     const { unmount } = await render(PageTrail, {
-      props: { trail, page: 'left-bracket-v4.bgcode', monoPage: true },
+      props: { trail, page: 'left-bracket-v4.bgcode', sansPage: true },
     });
 
     const marker = () =>
       document.querySelector('[data-slot="breadcrumb-page"]')?.className ?? '';
-    expect(marker()).toContain('font-mono');
+    expect(marker()).toContain('font-sans');
     await unmount();
 
     await render(PageTrail, { props: { trail, page: 'MK4S' } });
-    expect(marker()).not.toContain('font-mono');
+    expect(marker()).not.toContain('font-sans');
   });
 
   it('reaches every ancestor by keyboard, in the order of the trail', async () => {

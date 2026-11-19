@@ -18,8 +18,8 @@ export const UI_THEMES = ['system', 'light', 'dark'] as const;
 export type UiTheme = (typeof UI_THEMES)[number];
 
 /**
- * Reads the name, the fallback language, the theme and the brand file this
- * server draws its page with. `get-ui-settings` is `GET /api/v1/ui`, and it
+ * Reads the name, the fallback language and the theme this server draws its
+ * page with. `get-ui-settings` is `GET /api/v1/ui`, and it
  * takes no credential, because the page reads it before it paints and before
  * anybody has signed in.
  */

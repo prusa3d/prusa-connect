@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
 
   import { t } from '../../i18n';
-  import { NavTabs } from '../../primitives';
+  import { DetailTabs } from '../../primitives';
   import type { ServerSettingsTab } from './types';
 
   let {
@@ -12,6 +12,7 @@
     updatesHref,
     backupsHref,
     networkHref,
+    onNavigate,
     children,
   }: {
     active: ServerSettingsTab;
@@ -22,6 +23,8 @@
     /** Absent where core.upgrade.enabled is off, and the tab is not drawn. */
     backupsHref?: string | undefined;
     networkHref: string;
+    /** Opens a tab's address; the router is the caller's. */
+    onNavigate: (href: string) => void;
     children: Snippet;
   } = $props();
 
@@ -62,30 +65,13 @@
   ]);
 </script>
 
-<div class="flex w-full flex-col gap-4">
-  <section
-    class="rounded-panel @container/server-shell overflow-hidden bg-card text-card-foreground"
-    aria-labelledby="server-settings-title"
-  >
-    <header class="flex flex-col gap-3 p-4 @md/server-shell:p-6">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h2 id="server-settings-title" class="text-lead font-semibold">
-            {t('settingsServer.title')}
-          </h2>
-          <p class="text-body text-muted-foreground">
-            {updatesHref === undefined
-              ? t('settingsServer.descriptionWithoutUpdates')
-              : t('settingsServer.description')}
-          </p>
-        </div>
-      </div>
-    </header>
-
-    <div class="px-4 @md/server-shell:px-6">
-      <NavTabs label={t('settingsServer.tabs.label')} {tabs} {active} />
-    </div>
-  </section>
-
-  {@render children()}
-</div>
+<DetailTabs
+  {tabs}
+  {active}
+  onChange={(id: string) => {
+    const href = tabs.find((tab) => tab.id === id)?.href;
+    if (href !== undefined) onNavigate(href);
+  }}
+  fallback={children}
+  segmented
+/>

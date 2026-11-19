@@ -40,8 +40,8 @@
     data-slot="select-content"
     style="--radix-select-content-available-height: var(--bits-select-content-available-height); --radix-select-content-transform-origin: var(--bits-select-content-transform-origin); --radix-select-trigger-height: var(--bits-select-anchor-height); --radix-select-trigger-width: var(--bits-select-anchor-width);"
     class={[
-      'relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-sm border border-border bg-popover text-popover-foreground data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
-      'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+      'relative z-50 max-h-(--radix-select-content-available-height) min-w-menu origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground state-open:animate-scale-in state-closed:animate-scale-out',
+      'side-bottom:translate-y-1 side-left:-translate-x-1 side-right:translate-x-1 side-top:-translate-y-1',
       className,
     ]}
     {...rest}
@@ -49,7 +49,7 @@
     <SelectScrollUpButton />
     <SelectPrimitive.Viewport
       tabindex={0}
-      class="h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1 p-1"
+      class="h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width) scroll-my-1 p-1"
     >
       {@render children?.()}
     </SelectPrimitive.Viewport>

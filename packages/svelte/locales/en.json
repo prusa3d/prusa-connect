@@ -64,6 +64,7 @@
   "primitives.lineChart.summary": "{name}, latest {latest}, lowest {lowest}, highest {highest}",
   "primitives.lineChart.threshold": "{label}, {value}",
   "primitives.listing.clearAll": "Clear search and filters",
+  "primitives.listing.filters": "Filters ({count})",
   "primitives.listing.clearFilters": "Clear filters",
   "primitives.listing.clearSearch": "Clear search",
   "primitives.materialSwatch.colour": "Filament colour",
@@ -140,6 +141,7 @@
   "shell.home": "Home",
   "shell.menu": "Menu",
   "shell.nav": "Primary",
+  "shell.skipToContent": "Skip to content",
   "shell.notice.issue.title": "{printer} reports a new issue",
   "shell.notice.issue.body": "Open the printer to see what it needs.",
   "shell.notice.jobFailed.title": "A print failed on {printer}",
@@ -167,8 +169,6 @@
   "shell.safeMode.restartNormally": "Restart normally",
   "shell.safeMode.restarting": "Restarting…",
   "shell.safeMode.timeout": "The server has not come back yet. Reload the page in a moment.",
-  "shell.sections.hide": "Hide the {label} sections",
-  "shell.sections.show": "Show the {label} sections",
   "shell.signOut": "Sign out",
   "shell.theme.dark": "Dark",
   "shell.theme.label": "Theme",
@@ -187,5 +187,6 @@
   "state.READY": "Ready",
   "state.STOPPED": "Stopped",
   "state.UNKNOWN": "Unknown",
-  "state.notReporting": "Not reporting"
+  "state.notReporting": "Not reporting",
+  "table.resizeColumn": "Resize column"
 }

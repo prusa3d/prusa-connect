@@ -7,7 +7,7 @@
   import {
     PRINTER_STATE_LABEL_KEY,
     PRINTER_STATE_PROGRESS_TONE,
-    printerStateOf,
+    printStateOf,
   } from '../../domain';
   import {
     describeFault,
@@ -97,7 +97,15 @@
   // The path names the print, so the trail has a subject before the row lands.
   const name = $derived(job?.display_name ?? jobId);
 
-  const printState = $derived(printerStateOf(job?.state ?? 'UNKNOWN'));
+  const printState = $derived(
+    job === undefined
+      ? 'UNKNOWN'
+      : printStateOf({
+          state: job.state,
+          ended: job.ended !== undefined,
+          outcome: job.outcome,
+        }),
+  );
 
   // `ended` is what tells a running print from a finished one.
   const running = $derived(job !== undefined && job.ended === undefined);
@@ -226,7 +234,7 @@
   <PageTrail
     trail={[{ label: t('jobDetail.jobs'), href: jobsHref }]}
     page={name}
-    monoPage
+    sansPage
   />
 
   <FaultAlert fault={refusal} />
@@ -259,7 +267,8 @@
           value={job.progress}
           tone={PRINTER_STATE_PROGRESS_TONE[printState]}
           aria-label={t('jobDetail.progress.label', { name })}
-          class="h-1 flex-1"
+          size="sm"
+          class="flex-1"
         />
         <span class="shrink-0 font-mono text-sm tabular-nums">
           {formatUnit(job.progress, '%', { maximumFractionDigits: 0 })}
@@ -274,7 +283,7 @@
       </Alert>
     {/if}
 
-    <Card>
+    <Card data-settings-panel>
       <CardContent class="@container/job-parts flex flex-col gap-6">
         {#if waiting}
           <!-- The card's own shape while the read is in flight. -->

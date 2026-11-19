@@ -3,6 +3,7 @@
 <script lang="ts">
   import type { ListField } from '../primitives/field-picker';
   import type { FacetDimension } from '../primitives/listing-state';
+  import { ListingSearch } from '../primitives/listing-search';
   import ListingToolbar from '../primitives/listing-toolbar/listing-toolbar.svelte';
   import { viewModes } from '../primitives/view-mode';
 
@@ -15,14 +16,19 @@
   let view = $state('cards');
   let picked = $state<string[]>([]);
   let flagged = $state(false);
+  let query = $state('');
 
   let {
     mode = 'multiple',
     filtersActive,
     onClearFilters,
     onSelectedChange,
+    withSearch = false,
+    withActions = false,
   }: {
     mode?: 'multiple' | 'single';
+    withSearch?: boolean;
+    withActions?: boolean;
     filtersActive?: boolean;
     onClearFilters?: () => void;
     onSelectedChange?: (next: string[]) => void;
@@ -49,7 +55,22 @@
   ]);
 </script>
 
+{#snippet searchBox()}
+  <ListingSearch
+    value={query}
+    onValue={(next: string) => (query = next)}
+    label="Search"
+    placeholder="Search"
+  />
+{/snippet}
+
+{#snippet wideActions()}
+  <div data-testid="actions" class="h-8 w-62 shrink-0"></div>
+{/snippet}
+
 <ListingToolbar
+  search={withSearch ? searchBox : undefined}
+  trailing={withActions ? wideActions : undefined}
   {facets}
   toggles={[
     {

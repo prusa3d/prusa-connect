@@ -13,15 +13,12 @@
   let {
     feeder,
     nozzle,
-    slots,
     unload,
     children,
   }: {
     /** The feeder's model, such as MMU3S, empty when not reported. */
     feeder: string;
     nozzle: Tool['nozzle'];
-    /** How many slots the row holds, for its columns. */
-    slots: number;
     /** The head's Unload filament, when the printer offers it. */
     unload: Snippet | undefined;
     children: Snippet;
@@ -32,7 +29,7 @@
 
 <section
   data-part="mmu"
-  class="col-span-full overflow-hidden rounded-md border border-border"
+  class="overflow-hidden rounded-md border border-border"
 >
   <header
     class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-muted px-4 py-3"
@@ -55,25 +52,17 @@
     </span>
     {@render unload?.()}
   </header>
-  <ul class="slots grid gap-2 p-3" style="--slots: {slots};">
+  <ul class="slots grid gap-2 p-3">
     {@render children()}
   </ul>
 </section>
 
 <style>
+  /* As many slots to a row as hold a circle, sharing the width. */
   .slots {
     grid-template-columns: repeat(
-      var(--slots),
-      minmax(0, calc(var(--spacing) * 64))
+      auto-fit,
+      minmax(calc(var(--spacing) * 36), 1fr)
     );
-  }
-
-  @container (max-width: 40rem) {
-    .slots {
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(calc(var(--spacing) * 32), 1fr)
-      );
-    }
   }
 </style>

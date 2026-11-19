@@ -2,6 +2,7 @@
 <script lang="ts">
   import type { PrintDetails } from '../../data';
   import { formatList, formatUnit, t } from '../../i18n';
+  import { toolLabel } from '../printers/tool-label';
   import {
     KeyValueList,
     Table,
@@ -105,7 +106,7 @@
         {#each tools as tool (tool.index)}
           <TableRow>
             <TableHead scope="row" class="text-foreground">
-              {t('fileDetail.tools.toolNumber', { n: tool.index })}
+              {toolLabel(tool.index)}
             </TableHead>
             <TableCell>{used(tool.used)}</TableCell>
             <TableCell>{tool.material ?? ''}</TableCell>

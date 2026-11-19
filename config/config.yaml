@@ -179,9 +179,6 @@ core:
     # The palette the page opens in: system, light or dark. Default "system",
     # which follows what the operating system asks for.
     theme: system
-    # The brand the component library draws in: prusa, slicer or prusapro.
-    # Default "prusa".
-    skin: prusa
     # The origin printers dial, written into the prusa_printer_settings.ini the
     # add-printer page offers. Default empty, which uses the address the page
     # was opened on. Set it when printers reach this server by another name,

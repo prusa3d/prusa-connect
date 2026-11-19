@@ -28,7 +28,6 @@
       modules: true,
       printer_admission: 'approval',
       printer_custom_ca: false,
-      skin: 'default',
       theme: 'system',
       title: 'Prusa Connect',
       upgrades: true,

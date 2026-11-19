@@ -16,9 +16,11 @@
   who cannot drag.
 -->
 <script lang="ts">
+  import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import {
+    Button,
     Card,
     CardContent,
     ConfirmDialog,
@@ -51,6 +53,12 @@
   const hereName = $derived(
     catalogue.folder(here)?.name ?? t('parts.tree.all'),
   );
+
+  // Stacked above the listing the tree is a screenful of its own, so it
+  // starts shut there and shuts again once a folder is picked: it stays open
+  // only in the folder it was opened in.
+  let openIn = $state<number | undefined>(undefined);
+  const treeOpen = $derived(openIn === here);
 
   const removeFolder = async (): Promise<void> => {
     const folder = deleting;
@@ -86,14 +94,37 @@
 <Card>
   <CardContent class={SPLIT_ROW}>
     <aside class={SPLIT_LEADING} aria-label={t('parts.tree.label')}>
-      <FolderUpload folder={here} />
-      <FolderTree
-        onNewFolder={() => {
-          folderAct = { kind: 'create', parent: here };
+      <Button
+        variant="secondary"
+        size="sm"
+        class="justify-between @4xl/parts:hidden"
+        aria-expanded={treeOpen}
+        data-part="tree-toggle"
+        onclick={() => {
+          openIn = treeOpen ? undefined : here;
         }}
-      />
-      <TagList />
-      <UsageMeter />
+      >
+        <span class="truncate">{t('parts.tree.heading')}: {hereName}</span>
+        <ChevronDownIcon
+          aria-hidden="true"
+          class={treeOpen ? 'rotate-180' : undefined}
+        />
+      </Button>
+      <div
+        class={[
+          treeOpen ? 'grid' : 'hidden',
+          'content-start gap-y-6 @4xl/parts:grid',
+        ]}
+      >
+        <FolderUpload folder={here} />
+        <FolderTree
+          onNewFolder={() => {
+            folderAct = { kind: 'create', parent: here };
+          }}
+        />
+        <TagList />
+        <UsageMeter />
+      </div>
     </aside>
 
     <div

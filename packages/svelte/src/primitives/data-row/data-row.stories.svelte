@@ -169,6 +169,14 @@
   </DataRow>
 </Story>
 
+<Story name="Roomy" asChild>
+  <DataRow primary="benchy.bgcode" secondaryValues={['Printed', 'MK4S']} roomy>
+    {#snippet leading()}
+      <FileCode2Icon class="size-4 text-muted-foreground" aria-hidden="true" />
+    {/snippet}
+  </DataRow>
+</Story>
+
 <Story name="Realistic Listing" asChild>
   <div class="rounded-sm border border-border">
     {#each files as file (file.name)}
@@ -225,7 +233,7 @@
   tags={['!dev', '!autodocs']}
   asChild
 >
-  <div class="max-w-[280px]">
+  <div class="max-w-story-narrow-row">
     {#snippet printer()}
       <a
         href="#/printers/mk4s-3"

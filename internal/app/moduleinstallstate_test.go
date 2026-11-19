@@ -160,4 +160,6 @@ func (p fixedPlane) Database(ref.Ref) (wirerpc.DatabaseState, bool) {
 
 func (p fixedPlane) Stop(ref.Ref) bool { return false }
 
+func (p fixedPlane) Restart(ref.Ref) bool { return false }
+
 func (p fixedPlane) Status(ref.Ref) (httpapi.ResourceStatus, bool) { return p.status, p.found }

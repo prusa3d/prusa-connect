@@ -1,4 +1,7 @@
-<!-- A slider with the number beside it, typed as well as dragged. -->
+<!--
+  A slider with the number beside it, typed as well as dragged. It sets a value
+  on the machine, so the slider takes the primary tone.
+-->
 <script lang="ts">
   import Input from '../input/input.svelte';
   import Slider from '../slider/slider.svelte';
@@ -36,7 +39,13 @@
     const typed = current?.typed;
     if (typed === undefined || typed === null) return;
     const parsed = Number.parseFloat(typed);
-    const next = Number.isFinite(parsed) ? clamp(parsed) : value;
+    const snapped =
+      step === undefined
+        ? parsed
+        : Number(
+            (min + Math.round((parsed - min) / step) * step).toPrecision(12),
+          );
+    const next = Number.isFinite(snapped) ? clamp(snapped) : value;
     edit = { since: value, value: next, typed: null };
     if (next !== value) onCommit(next);
   };
@@ -57,11 +66,12 @@
     step={step ?? 1}
     disabled={disabled ?? false}
     aria-label={label}
+    tone="primary"
     class="min-w-24 flex-1"
   />
   <!-- `inputmode="numeric"` and `type="number"`. -->
   <div class="flex shrink-0 items-center gap-1">
-    <div class="w-20">
+    <div class="w-32">
       <Input
         type="number"
         inputmode="numeric"

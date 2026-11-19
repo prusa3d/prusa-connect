@@ -22,6 +22,8 @@
 
 <Story name="With Description" args={{ description: 'In millimetres.' }} />
 
+<Story name="Row Layout" args={{ layout: 'row' }} />
+
 <Story
   name="With Error"
   args={{
@@ -122,6 +124,7 @@
       control={RadioGroup as unknown as FieldControl}
     />
     {#snippet failed(error)}
+      <!-- eslint-disable-next-line no-restricted-syntax -- story fixture: the boundary prints the refusal it caught as plain text -->
       <p role="alert">{String(error)}</p>
     {/snippet}
   </svelte:boundary>

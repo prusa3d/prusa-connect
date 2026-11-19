@@ -547,3 +547,37 @@ func TestAFieldOverItsLimitIsRefused(t *testing.T) {
 		}
 	}
 }
+
+func TestAPrintFileWithoutAPictureIsRecordedAsSuch(t *testing.T) {
+	t.Parallel()
+
+	for _, engine := range dbtest.Engines(t) {
+		t.Run(string(engine.Name), func(t *testing.T) {
+			t.Parallel()
+
+			held, files := over(t, engine.Grant(t), nil, &hostfake.Files{})
+			part := aPart(t, held, "Hinge")
+			bare := catalog.PartDir(place.Root, part.ID) + "/up/bare.bgcode"
+			files.PutBare(place.Storage, bare, 4, "digest")
+
+			version, err := held.AddVersion(context.Background(), part.ID,
+				catalog.VersionDraft{Files: []catalog.FileDraft{{Path: bare}}}, "user:alice")
+			if err != nil {
+				t.Fatalf("add a version: %v", err)
+			}
+
+			if got := version.Files[0].Thumbnail; got == nil || *got {
+				t.Errorf("the file has no picture, and Thumbnail reads %v", got)
+			}
+
+			detail, err := held.Detail(part.ID)
+			if err != nil {
+				t.Fatalf("read the part: %v", err)
+			}
+
+			if detail.Picture != nil {
+				t.Errorf("a part whose only file has no picture drew %+v", detail.Picture)
+			}
+		})
+	}
+}

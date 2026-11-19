@@ -180,7 +180,7 @@ describe('HeaterRow', () => {
 
   it('gives up the material line before the reading and the trigger', async () => {
     const host = document.createElement('div');
-    host.className = 'w-[14.25rem]';
+    host.className = 'w-heater-row';
     document.body.append(host);
 
     await render(HeaterRow, {

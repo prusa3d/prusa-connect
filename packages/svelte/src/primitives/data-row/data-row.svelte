@@ -35,6 +35,7 @@
     leading,
     secondaryValues,
     wrapValues = false,
+    roomy = false,
     actions,
     class: className,
     ...rest
@@ -57,9 +58,10 @@
   {...rest}
   data-slot="data-row"
   class={[
-    '@container/data-row relative isolate flex min-h-15 items-center gap-3 border-b border-border px-2 py-2 last:border-b-0',
+    '@container/data-row relative isolate flex min-h-15 items-center gap-3 border-b border-border px-2 last:border-b-0',
+    roomy ? 'py-4' : 'py-2',
     activatable &&
-      'hover:bg-accent has-[[data-slot="data-row-activate"]:focus-visible]:bg-accent has-[a:focus-visible]:bg-accent',
+      'hover:bg-accent with-link-focus:bg-accent with-activate-focus:bg-accent',
     className,
   ]}
 >

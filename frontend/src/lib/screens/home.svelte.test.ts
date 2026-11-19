@@ -167,7 +167,6 @@ describe('where the app opens', () => {
           title: 'Prusa Connect',
           default_language: 'en',
           theme: 'system',
-          skin: 'prusa',
           dashboards: false,
         }),
       },

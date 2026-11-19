@@ -1,8 +1,8 @@
-<!-- The stored events of the window, in the server's own words. -->
+<!-- The stored events of the window, in the host's words. -->
 <script lang="ts">
   import InboxIcon from '@lucide/svelte/icons/inbox';
 
-  import { formatDateTime, t } from '../../../i18n';
+  import { CORE_NAMESPACE, formatDateTime, locale, t } from '../../../i18n';
   import {
     Button,
     Card,
@@ -36,6 +36,16 @@
   // Where the window did not fit one page, "on top" is the newest row that
   // was read and not the newest row there is, which is what `more` says.
   const entries = $derived([...rows].reverse());
+
+  // The catalogue words a type the host knows; a type it does not know yet
+  // keeps the server's own summary.
+  const wordsFor = (type: string): string => {
+    const key = `printerDetailHistory.eventType.${type.replace(/^com\.prusa\.connect\./u, '')}`;
+
+    return locale.message(CORE_NAMESPACE, key) === undefined
+      ? (describeType?.(type) ?? type)
+      : t(key);
+  };
 </script>
 
 <Card>
@@ -66,7 +76,7 @@
                 {formatDateTime(row.at)}
               </TableCell>
               <TableCell class="text-sm">
-                {describeType?.(row.type) ?? row.type}
+                {wordsFor(row.type)}
               </TableCell>
             </TableRow>
           {/each}

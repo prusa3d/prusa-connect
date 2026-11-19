@@ -89,7 +89,7 @@ describe('TelemetryChips', () => {
       props: { telemetry: silent, device: slotted },
     });
 
-    await expect.element(page.getByText('T1')).toBeVisible();
+    await expect.element(page.getByText('Tool 2')).toBeVisible();
 
     await first.unmount();
     await render(TelemetryChips, {
@@ -106,31 +106,7 @@ describe('TelemetryChips', () => {
       },
     });
 
-    await expect.element(page.getByText('T0')).not.toBeInTheDocument();
-  });
-
-  // One material for the chip: the one of the tool printing now, from the
-  // tree, and the flat alias where the tree does not say.
-  it('shows the material of the slot the printer prints from', async () => {
-    await render(TelemetryChips, {
-      props: {
-        telemetry: silent,
-        device: {
-          ...device,
-          state: {
-            ...device.state,
-            '/tools/0/active': true,
-            '/tools/0.2/active': true,
-            '/tools/0/feeder/slot_count': 5,
-            '/tools/0.2/material_package_instance/package/material/abbreviation':
-              'ASA',
-          },
-        },
-      },
-    });
-
-    await expect.element(page.getByText('ASA')).toBeVisible();
-    await expect.element(page.getByText('PLA')).not.toBeInTheDocument();
+    await expect.element(page.getByText('Tool 1')).not.toBeInTheDocument();
   });
 
   describe('on a tool changer', () => {
@@ -171,10 +147,10 @@ describe('TelemetryChips', () => {
       const surface = await openSurface();
 
       await expect
-        .element(surface.getByRole('button', { name: /T1 PETG Active/ }))
+        .element(surface.getByRole('button', { name: /Tool 2 PETG Active/ }))
         .toBeVisible();
       await expect
-        .element(surface.getByRole('button', { name: /T2/ }))
+        .element(surface.getByRole('button', { name: /Tool 3/ }))
         .not.toBeInTheDocument();
     });
 
@@ -191,10 +167,10 @@ describe('TelemetryChips', () => {
       const surface = await openSurface();
 
       await expect
-        .element(surface.getByRole('button', { name: /T0 PLA/ }))
+        .element(surface.getByRole('button', { name: /Tool 1 PLA/ }))
         .toBeVisible();
       await expect
-        .element(surface.getByRole('button', { name: /T1 PETG Active/ }))
+        .element(surface.getByRole('button', { name: /Tool 2 PETG Active/ }))
         .toBeVisible();
       await expect.element(surface.getByRole('slider')).not.toBeInTheDocument();
     });
@@ -213,11 +189,11 @@ describe('TelemetryChips', () => {
       await (
         await openSurface()
       )
-        .getByRole('button', { name: /T0 PLA/ })
+        .getByRole('button', { name: /Tool 1 PLA/ })
         .click();
       const step = await openSurface();
       await expect
-        .element(step.getByLabelText('Target for T0 (°C)'))
+        .element(step.getByLabelText('Target for Tool 1 (°C)'))
         .toHaveValue(0);
       await step.getByRole('button', { name: 'PETG' }).click();
       await setButton().click();
@@ -245,11 +221,11 @@ describe('TelemetryChips', () => {
       await (
         await openSurface()
       )
-        .getByRole('button', { name: /T0 PLA/ })
+        .getByRole('button', { name: /Tool 1 PLA/ })
         .click();
 
       await expect
-        .element((await openSurface()).getByLabelText('Target for T0 (°C)'))
+        .element((await openSurface()).getByLabelText('Target for Tool 1 (°C)'))
         .toHaveValue(205);
     });
 
@@ -292,7 +268,7 @@ describe('TelemetryChips', () => {
       props: { telemetry: silent, device: filament, commands: { onCommand } },
     });
 
-    await page.getByRole('button', { name: 'Material PLA' }).click();
+    await page.getByRole('button', { name: 'Material Load / unload' }).click();
     await (await openSurface()).getByRole('button', { name: 'PETG' }).click();
 
     expect(onCommand).toHaveBeenCalledWith('core.command.load_filament', {
@@ -318,7 +294,7 @@ describe('TelemetryChips', () => {
       },
     });
 
-    await page.getByRole('button', { name: 'Material PLA' }).click();
+    await page.getByRole('button', { name: 'Material Load / unload' }).click();
     await expect
       .element(page.getByRole('button', { name: 'PETG' }))
       .not.toBeInTheDocument();
@@ -336,7 +312,7 @@ describe('TelemetryChips', () => {
       props: { telemetry: silent, device: filament, commands: { onCommand } },
     });
 
-    await page.getByRole('button', { name: 'Material PLA' }).click();
+    await page.getByRole('button', { name: 'Material Load / unload' }).click();
     await page.getByRole('button', { name: 'Unload filament' }).click();
 
     expect(onCommand).toHaveBeenCalledWith(

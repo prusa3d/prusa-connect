@@ -7,6 +7,7 @@ export { default as TableHead } from './table-head.svelte';
 export { default as TableHeader } from './table-header.svelte';
 export { default as SortableTableHead } from './sortable-table-head.svelte';
 export { default as TableRow } from './table-row.svelte';
+export { SORT_DIRECTION } from './types';
 export type {
   SortableTableHeadProps,
   TableBodyProps,

@@ -7,12 +7,12 @@
   and reach no one, so the heading inside the surface is what names it.
 
   bits-ui publishes the anchor's transform origin and the room left beside the
-  anchor under names of its own. The `origin-(--radix-...)` and
-  `max-w-[min(...,var(--radix-popper-available-width))]` classes are the React
-  design system's, so the element declares both React names from the bits-ui
-  ones. A surface that caps its own width reads the second, and the cap has to
-  sit on this box, because the measurement runs from this box's own edge with
-  its padding and border counted in.
+  anchor under names of its own. The `origin-(--radix-...)` class and the width
+  caps that read `--radix-popper-available-width` are the React design
+  system's, so the element declares both React names from the bits-ui ones. A
+  surface that caps its own width reads the second, and the cap has to sit on
+  this box, because the measurement runs from this box's own edge with its
+  padding and border counted in.
 -->
 <script lang="ts">
   import { Popover as PopoverPrimitive } from 'bits-ui';
@@ -48,7 +48,7 @@
     {sideOffset}
     style={declarations}
     class={[
-      'z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-sm border border-border bg-popover p-4 text-popover-foreground outline-none data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
+      'z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border border-border bg-popover p-4 text-popover-foreground outline-none state-open:animate-scale-in state-closed:animate-scale-out',
       className,
     ]}
   />

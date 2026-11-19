@@ -70,6 +70,7 @@ const recordOf = (job: FleetJob, live: number | undefined): JobRecord => ({
   progress: live ?? job.progress,
   started: job.started,
   ...(job.ended === undefined ? {} : { ended: job.ended }),
+  ...(job.outcome === undefined ? {} : { outcome: job.outcome }),
 });
 
 /**

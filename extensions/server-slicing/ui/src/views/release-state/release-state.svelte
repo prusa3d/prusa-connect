@@ -44,11 +44,17 @@
   class="grid min-w-0 grid-cols-1 content-start gap-1"
   data-part="release-state"
 >
-  <Badge variant={variants[row.state]} class="w-fit">
-    {row.state === 'installing' && progress
-      ? t(`slicer.phase.${progress.phase}`)
-      : t(`slicer.releaseState.${row.state}`)}
-  </Badge>
+  {#if row.state === 'available' || row.state === 'unavailable'}
+    <span class="text-sm text-muted-foreground"
+      >{t(`slicer.releaseState.${row.state}`)}</span
+    >
+  {:else}
+    <Badge variant={variants[row.state]} class="w-fit">
+      {row.state === 'installing' && progress
+        ? t(`slicer.phase.${progress.phase}`)
+        : t(`slicer.releaseState.${row.state}`)}
+    </Badge>
+  {/if}
   {#if row.state === 'installing' && progress}
     <div class="flex items-center gap-2">
       <Progress

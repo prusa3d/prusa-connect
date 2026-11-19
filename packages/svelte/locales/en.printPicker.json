@@ -23,6 +23,8 @@
   "printPicker.reason.state.PRINTING": "This printer is printing.",
   "printPicker.reason.state.STOPPED": "This printer has a stopped print on its bed.",
   "printPicker.reason.state.UNKNOWN": "This printer has reported no state yet.",
+  "printPicker.reason.unavailable": "This printer is no longer available.",
+  "printPicker.replace.available": "{count, plural, =0 {None of these printers can replace the file now.} one {Only # printer can replace the file now.} other {Only # printers can replace the file now.}}",
   "printPicker.replace.confirm": "Replace",
   "printPicker.replace.note": "{count, plural, one {The file on the printer is deleted} other {The file on each printer is deleted}}, and this one is sent in its place.",
   "printPicker.replace.title": "A different file named {name} is already on {count, plural, one {this printer} other {# printers}}. Replace it?",

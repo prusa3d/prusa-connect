@@ -2,9 +2,7 @@
   A trigger and its content, for the test to render. The parts only work
   together, and a test cannot write markup of its own.
 
-  Every word comes in as a prop, so the test says what it asserts on, and this
-  file holds no class of its own, so it adds nothing to what classes.test.ts
-  compares.
+  Every word comes in as a prop, so the test says what it asserts on.
 -->
 <script lang="ts">
   import CollapsibleContent from '../primitives/collapsible/collapsible-content.svelte';

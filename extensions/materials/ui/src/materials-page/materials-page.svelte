@@ -31,6 +31,7 @@
   import CustomDialog from './custom-dialog.svelte';
   import { materialsOn } from '../api';
   import { heldHost } from '../host';
+  import { follow } from '../live';
   import { heldList } from '../list.svelte';
   import { kept } from './remembered';
   import FaultNote from './fault-note.svelte';
@@ -59,16 +60,41 @@
   // The list opens with the filters the person kept, unless it already has
   // some from earlier in this visit. A read that fails opens it unfiltered.
   onMount(() => {
-    void (async () => {
-      const recalled = list.loaded
-        ? {}
-        : await service
+    const stream = new AbortController();
+    const signal = AbortSignal.any([host.signal, stream.signal]);
+    const initial = (async () => {
+      const fresh = !list.loaded;
+      const recalled = fresh
+        ? await service
             .filters()
             .then(kept)
-            .catch(() => ({}));
-      saved = JSON.stringify(kept({ ...recalled, ...list.query }));
-      await list.narrow({ ...recalled, ...list.query });
+            .catch(() => ({}))
+        : {};
+      const wanted = { ...recalled, ...list.query };
+      // With no filter in mind and spools on the shelf, the page opens on
+      // them: the catalogue is 16 000 rows with nothing in them.
+      const shelf = fresh && Object.keys(wanted).length === 0;
+      const opening = shelf ? { in_stock: true } : wanted;
+      saved = JSON.stringify(kept(opening));
+      await list.narrow(opening);
+      if (shelf && list.stock.spools === 0) {
+        saved = JSON.stringify(kept(wanted));
+        await list.narrow({ in_stock: undefined });
+      }
     })();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    follow(host.client, signal, ['tool'], () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        void initial.then(() => {
+          if (!signal.aborted) void list.narrow({});
+        });
+      }, 300);
+    });
+    return () => {
+      clearTimeout(timer);
+      stream.abort();
+    };
   });
 
   // Each change is kept for the next visit. A person who may only look is
@@ -134,9 +160,9 @@
 
       <div data-part="listing">
         {#if !list.loaded}
-          <!-- A table row with its header is taller than a bar, so seven bars
-               hold the place of the header and the first five rows. -->
-          <ListingSkeleton label={t('materials.page.reading')} rows={7} art />
+          <!-- A table row is taller than a bar, so nine bars hold the place
+               of the header and the first five rows. -->
+          <ListingSkeleton label={t('materials.page.reading')} rows={9} art />
         {:else if list.rows.length === 0}
           {#if narrowed}
             <ListingNoMatch

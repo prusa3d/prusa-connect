@@ -1,8 +1,6 @@
 import type { LucideIcon } from '@lucide/svelte';
 import type { ClassValue } from 'svelte/elements';
 
-import type { ToggleSize } from '../toggle/types';
-
 /**
  * The shapes a listing can take, named once for the whole tree.
  *
@@ -29,6 +27,7 @@ export interface ViewModeOption {
    */
   label: string;
   icon: LucideIcon;
+  iconSrc?: string | undefined;
   /**
    * Set when this view needs more room than the listing has. The item stays,
    * marked unavailable, and says this in a tooltip.
@@ -45,6 +44,5 @@ export interface ViewModeToggleProps {
    * before this component existed.
    */
   label?: string | undefined;
-  size?: ToggleSize;
   class?: ClassValue | undefined;
 }

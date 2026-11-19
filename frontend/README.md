@@ -35,12 +35,6 @@ The `Tour` pages are in `src/tour/`. A screen's stories are in
 `src/lib/screens/<screen>.stories.svelte`, beside the screen. Every other story
 file is beside the component it shows.
 
-### The `printers` switch in the toolbar
-
-The `printers` global sets the size of the fleet: `one`, `two` or `many`. The
-`Screens` stories read it. A story that does not read it looks the same under
-every value. A `Tour` page sets its own size.
-
 ### How a screen story runs the real app
 
 `AppAt` in `test/story/app-at.svelte` mounts the real `App` at one address.
@@ -53,8 +47,7 @@ from the UX fixture table, `test/ux/fixtures/api.json`. When the story closes,
 ```
 
 - `path` is the address the app opens.
-- `size` fixes the fleet size. Without it, the toolbar's `printers` value is
-  used.
+- `size` sets the fleet size: `one`, `two` or `many`. Without it, `many`.
 - `overrides` replaces rows of the table. A key is `"<METHOD> <path>"`, with the
   query added when the row answers one query only. A value is a `Response` or a
   function that returns one.

@@ -1,21 +1,68 @@
 <!--
-  Hands the toolbar's `printers` global to whatever the story draws, so
-  `AppAt` follows it without a story template reading Storybook's untyped
-  globals. Nothing is wrapped around the story.
+  Gives whatever the story draws the demo filament preview and the favourite
+  filaments. Nothing is wrapped around the story.
 -->
 <script lang="ts">
-  import { setContext, type Snippet } from 'svelte';
+  import type { Snippet } from 'svelte';
 
-  import { type FleetSize, SHOWN_FLEET } from './fleet';
+  import { provideFilamentPreview } from '../../packages/svelte/src/shell/printers/filament-colors';
+  import {
+    provideFilamentFavoritesPreview,
+    type FavoriteFilament,
+  } from '../../packages/svelte/src/shell/printers/filament-preferences';
+  import { demoFilamentPreview } from './fleet';
 
   interface Props {
-    size: FleetSize;
     children?: Snippet;
   }
 
-  const { size, children }: Props = $props();
+  const { children }: Props = $props();
 
-  setContext(SHOWN_FLEET, () => size);
+  provideFilamentPreview(demoFilamentPreview);
+
+  let favorites = $state.raw<readonly FavoriteFilament[]>([
+    {
+      id: 'demo-pla-yellow',
+      name: 'Yellow PLA',
+      material: 'PLA',
+      brand: 'Prusament',
+      color: 'yellow',
+    },
+    {
+      id: 'demo-petg-orange',
+      name: 'Orange PETG',
+      material: 'PETG',
+      brand: 'Prusament',
+      color: 'orange',
+    },
+    {
+      id: 'demo-asa-gray',
+      name: 'Gray ASA',
+      material: 'ASA',
+      brand: 'Prusament',
+      color: 'gray',
+    },
+    {
+      id: 'demo-pla-purple',
+      name: 'Purple PLA',
+      material: 'PLA',
+      brand: '',
+      color: 'purple',
+    },
+    {
+      id: 'demo-flex-teal',
+      name: 'Teal FLEX',
+      material: 'FLEX',
+      brand: '',
+      color: 'teal',
+    },
+  ]);
+  provideFilamentFavoritesPreview({
+    read: () => favorites,
+    save: (next) => {
+      favorites = next;
+    },
+  });
 </script>
 
 {@render children?.()}

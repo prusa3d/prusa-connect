@@ -69,9 +69,12 @@ func pictureOf(cover string, latest *Version) *Picture {
 		return ""
 	}
 
+	// A print file the storage found no picture in cannot stand for the part.
+	draws := func(file File) bool { return file.Thumbnail == nil || *file.Thumbnail }
+
 	if cover != "" {
 		for _, file := range latest.Files {
-			if file.Path == cover && kindOf(file.Name) != "" {
+			if file.Path == cover && kindOf(file.Name) != "" && draws(file) {
 				return &Picture{Storage: file.Storage, Path: file.Path, Kind: kindOf(file.Name)}
 			}
 		}
@@ -79,7 +82,7 @@ func pictureOf(cover string, latest *Version) *Picture {
 
 	for _, wanted := range []string{PictureImage, PictureThumbnail} {
 		for _, file := range latest.Files {
-			if kindOf(file.Name) == wanted {
+			if kindOf(file.Name) == wanted && draws(file) {
 				return &Picture{Storage: file.Storage, Path: file.Path, Kind: wanted}
 			}
 		}

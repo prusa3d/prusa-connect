@@ -14,8 +14,7 @@
   React writes the tint as a ternary chain inside `cn()`, because its
   `keyword-colours.test.ts` reads a call's own literals and cannot follow a
   lookup. That gate is not in this tree, and svelte-5.md asks for a static map
-  chosen by key, so the tints are a record in variants.ts here. The class test
-  reads every value of the record, so nothing is hidden from it either.
+  chosen by key, so the tints are a record in variants.ts here.
 -->
 <script lang="ts">
   import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';

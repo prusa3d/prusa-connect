@@ -59,7 +59,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "server-slicing"
-	release = extension.Version("0.2.2")
+	release = extension.Version("0.2.3")
 )
 
 // mebibyte is the unit the settings count memory in.

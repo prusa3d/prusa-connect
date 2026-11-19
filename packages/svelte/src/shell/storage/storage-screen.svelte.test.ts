@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { Storage } from '../../data';
@@ -147,6 +147,12 @@ const movingStorage = (refuse?: string) => {
 };
 
 describe('StorageScreen', () => {
+  // Wide enough for every column and every row action; a phone-width pane
+  // folds them, which the narrow cases below set up for themselves.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -172,16 +178,36 @@ describe('StorageScreen', () => {
       .toBeVisible();
   });
 
-  it('puts the folders first, then the newest file', async () => {
+  // Neither the order they arrive in nor their dates set the order: the
+  // newest file sorts last by name.
+  it('puts the folders first, then the files by name', async () => {
     const { container } = await render(StorageScreen, {
-      props: { storage: source({ entries }), store },
+      props: {
+        storage: source({
+          entries: [
+            fileOf('cube.gcode', 'cube.gcode', 2048, '2026-09-01T08:00:00Z'),
+            folderOf('zeta'),
+            fileOf(
+              'anchor.gcode',
+              'anchor.gcode',
+              2048,
+              '2026-08-01T08:00:00Z',
+            ),
+            folderOf('beta'),
+          ],
+        }),
+        store: fakeListingStore(),
+      },
     });
     const names = [...container.querySelectorAll('tbody tr')].map((row) =>
       row.textContent.replace(/\s+/g, ' ').trim(),
     );
 
-    expect(names[0]).toContain('archive');
-    expect(names[1]).toContain('gasket_set_tpu.bgcode');
+    expect(names).toHaveLength(4);
+    expect(names[0]).toContain('beta');
+    expect(names[1]).toContain('zeta');
+    expect(names[2]).toContain('anchor.gcode');
+    expect(names[3]).toContain('cube.gcode');
   });
 
   // What the bar does with the ticked rows is the whole point of ticking them.
@@ -489,6 +515,31 @@ describe('StorageScreen', () => {
     expect(moved).toEqual([['models/benchy.3mf', 'models/boat.3mf']]);
   });
 
+  // A phone-width pane has room for one control per row: the acts fold into
+  // the row's menu and the table never scrolls sideways.
+  it('folds the row acts into a menu on a phone-width pane', async () => {
+    await page.viewport(375, 800);
+    await render(StorageScreen, {
+      props: { storage: source({ entries }), store },
+    });
+
+    const table = page.getByRole('table').element();
+    const scroller = table.parentElement!;
+    await expect.element(page.getByRole('table')).toBeVisible();
+    expect(scroller.scrollWidth).toBeLessThanOrEqual(scroller.clientWidth);
+    expect(
+      page.getByRole('button', { name: 'Rename benchy.3mf' }).query(),
+    ).toBeNull();
+
+    await page.getByRole('button', { name: 'Actions for benchy.3mf' }).click();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Rename' }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Delete' }))
+      .toBeVisible();
+  });
+
   it('offers no new folder where the storage is read-only', async () => {
     await render(StorageScreen, {
       props: {
@@ -567,6 +618,22 @@ describe('StorageScreen', () => {
 
     await expect.element(page.getByText(/Page 1 of 2/)).toBeVisible();
     await expect.element(page.getByText('part_10.bgcode')).toBeVisible();
+  });
+
+  // The box is 16px and the column's resize handle sits beside it, so the
+  // whole header cell is the target.
+  it('ticks the page from anywhere in the header cell', async () => {
+    await render(StorageScreen, {
+      props: { storage: source({ entries: [fileOf('benchy.3mf')] }), store },
+    });
+    const box = page.getByRole('checkbox', {
+      name: 'Select every row on this page',
+    });
+    const cell = box.element().closest('label');
+    if (cell === null) throw new Error('the header box has no label');
+
+    await userEvent.click(cell, { position: { x: 2, y: 2 } });
+    await expect.element(box).toBeChecked();
   });
 
   // The header box ticks the page on screen. The rest of the folder is a
@@ -668,7 +735,8 @@ describe('StorageScreen', () => {
     await page.getByRole('radio', { name: 'Cards' }).click();
     await expect.poll(() => container.querySelector('table')).toBe(null);
 
-    await page.getByRole('button', { name: 'archive' }).click();
+    // A tile's name carries the date it shows after the folder's name.
+    await page.getByRole('button', { name: /^archive / }).click();
 
     expect(opened).toEqual(['archive']);
   });
@@ -745,7 +813,9 @@ describe('StorageScreen', () => {
     await page
       .getByRole('button', { name: 'Print gasket_set_tpu.bgcode' })
       .click();
-    await body().getByRole('button', { name: 'Print', exact: true }).click();
+    await body()
+      .getByRole('button', { name: /^Print( on \d+ printers?)?$/ })
+      .click();
 
     await expect
       .poll(() => sent)
@@ -918,6 +988,12 @@ describe('StorageScreen', () => {
 });
 
 describe('StorageScreen sharing', () => {
+  // Wide enough for every column and every row action; a phone-width pane
+  // folds them, which the narrow cases below set up for themselves.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

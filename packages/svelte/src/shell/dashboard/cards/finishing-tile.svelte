@@ -10,6 +10,7 @@
   import { EmptyState, TilePanel } from '../../../primitives';
   import HourglassIcon from '@lucide/svelte/icons/hourglass';
 
+  import { jobFallbackOf, printActivityOf } from '../../printers/presentation';
   import { ordered, selected } from '../printers';
   import { t } from '../../../i18n';
   import { dashboardContext } from '../context';
@@ -24,11 +25,26 @@
 
   const settings = $derived(finishingSettings(config));
 
+  const scoped = $derived(
+    printers.views.filter((view) => selected(view, settings)),
+  );
+  const withoutEstimate = $derived(
+    scoped.some(
+      (view) =>
+        printActivityOf(view) === 'active' && view.remaining === undefined,
+    ),
+  );
+  const unknown = $derived(
+    scoped.some((view) => printActivityOf(view) === 'unknown'),
+  );
+  const emptyHeading = $derived.by(() => {
+    if (withoutEstimate) return t('dashboard.finishing.estimatesUnavailable');
+    if (unknown) return t('printers.noData');
+    return t('dashboard.finishing.none');
+  });
   const views = $derived(
     ordered(
-      printers.views.filter(
-        (view) => view.remaining !== undefined && selected(view, settings),
-      ),
+      scoped.filter((view) => view.remaining !== undefined),
       'remaining',
     ).slice(0, settings.limit),
   );
@@ -36,19 +52,19 @@
   $effect(() => clock.hold());
 </script>
 
-<TilePanel {title} fallback={t('dashboard.finishing.title')}>
+<TilePanel {title} fallback={t('dashboard.finishing.title')} gap="md">
   <FleetState>
     {#if views.length === 0}
       <EmptyState
         size="sm"
         icon={HourglassIcon}
-        heading={t('dashboard.finishing.none')}
+        heading={emptyHeading}
         description={t('dashboard.finishing.noneNote')}
       />
     {:else}
       <ol
         data-part="finishing"
-        class="-me-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pe-1"
+        class="me-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pe-0"
       >
         {#each views as view (view.id)}
           <li>
@@ -72,7 +88,9 @@
               <span
                 class="flex items-baseline justify-between gap-3 font-mono text-xs text-muted-foreground"
               >
-                <span class="min-w-0 truncate">{view.jobName ?? ''}</span>
+                <span class="min-w-0 truncate"
+                  >{view.jobName ?? jobFallbackOf(view) ?? ''}</span
+                >
                 <span class="shrink-0 tabular-nums">
                   {t('dashboard.printer.left', {
                     time: formatDuration(view.remaining ?? 0),
@@ -83,6 +101,11 @@
           </li>
         {/each}
       </ol>
+    {/if}
+    {#if views.length > 0 && withoutEstimate}
+      <p class="text-xs text-muted-foreground">
+        {t('dashboard.finishing.someWithoutEstimate')}
+      </p>
     {/if}
   </FleetState>
 </TilePanel>

@@ -3058,7 +3058,7 @@ export interface paths {
         };
         /**
          * How this deployment's web app looks
-         * @description Reports the name, the fallback language, the theme and the brand file this server's own page draws with, and whether that page is served here at all. It takes no credential, because the page reads it before it paints and before anybody has signed in. It names no account, no printer and no module. It does say whether a new printer waits for a person's approval, which anybody who can reach the printer port learns anyway.
+         * @description Reports the name, the fallback language and the theme this server's own page draws with, and whether that page is served here at all. It takes no credential, because the page reads it before it paints and before anybody has signed in. It names no account, no printer and no module. It does say whether a new printer waits for a person's approval, which anybody who can reach the printer port learns anyway.
          */
         get: operations["get-ui-settings"];
         put?: never;
@@ -3505,8 +3505,6 @@ export interface components {
             printer_custom_ca: boolean;
             /** @description Present while this run is in safe mode: every module is off, whatever the configuration says, until the server restarts normally. It never names who asked for it. */
             readonly safe_mode?: components["schemas"]["SafeModeState"];
-            /** @description The brand file the component library reads its primary colour out of, named without its .css. "default" is the orange seed in the theme itself. */
-            skin: string;
             /** @description Where the app's Support link points. Empty keeps the assistant on the beta portal. */
             support_url?: string;
             /** @description system, light or dark. system follows whatever the operating system asks for. */
@@ -24698,7 +24696,6 @@ export interface operations {
                      *       "modules": true,
                      *       "printer_admission": "approval",
                      *       "printer_custom_ca": false,
-                     *       "skin": "default",
                      *       "theme": "system",
                      *       "title": "Prusa Connect",
                      *       "upgrades": true

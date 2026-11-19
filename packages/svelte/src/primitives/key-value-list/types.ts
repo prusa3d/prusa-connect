@@ -19,11 +19,15 @@ export interface KeyValueRow {
   wrap?: boolean | undefined;
   /** The row gets a copy button at its end. */
   copyable?: boolean | undefined;
+  /** The reading's hierarchy: a strong reading is larger, a muted one smaller. */
+  emphasis?: 'strong' | 'muted' | undefined;
 }
 
 export interface KeyValueListProps {
   rows: readonly KeyValueRow[];
   /** What a row with no value says. */
   absentText?: string;
+  /** The width of the name column, where its names are long: "14rem". */
+  labelWidth?: string | undefined;
   class?: ClassValue | undefined;
 }

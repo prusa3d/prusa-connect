@@ -6,9 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 // Contrast, and nothing else. Every fill somebody reads text on is measured
 // against the text drawn on it at WCAG AA's 4.5:1, and every mark a person
-// reads without words at WCAG 1.4.11's 3:1. Both sweeps run over all three
-// skins and both themes, because a second palette is only safe to ship
-// because the same sweep ran over it.
+// reads without words at WCAG 1.4.11's 3:1. Both sweeps run over both
+// themes.
 //
 // What each token carries is pinned by `tokens.test.ts` beside this file.
 // This one reads the declared values and measures them.
@@ -52,34 +51,17 @@ const declaredTokens = (block: string): string[] =>
 const THEMES = ['light', 'dark'] as const;
 type Theme = (typeof THEMES)[number];
 
-/**
- * The skins the stylesheet declares, in source order. The first is the default
- * and carries no `data-skin` attribute; every later one is selected by
- * `:root[data-skin='<name>']`.
- */
-const SKINS: string[] = [
-  ...css.matchAll(/\/\* @tokens ([a-z]+) light \*\//g),
-].map((match) => match[1]!);
-const DEFAULT_SKIN = SKINS[0]!;
-
-const tokenBlock = (skin: string, mode: Theme): string =>
-  sliceBlock(`/* @tokens ${skin} ${mode} */`);
+const tokenBlock = (mode: Theme): string => sliceBlock(`/* @tokens ${mode} */`);
 
 /**
- * The blocks one skin and theme resolve a token through, most specific first:
- * the cascade the browser walks, spelled out.
- *
- * `:root[data-skin='…']` scores 0-2-0 and `.dark` 0-1-0, so a non-default
- * skin's light block outranks the default skin's dark block, which is why it
- * sits above it here.
+ * The blocks one theme resolves a token through, most specific first: the
+ * cascade the browser walks, spelled out. `.dark` sits on the root element
+ * with `:root`, scores the same and comes later, so it wins where it declares.
  */
-const cascade = (skin: string, mode: Theme): string[] => [
-  ...(skin === DEFAULT_SKIN
-    ? []
-    : [tokenBlock(skin, mode), tokenBlock(skin, 'light')]),
-  tokenBlock(DEFAULT_SKIN, mode),
-  tokenBlock(DEFAULT_SKIN, 'light'),
-];
+const cascade = (mode: Theme): string[] =>
+  mode === 'light'
+    ? [tokenBlock('light')]
+    : [tokenBlock('dark'), tokenBlock('light')];
 
 // OKLCH to sRGB (CSS Color 4), then WCAG 2.1 relative luminance and contrast.
 // Forty lines of arithmetic that will not change, written here rather than
@@ -248,7 +230,7 @@ const resolveToken = (blocks: string[], token: string): Colour => {
     .map((block) => declaredValue(block, token))
     .find((hit) => hit !== null);
   if (value === undefined) {
-    throw new Error(`${token} is not declared in this skin's cascade`);
+    throw new Error(`${token} is not declared in this theme's cascade`);
   }
 
   const written = parseColour(value);
@@ -306,7 +288,7 @@ const ratio = (fg: Colour, bg: Colour): number => {
 // surface names its foreground after itself.
 // `--disabled` is not here: WCAG exempts an inactive control from the text
 // bar, and the theme spends the pair on a fill a person can still see rather
-// than on a ratio (1.86:1 light, 3.03:1 dark).
+// than on a ratio.
 const SURFACES: [string, string][] = [
   ['--background', '--foreground'],
   ['--card', '--card-foreground'],
@@ -327,10 +309,9 @@ const SURFACES: [string, string][] = [
  * foreground sits on every quiet surface.
  */
 const textPairs = (): [string, string][] => {
-  const tokens = new Set(declaredTokens(tokenBlock(DEFAULT_SKIN, 'light')));
-  // The three surfaces a word of status is written on. Not the raised tone:
-  // it is gray-light-3, a fill, and the theme's step-11 green measures 4.26:1
-  // there, which is why no surface pairs a `-text` token with it.
+  const tokens = new Set(declaredTokens(tokenBlock('light')));
+  // The three surfaces a word of status is written on. Not the raised tone,
+  // which is a fill no surface pairs a `-text` token with.
   const PAGES = ['--background', '--card', '--popover'];
   const pairs: [string, string][] = [
     ['--foreground', '--background'],
@@ -378,8 +359,8 @@ const textPairs = (): [string, string][] => {
  * A primary button's own edge is not measured against its fill but against the
  * page, and the edge is `border-primary` rather than the fill (see
  * primitives/button/variants.ts), so the `--ring` rows below are that
- * measurement: both tokens are `--primary`. That is what lets a skin set a
- * pale fill and keep a button whose shape a person can still find.
+ * measurement: both tokens are `--primary`. That is what lets a pale fill keep
+ * a button whose shape a person can still find.
  *
  * A chart's threshold line is `--muted-foreground`, which the text pairs above
  * already hold to 4.5:1 on every surface, so it has no row here.
@@ -414,53 +395,8 @@ const NON_TEXT_PAIRS: [string, string][] = [
   ['--destructive-text', '--popover'],
 ];
 
-/**
- * The text on a brand fill: --primary, --selected and --control-on, at rest,
- * hovered and pressed. Each carries the Prusa Design System's own pair, white
- * on the brand colour, and that pair sits under 4.5:1. The design system is
- * the specification, so each row is held to the ratio it measures and not to
- * the bar: a pair cannot get quieter, and a pair that changes fails here and
- * is measured again against the design system. A pair that clears 4.5:1 has
- * no row.
- */
-const DESIGN_SYSTEM_RATIOS: Record<string, number> = {
-  'prusa / dark --control-on-foreground on --control-on': 2.86,
-  'prusa / dark --primary-foreground on --primary-hovered': 3.34,
-  'prusa / dark --primary-foreground on --primary-pressed': 4.66,
-  'prusa / dark --primary-foreground on --primary': 2.86,
-  'prusa / dark --selected-foreground on --selected-hovered': 3.34,
-  'prusa / dark --selected-foreground on --selected': 2.86,
-  'prusa / light --control-on-foreground on --control-on': 3.25,
-  'prusa / light --primary-foreground on --primary-hovered': 3.79,
-  'prusa / light --primary-foreground on --primary-pressed': 4.43,
-  'prusa / light --primary-foreground on --primary': 3.25,
-  'prusa / light --selected-foreground on --selected-hovered': 3.79,
-  'prusa / light --selected-foreground on --selected': 3.25,
-  'prusapro / dark --control-on-foreground on --control-on': 2.88,
-  'prusapro / dark --primary-foreground on --primary-hovered': 3.37,
-  'prusapro / dark --primary-foreground on --primary-pressed': 4.33,
-  'prusapro / dark --primary-foreground on --primary': 2.88,
-  'prusapro / dark --selected-foreground on --selected-hovered': 3.37,
-  'prusapro / dark --selected-foreground on --selected': 2.88,
-  'prusapro / light --control-on-foreground on --control-on': 3.3,
-  'prusapro / light --primary-foreground on --primary-hovered': 3.9,
-  'prusapro / light --primary-foreground on --primary': 3.3,
-  'prusapro / light --selected-foreground on --selected-hovered': 3.9,
-  'prusapro / light --selected-foreground on --selected': 3.3,
-  'slicer / dark --primary-foreground on --primary-hovered': 2.57,
-  'slicer / dark --primary-foreground on --primary-pressed': 3.71,
-  'slicer / dark --primary-foreground on --primary': 2.96,
-  'slicer / light --control-on-foreground on --control-on': 3.25,
-  'slicer / light --primary-foreground on --primary-hovered': 3.79,
-  'slicer / light --primary-foreground on --primary-pressed': 4.43,
-  'slicer / light --primary-foreground on --primary': 3.25,
-  'slicer / light --selected-foreground on --selected-hovered': 3.79,
-  'slicer / light --selected-foreground on --selected': 3.25,
-};
-
-describe('text clears WCAG AA in every skin and theme', () => {
+describe('text clears WCAG AA in both themes', () => {
   const pairs = textPairs();
-  const met = new Set<string>();
 
   it('has a palette and pairs to measure', () => {
     // An empty palette or an empty pair list would make every assertion below
@@ -469,110 +405,53 @@ describe('text clears WCAG AA in every skin and theme', () => {
     expect(pairs.length).toBeGreaterThan(30);
   });
 
-  for (const skin of SKINS) {
-    for (const mode of THEMES) {
-      describe(`${skin} / ${mode}`, () => {
-        for (const [fg, bg] of pairs) {
-          met.add(`${skin} / ${mode} ${fg} on ${bg}`);
-          it(`${fg} on ${bg}`, () => {
-            const blocks = cascade(skin, mode);
-            const measured = Number(
-              ratio(resolveToken(blocks, fg), resolveToken(blocks, bg)).toFixed(
-                2,
-              ),
-            );
-            const row = `${skin} / ${mode} ${fg} on ${bg}`;
-            const known = DESIGN_SYSTEM_RATIOS[row];
-
-            if (known !== undefined) {
-              expect(measured, `${row}, the design system's pair`).toBe(known);
-
-              return;
-            }
-
-            expect(
-              measured,
-              `${fg} on ${bg} in the ${skin} skin's ${mode} theme`,
-            ).toBeGreaterThanOrEqual(4.5);
-          });
-        }
-      });
-    }
+  for (const mode of THEMES) {
+    describe(mode, () => {
+      for (const [fg, bg] of pairs) {
+        it(`${fg} on ${bg}`, () => {
+          const blocks = cascade(mode);
+          const measured = Number(
+            ratio(resolveToken(blocks, fg), resolveToken(blocks, bg)).toFixed(
+              2,
+            ),
+          );
+          expect(
+            measured,
+            `${fg} on ${bg} in the ${mode} theme`,
+          ).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+    });
   }
-
-  it('records no design-system pair it no longer measures', () => {
-    expect(
-      Object.keys(DESIGN_SYSTEM_RATIOS).filter((row) => !met.has(row)),
-    ).toEqual([]);
-  });
 });
 
 // WCAG 1.4.11: a border, a ring or a filled bar carries no words, so 3:1 is
 // the bar rather than 4.5:1. Under it a person cannot tell where a text box
 // ends, which part of a progress bar is filled, or what has focus.
-/**
- * The marks that do not clear 3:1, with the ratio measured today. Each is a
- * shortfall this library took with the theme rather than a rule it relaxed:
- * the values are the React design system's and `tokens.test.ts` pins them.
- * Every row is held to its own number, so a mark cannot get quieter, and a row
- * that is put right fails here and asks to be deleted. Never add one.
- */
-const KNOWN_SHORTFALLS: Record<string, number> = {
-  // The slicer skin takes --muted to gray-light-3, one step lighter than the
-  // default skin's gray-light-2, and leaves --primary on orange-light-9.
-  // primitives/progress draws the track in --muted and the filled part in
-  // --primary, so the bar loses the edge between the two.
-  'slicer / light --primary on --muted': 2.92,
-  'slicer / light --ring on --muted': 2.92,
-  // The slicer skin's raised surfaces are #2a2a2a and it leaves --input on
-  // gray-dark-9, which this tree spends on a field's border rather than on the
-  // field's fill.
-  'slicer / dark --input on --card': 2.83,
-  'slicer / dark --input on --popover': 2.83,
-};
-
-describe('non-text marks clear WCAG 1.4.11 in every skin and theme', () => {
-  const met = new Set<string>();
-
-  for (const skin of SKINS) {
-    for (const mode of THEMES) {
-      describe(`${skin} / ${mode}`, () => {
-        for (const [mark, against] of NON_TEXT_PAIRS) {
-          const row = `${skin} / ${mode} ${mark} on ${against}`;
-          met.add(row);
-
-          it(`${mark} on ${against}`, () => {
-            const blocks = cascade(skin, mode);
-            const measured = Number(
-              ratio(
-                resolveToken(blocks, mark),
-                resolveToken(blocks, against),
-              ).toFixed(2),
-            );
-            const known = KNOWN_SHORTFALLS[row];
-
-            if (known === undefined) {
-              expect(measured, row).toBeGreaterThanOrEqual(3);
-
-              return;
-            }
-
-            expect(measured, `${row}, a recorded shortfall`).toBe(known);
-          });
-        }
-      });
-    }
+describe('non-text marks clear WCAG 1.4.11 in both themes', () => {
+  for (const mode of THEMES) {
+    describe(mode, () => {
+      for (const [mark, against] of NON_TEXT_PAIRS) {
+        it(`${mark} on ${against}`, () => {
+          const blocks = cascade(mode);
+          const measured = Number(
+            ratio(
+              resolveToken(blocks, mark),
+              resolveToken(blocks, against),
+            ).toFixed(2),
+          );
+          expect(
+            measured,
+            `${mark} on ${against} in the ${mode} theme`,
+          ).toBeGreaterThanOrEqual(3);
+        });
+      }
+    });
   }
-
-  it('records no shortfall for a pair it no longer measures', () => {
-    expect(
-      Object.keys(KNOWN_SHORTFALLS).filter((row) => !met.has(row)),
-    ).toEqual([]);
-  });
 });
 
 describe('every surface owns the foreground drawn on it', () => {
-  const light = new Set(declaredTokens(tokenBlock(DEFAULT_SKIN, 'light')));
+  const light = new Set(declaredTokens(tokenBlock('light')));
 
   it.each(SURFACES)('%s carries %s', (surface, foreground) => {
     expect(light.has(surface)).toBe(true);

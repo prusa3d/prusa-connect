@@ -19,7 +19,7 @@
 <div
   data-slot="context-menu-label"
   data-inset={inset ? '' : undefined}
-  class={['px-2 py-1.5 text-sm font-semibold data-[inset]:pl-8', className]}
+  class={['px-2 py-1.5 text-sm font-semibold data-inset:pl-8', className]}
   {...rest}
 >
   {@render children?.()}

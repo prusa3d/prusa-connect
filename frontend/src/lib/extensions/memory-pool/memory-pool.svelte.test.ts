@@ -72,6 +72,19 @@ describe('MemoryPool', () => {
     await expect.element(page.getByText('Over by 44 MiB')).toBeVisible();
   });
 
+  it('is a settings pane with the summary in its header band', async () => {
+    await render(MemoryPool, {
+      props: {
+        pool: { committed_bytes: 256 * MIB, pool_bytes: 1024 * MIB },
+        budgets: [{ key: 'a', title: 'Spools', bytes: 256 * MIB }],
+      },
+    });
+
+    const header = document.querySelector('[data-slot="settings-pane-header"]');
+    expect(header?.textContent).toContain('Module memory');
+    expect(header?.querySelector('[data-part="pool-summary"]')).not.toBeNull();
+  });
+
   it('draws nothing without a pool', async () => {
     await render(MemoryPool, { props: { pool: undefined, budgets: [] } });
 

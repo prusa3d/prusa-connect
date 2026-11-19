@@ -39,14 +39,8 @@ export type SelectTriggerProps = SelectPrimitive.TriggerProps & {
    * text field standing in the same toolbar read it from the same record.
    */
   size?: ControlSize;
-  /**
-   * `info` fills the box with the info token, as an `info` badge is filled.
-   * The fill cannot be passed in `class`: no tailwind-merge resolves it
-   * against the recipe's `bg-transparent` and `border-input`, which win, while
-   * the black `text-info-foreground` does not lose, so the value reads black
-   * on the page.
-   */
-  tone?: SelectTriggerTone;
+  /** `info` fills the trigger in the info colour, at rest and on hover. */
+  tone?: SelectTriggerTone | undefined;
 };
 
 export type SelectTriggerTone = 'default' | 'info';

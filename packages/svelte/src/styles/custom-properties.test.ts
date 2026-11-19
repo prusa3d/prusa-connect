@@ -37,12 +37,20 @@ const styleBlocks = (text: string): string =>
 /**
  * Every name declared anywhere in the package: the theme's own blocks, a
  * component's scoped style, and the properties a component writes onto an
- * element itself, such as a progress bar handing its reading to CSS.
+ * element itself, such as a progress bar handing its reading to CSS, through
+ * a `style:--x={...}` directive, or from script with `style.setProperty`.
  */
 const declared = new Set<string>();
 for (const path of sources) {
   for (const match of withoutComments(readFileSync(path, 'utf8')).matchAll(
-    /(--[A-Za-z0-9_-]+)\s*:/g,
+    /style:(--[A-Za-z0-9_-]+)=|(--[A-Za-z0-9_-]+)\s*:/g,
+  )) {
+    declared.add((match[1] ?? match[2])!);
+  }
+}
+for (const path of filesUnder(srcDir, ['.ts'])) {
+  for (const match of readFileSync(path, 'utf8').matchAll(
+    /setProperty\(\s*['"](--[A-Za-z0-9_-]+)['"]/g,
   )) {
     declared.add(match[1]!);
   }

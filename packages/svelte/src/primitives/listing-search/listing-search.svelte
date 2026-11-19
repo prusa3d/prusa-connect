@@ -39,7 +39,7 @@
   <Input
     type="search"
     size="sm"
-    class="pe-7 [&::-webkit-search-cancel-button]:appearance-none"
+    class="pe-10 [&::-webkit-search-cancel-button]:appearance-none"
     value={text}
     {placeholder}
     {maxlength}
@@ -54,14 +54,15 @@
     }}
   />
   {#if text !== ''}
-    <!-- Smaller than the box and inset from its end, so the box's border and
-         focus ring stay whole around it. The dialog's close X wears the same
+    <!-- Smaller than the box and inset from its end by the box's own side
+         padding, so the border and focus ring stay whole around it; the input
+         reserves the room with `pe-10`. The dialog's close X wears the same
          quiet recipe; `Button` has no size below the box's own height. -->
     <button
       type="button"
       data-slot="listing-search-clear"
       aria-label={t('primitives.listing.clearSearch')}
-      class="absolute inset-e-1 top-1/2 grid size-5 -translate-y-1/2 cursor-pointer place-items-center rounded-sm text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-3.5"
+      class="absolute inset-e-control-inline top-1/2 grid size-5 -translate-y-1/2 cursor-pointer place-items-center rounded-sm text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:size-3.5"
       onclick={clear}
     >
       <XIcon aria-hidden="true" />

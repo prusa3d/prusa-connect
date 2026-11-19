@@ -14,6 +14,7 @@
     FaultAlert,
     ListingSkeleton,
     SettingsPane,
+    SettingsRow,
   } from '@prusa/connect-ui/primitives';
   import { onMount } from 'svelte';
 
@@ -73,37 +74,49 @@
   };
 </script>
 
-<SettingsPane title={t('materials.settings.title')} edged>
-  <div class="flex flex-col gap-3 text-sm">
+{#snippet actions()}
+  <Button disabled={running || catalogue.busy} onclick={download}>
+    {t('materials.settings.download')}
+  </Button>
+{/snippet}
+
+<SettingsPane
+  title={t('materials.settings.title')}
+  edged
+  actions={list.mayWrite ? actions : undefined}
+>
+  <div
+    class="flex max-w-3xl flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
     {#if !catalogue.loaded}
       <ListingSkeleton label={t('materials.settings.reading')} rows={3} />
     {:else if meta}
-      <dl class="grid grid-cols-2 gap-x-4 gap-y-1">
-        <dt class="text-muted-foreground">{t('materials.settings.version')}</dt>
-        <dd>{meta.last_modified}</dd>
-        <dt class="text-muted-foreground">{t('materials.settings.hash')}</dt>
-        <dd><code>{meta.data_hash.slice(0, 12)}</code></dd>
+      <div class="flex flex-col gap-form-note">
+        <SettingsRow label={t('materials.settings.version')}>
+          {#snippet control()}{meta.last_modified}{/snippet}
+        </SettingsRow>
+        <SettingsRow label={t('materials.settings.hash')}>
+          {#snippet control()}<code>{meta.data_hash.slice(0, 12)}</code
+            >{/snippet}
+        </SettingsRow>
         {#each counts as [name, value] (name)}
-          <dt class="text-muted-foreground">
-            {t(`materials.settings.${name}`)}
-          </dt>
-          <dd data-part={name}>{value}</dd>
+          <SettingsRow label={t(`materials.settings.${name}`)}>
+            {#snippet control()}<span data-part={name}>{value}</span>{/snippet}
+          </SettingsRow>
         {/each}
         {#if meta.skipped > 0}
-          <dt class="text-muted-foreground">
-            {t('materials.settings.skipped')}
-          </dt>
-          <dd data-part="skipped">{meta.skipped}</dd>
+          <SettingsRow label={t('materials.settings.skipped')}>
+            {#snippet control()}<span data-part="skipped">{meta.skipped}</span
+              >{/snippet}
+          </SettingsRow>
         {/if}
-        <dt class="text-muted-foreground">
-          {t('materials.settings.imported')}
-        </dt>
-        <dd>{formatDateTime(meta.imported_at)}</dd>
-      </dl>
+        <SettingsRow label={t('materials.settings.imported')}>
+          {#snippet control()}{formatDateTime(meta.imported_at)}{/snippet}
+        </SettingsRow>
+      </div>
     {:else}
-      <p>{t('materials.settings.none')}</p>
+      <p class="text-body">{t('materials.settings.none')}</p>
     {/if}
-
     {#if status?.import.phase === 'failed'}
       <FaultAlert
         fault={{
@@ -113,31 +126,17 @@
         }}
       />
     {:else if seen && status?.import.phase === 'idle' && status.import.finished}
-      <p data-part="result" class="text-muted-foreground">
+      <p data-part="result" class="text-body text-muted-foreground">
         {status.import.unchanged
           ? t('materials.settings.unchanged')
           : t('materials.settings.updated')}
       </p>
     {/if}
-
     {#if running}
-      <p data-part="running" class="text-muted-foreground">
+      <p data-part="running" class="text-body text-muted-foreground">
         {t('materials.settings.running')}
       </p>
     {/if}
-
     <FaultNote fault={catalogue.fault} />
-
-    {#if list.mayWrite}
-      <div>
-        <Button
-          size="sm"
-          disabled={running || catalogue.busy}
-          onclick={download}
-        >
-          {t('materials.settings.download')}
-        </Button>
-      </div>
-    {/if}
   </div>
 </SettingsPane>

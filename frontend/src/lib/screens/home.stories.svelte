@@ -43,7 +43,6 @@
           title: 'Prusa Connect',
           default_language: 'en',
           theme: 'system',
-          skin: 'default',
           dashboards: false,
           diagnostics: true,
         }),

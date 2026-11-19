@@ -19,7 +19,7 @@
   import { Progress as ProgressPrimitive } from 'bits-ui';
 
   import type { ProgressProps } from './types';
-  import { tones, UNKNOWN } from './variants';
+  import { sizes, tones, UNKNOWN } from './variants';
 
   let {
     ref = $bindable(null),
@@ -27,6 +27,7 @@
     value,
     max = 100,
     tone = 'primary',
+    size = 'md',
     ...rest
   }: ProgressProps = $props();
 
@@ -42,7 +43,8 @@
   value={value ?? null}
   {max}
   class={[
-    'relative h-2 w-full overflow-hidden rounded-sm bg-border',
+    'relative w-full overflow-hidden rounded-sm bg-border',
+    sizes[size],
     className,
   ]}
   {...rest}

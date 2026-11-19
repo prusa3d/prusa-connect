@@ -4,7 +4,7 @@ import type { ClassValue } from 'svelte/elements';
  * How big the mark is set. `lg` reaches past the interface's type scale, which
  * stops at `--text-2xl` because no text needs to be bigger. A display wordmark
  * does, and it is derived from that token rather than declared in pixels, so
- * the skin's `--density` still reaches it.
+ * `--density` and the text size setting still reach it.
  */
 export type LogoSize = 'sm' | 'md' | 'lg';
 

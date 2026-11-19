@@ -4,6 +4,12 @@ What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host, and
 `changelog_test.go` fails when the three differ.
 
+## 0.1.12 - 2026-11-17
+
+### Changed
+
+- The project view takes the Ember look of the web app, and its Czech strings are complete.
+
 ## 0.1.11 - 2026-11-16
 
 ### Changed

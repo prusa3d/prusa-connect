@@ -67,6 +67,10 @@ const props = (over: Partial<PrintDialogProps> = {}): PrintDialogProps => ({
 
 const body = () => page.elementLocator(document.body);
 
+// The button names how many printers it sends to once one is ticked.
+const printButton = () =>
+  body().getByRole('button', { name: /^Print( on \d+ printers?)?$/ });
+
 /** A promise the test resolves, so an answer can be made to arrive late. */
 const deferred = <T>() => {
   let settle: (value: T) => void = () => undefined;
@@ -90,6 +94,69 @@ describe('PrintDialog', () => {
     await expect.element(body().getByText('Estimated time')).toBeVisible();
     await expect.element(body().getByText('PLA')).toBeVisible();
     await expect.element(body().getByText('MK4IS')).toBeVisible();
+  });
+
+  it('discards a replacement request when the open file changes', async () => {
+    const onPrint = vi.fn(() =>
+      Promise.reject(new StubApiError('core.printer/FILE_NAME_TAKEN', 409)),
+    );
+    const { rerender } = await render(PrintDialog, {
+      props: props({ onPrint }),
+    });
+
+    await printButton().click();
+    await expect
+      .element(body().getByRole('button', { name: 'Replace' }))
+      .toBeVisible();
+
+    await rerender({
+      file: { ...file, name: 'other.bgcode', source: 'models/other.bgcode' },
+    });
+    await expect
+      .element(body().getByRole('button', { name: 'Replace' }))
+      .not.toBeInTheDocument();
+    await expect.element(body().getByText('other.bgcode')).toBeVisible();
+    expect(onPrint).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports printers that become unavailable before replacement', async () => {
+    const devices = [
+      printerOf('idle-one', 'MK4S #1042', 'IDLE'),
+      printerOf('idle-two', 'MK4S #1043', 'IDLE'),
+    ];
+    const onPrinted = vi.fn();
+    const onPrint = vi.fn((request: PrintRequest) =>
+      request.replace === true
+        ? Promise.resolve(started)
+        : Promise.reject(new StubApiError('core.printer/FILE_NAME_TAKEN', 409)),
+    );
+    const { rerender } = await render(PrintDialog, {
+      props: props({ devices, onPrint, onPrinted }),
+    });
+    await body().getByRole('checkbox', { name: 'MK4S #1042' }).click();
+    await body().getByRole('checkbox', { name: 'MK4S #1043' }).click();
+    await printButton().click();
+    const replace = body().getByRole('button', { name: 'Replace' });
+    await expect.element(replace).toBeVisible();
+    await rerender({
+      devices: [
+        printerOf('idle-one', 'MK4S #1042', 'IDLE'),
+        printerOf('idle-two', 'MK4S #1043', 'PRINTING'),
+      ],
+    });
+    await expect
+      .element(body().getByText('Only 1 printer can replace the file now.'))
+      .toBeVisible();
+    await replace.click();
+    await vi.waitFor(() => {
+      expect(onPrint).toHaveBeenCalledTimes(3);
+    });
+    expect(onPrint.mock.calls[2]?.[0]).toMatchObject({
+      deviceId: 'idle-one',
+      replace: true,
+    });
+    await expect.element(body().getByRole('dialog')).toBeVisible();
+    expect(onPrinted).not.toHaveBeenCalled();
   });
 
   it('draws no facts for a file that said nothing', async () => {
@@ -128,9 +195,7 @@ describe('PrintDialog', () => {
         body().getByText('This printer has a finished print on its bed.'),
       )
       .toBeVisible();
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .toBeDisabled();
+    await expect.element(printButton()).toBeDisabled();
   });
 
   // The kind that declares its own moves is the authority on its own machine.
@@ -162,7 +227,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     expect(sent).toEqual([
       {
@@ -189,7 +254,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     expect(sent).toEqual([
       { deviceId: 'idle-one', path: 'usb/bracket.bgcode' },
@@ -201,7 +266,7 @@ describe('PrintDialog', () => {
     const onOpenChange = vi.fn();
     await render(PrintDialog, { props: props({ onOpenChange, onPrinted }) });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect.poll(() => onPrinted.mock.calls).toEqual([[['idle-one']]]);
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -222,16 +287,12 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .toBeDisabled();
+    await expect.element(printButton()).toBeDisabled();
 
     await body()
       .getByRole('checkbox', { name: /MK4S #1043/ })
       .click();
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .not.toBeDisabled();
+    await expect.element(printButton()).not.toBeDisabled();
     expect(onPrint).not.toHaveBeenCalled();
   });
 
@@ -259,7 +320,7 @@ describe('PrintDialog', () => {
     await body()
       .getByRole('checkbox', { name: /MK4S #1043/ })
       .click();
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect
       .poll(() => onPrinted.mock.calls)
@@ -298,7 +359,7 @@ describe('PrintDialog', () => {
     await body()
       .getByRole('checkbox', { name: /MK4S #1043/ })
       .click();
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect.element(body().getByText('printer is busy')).toBeVisible();
     // The failure names its printer above the row that names it too.
@@ -347,7 +408,7 @@ describe('PrintDialog', () => {
     await body()
       .getByRole('checkbox', { name: /MK4S #1043/ })
       .click();
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     const question = body().getByRole('alertdialog');
     await expect.element(question).toBeVisible();
@@ -386,7 +447,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
     const question = body().getByRole('alertdialog');
     await question.getByRole('button', { name: 'Cancel' }).click();
 
@@ -443,7 +504,7 @@ describe('PrintDialog', () => {
         printerOf('free-two', 'AAA #1', 'IDLE'),
       ],
     });
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect
       .poll(() => sent.map((one) => one.deviceId))
@@ -465,7 +526,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
     await rerender({ open: false });
     late.settle(started);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -479,7 +540,7 @@ describe('PrintDialog', () => {
       props: props({ onPrint: () => late.promise }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
     await rerender({ open: false });
     late.settle({
       commandId: 'cmd-2',
@@ -495,9 +556,7 @@ describe('PrintDialog', () => {
     expect(
       body().getByText('core.printer/COMMAND_REFUSED').elements(),
     ).toHaveLength(0);
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .not.toBeDisabled();
+    await expect.element(printButton()).not.toBeDisabled();
   });
 
   // The printer answered and did not take the command. That is a 200 with
@@ -520,7 +579,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect
       .element(body().getByText('core.printer/COMMAND_REFUSED'))
@@ -543,7 +602,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await body().getByRole('button', { name: 'Print' }).click();
+    await printButton().click();
 
     await expect
       .element(body().getByText('core.printer/TRANSFER_BUSY'))
@@ -605,9 +664,7 @@ describe('PrintDialog', () => {
         ),
       )
       .toBeVisible();
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .toBeDisabled();
+    await expect.element(printButton()).toBeDisabled();
     expect(onPrint).not.toHaveBeenCalled();
   });
 
@@ -624,9 +681,7 @@ describe('PrintDialog', () => {
       }),
     });
 
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .toBeEnabled();
+    await expect.element(printButton()).toBeEnabled();
 
     await rerender({ devices: [printerOf('idle-one', 'MK4S #1042', 'ERROR')] });
 
@@ -637,9 +692,7 @@ describe('PrintDialog', () => {
         ),
       )
       .toBeVisible();
-    await expect
-      .element(body().getByRole('button', { name: 'Print' }))
-      .toBeDisabled();
+    await expect.element(printButton()).toBeDisabled();
     expect(onPrint).not.toHaveBeenCalled();
   });
 
@@ -658,7 +711,7 @@ describe('PrintDialog', () => {
     });
     await render(PrintDialog, { props: props({ devices: many }) });
 
-    const button = body().getByRole('button', { name: 'Print' }).element();
+    const button = printButton().element();
     const box = button.getBoundingClientRect();
 
     expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);

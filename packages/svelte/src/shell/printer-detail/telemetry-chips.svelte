@@ -18,6 +18,7 @@
     toolsOf,
     toolArgument,
     SPEED_PATH,
+    STATE_PATH,
     type Device,
     type PreheatPreset,
   } from '../../domain';
@@ -51,8 +52,11 @@
     NOZZLE_MAX_CELSIUS,
     refusalText,
     resolverFor,
+    textOf,
     VERBS,
   } from './controls/machine-controls';
+  import { toolLabel } from '../printers/tool-label';
+  import NozzleEditor from './controls/nozzle-editor.svelte';
   import type { CommandPort, TelemetrySource } from './types';
 
   let {
@@ -92,7 +96,7 @@
   const resolve = $derived(
     commands === undefined || !device.connected
       ? () => ({ kind: 'absent' as const })
-      : resolverFor(device, commands),
+      : resolverFor(device, commands, textOf(telemetry, device, STATE_PATH)),
   );
   const busy = $derived(commands?.sending === true);
 
@@ -108,7 +112,7 @@
 
   const sendFilament = (verb: string, args?: Record<string, string>): void => {
     filamentOpen = false;
-    commands?.onCommand(verb, args);
+    void commands?.onCommand(verb, args);
   };
 
   const celsius = (value: number | undefined): string =>
@@ -229,25 +233,11 @@
 
   // A tool changer whose verb takes no tool can only heat the active head,
   // which is the plain editor.
-  const toolChoices = $derived<ValueChoice[] | undefined>(
-    tools.length > 0 && declaresArgument(device, VERBS.nozzle, 'tool')
-      ? tools.map((tool) => ({
-          key: toolArgument(tool.index),
-          subject: t('printerDetailControls.tools.label', { n: tool.index }),
-          currentLabel: celsius(tool.temperature),
-          target: scale.shown(tool.target ?? 0),
-          targetLabel: t('printerDetail.chip.toolTarget', {
-            n: tool.index,
-            unit: scale.unit,
-          }),
-        }))
-      : undefined,
-  );
+  const perTool = $derived(declaresArgument(device, VERBS.nozzle, 'tool'));
 
-  const send = (chip: HeaterChip, next: number, choice?: ValueChoice): void => {
-    commands?.onCommand(chip.verb, {
+  const send = (chip: HeaterChip, next: number): void => {
+    void commands?.onCommand(chip.verb, {
       [chip.argument]: String(Math.round(scale.celsius(next))),
-      ...(choice === undefined ? {} : { tool: choice.key }),
     });
   };
 </script>
@@ -296,11 +286,48 @@
   </span>
 {/snippet}
 
-{#snippet heaterChip(chip: HeaterChip, icon: Snippet, choices?: ValueChoice[])}
+{#snippet badgeButton(
+  chip: HeaterChip,
+  icon: Snippet,
+  props: Record<string, unknown>,
+)}
+  <Badge variant="outline" size="md" numeric>
+    {#snippet child({ props: badge })}
+      <!-- The badge's attributes come last. The editor's name is
+           read out ahead of the reading rather than replacing it,
+           since WCAG 2.5.3 wants the shown text inside the name. -->
+      <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- a Badge child is the documented way to make a pressable badge -->
+      <button {...props} {...badge} aria-label={undefined} type="button">
+        <span class="sr-only">{props['aria-label']},</span>
+        <TemperatureReading
+          {icon}
+          current={chip.current}
+          target={chip.target}
+          chamber={chip.chamber}
+        />
+        <ChevronDownIcon aria-hidden="true" />
+      </button>
+    {/snippet}
+  </Badge>
+{/snippet}
+
+{#snippet heaterChip(chip: HeaterChip, icon: Snippet, isNozzle: boolean)}
   <div>
     <dt class="sr-only">{chip.name}</dt>
     <dd>
-      {#if chip.settable}
+      {#if chip.settable && isNozzle}
+        <NozzleEditor
+          {resolve}
+          {busy}
+          onCommand={commands?.onCommand ?? (() => undefined)}
+          {perTool}
+          temperature={chip.current}
+          target={chip.target}
+          heads={tools}
+          choice={toolRow}
+          {trigger}
+        />
+      {:else if chip.settable}
         <ValueEditor
           label={chip.label}
           currentLabel={celsius(chip.current)}
@@ -312,39 +339,12 @@
           presets={chip.presets}
           disabled={busy}
           announceTarget={chip.target !== undefined}
-          {choices}
-          choice={toolRow}
-          {...chip.reason === undefined ? {} : { reason: chip.reason }}
-          onCommit={(next: number, choice?: ValueChoice) => {
-            send(chip, next, choice);
+          reason={chip.reason}
+          onCommit={(next: number) => {
+            send(chip, next);
           }}
-        >
-          {#snippet trigger({ props }: { props: Record<string, unknown> })}
-            <Badge variant="outline" size="md" numeric>
-              {#snippet child({ props: badge })}
-                <!-- The badge's attributes come last. The editor's name is
-                     read out ahead of the reading rather than replacing it,
-                     since WCAG 2.5.3 wants the shown text inside the name. -->
-                <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- a Badge child is the documented way to make a pressable badge -->
-                <button
-                  {...props}
-                  {...badge}
-                  aria-label={undefined}
-                  type="button"
-                >
-                  <span class="sr-only">{props['aria-label']},</span>
-                  <TemperatureReading
-                    {icon}
-                    current={chip.current}
-                    target={chip.target}
-                    chamber={chip.chamber}
-                  />
-                  <ChevronDownIcon aria-hidden="true" />
-                </button>
-              {/snippet}
-            </Badge>
-          {/snippet}
-        </ValueEditor>
+          {trigger}
+        />
       {:else}
         <Badge variant="outline" size="md" numeric>
           <TemperatureReading
@@ -357,27 +357,35 @@
       {/if}
     </dd>
   </div>
+
+  {#snippet trigger({ props }: { props: Record<string, unknown> })}
+    {@render badgeButton(chip, icon, props)}
+  {/snippet}
 {/snippet}
 
 <dl class="flex flex-wrap items-center gap-2">
-  {@render heaterChip(nozzle, nozzleIcon, toolChoices)}
+  {@render heaterChip(nozzle, nozzleIcon, true)}
 
   {#if activeTool !== undefined}
     <div>
       <dt class="sr-only">{t('printerDetail.chip.tool')}</dt>
       <dd>
         <Badge variant="outline" size="md" numeric>
-          {t('printerDetail.chip.toolNumber', { n: activeTool })}
+          {toolLabel(activeTool)}
         </Badge>
       </dd>
     </div>
   {/if}
-  {@render heaterChip(bed, bedIcon)}
+  {@render heaterChip(bed, bedIcon, false)}
   {#if hasChamber}
-    {@render heaterChip(chamber, chamberIcon)}
+    {@render heaterChip(chamber, chamberIcon, false)}
   {/if}
 
-  <div>
+  <div
+    class={load.kind === 'absent' && unload.kind === 'absent'
+      ? 'hidden'
+      : undefined}
+  >
     <dt class="sr-only">{t('printerDetail.chip.material')}</dt>
     <dd>
       {#if load.kind === 'absent' && unload.kind === 'absent'}
@@ -398,7 +406,7 @@
                       role="img"
                       aria-label={t('printerDetail.chip.material')}
                     />
-                    {@render materialText()}
+                    <span>{t('printerDetailInfo.filament.handling')}</span>
                     <ChevronDownIcon aria-hidden="true" />
                   </button>
                 {/snippet}

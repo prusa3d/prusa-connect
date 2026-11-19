@@ -28,11 +28,17 @@ export const stateOf = (connected: boolean, state: string): PrinterState =>
 
 const BADGE: Record<(typeof PRINTER_STATE_TONE)[PrinterState], BadgeVariant> = {
   active: 'stateActive',
+  busy: 'stateBusy',
+  moving: 'stateMoving',
+  ready: 'stateReady',
+  finished: 'stateFinished',
+  stopped: 'stateStopped',
+  paused: 'statePaused',
   attention: 'stateAttention',
-  done: 'stateDone',
   fault: 'stateFault',
   idle: 'stateIdle',
   quiet: 'stateQuiet',
+  offline: 'stateOffline',
 };
 
 /** The badge a state wears. */

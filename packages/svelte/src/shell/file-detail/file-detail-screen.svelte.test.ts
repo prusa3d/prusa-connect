@@ -253,6 +253,25 @@ describe('FileDetailScreen', () => {
     expect(container.textContent).toContain('Matched by file name.');
   });
 
+  // The printer was back at idle when the print ended; the outcome says how.
+  it('reads an ended print by its recorded outcome', async () => {
+    const ended: FilePrint = {
+      ...prints[0]!,
+      state: 'IDLE',
+      ended: '2026-08-19T09:10:00Z',
+      outcome: 'failed',
+      // Its own field says it ended, not the span beside it.
+      durationSeconds: undefined,
+    };
+    await render(FileDetailScreen, {
+      props: props({ prints: [ended], tab: 'prints' }),
+    });
+
+    await expect
+      .element(page.getByText('Error', { exact: true }))
+      .toBeVisible();
+  });
+
   // Answered and empty is not the same fact as never asked.
   it('tells a file nothing has printed from a query nothing answers', async () => {
     await render(FileDetailScreen, {

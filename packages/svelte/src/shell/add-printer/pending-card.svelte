@@ -52,7 +52,7 @@
 <!-- A bordered panel, not a second card: it sits inside the step's card, and
      a card's own padding there pushed the code away from the text above. -->
 <div
-  class="@container/pending rounded-sm border border-border p-4"
+  class="@container/pending rounded-md border border-border p-4"
   data-part="pending-card"
   data-code={printer.code}
 >

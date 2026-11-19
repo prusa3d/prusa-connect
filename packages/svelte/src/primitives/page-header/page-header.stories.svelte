@@ -19,13 +19,13 @@
 -->
 
 <Story name="Title Only" asChild>
-  <div class="w-[48rem]">
+  <div class="w-3xl">
     <PageHeader title="Printers" />
   </div>
 </Story>
 
 <Story name="With The One Action" asChild>
-  <div class="w-[48rem]">
+  <div class="w-3xl">
     <PageHeader
       title="Printers"
       action={{
@@ -38,7 +38,7 @@
 </Story>
 
 <Story name="With Actions Of Its Own" asChild>
-  <div class="w-[48rem]">
+  <div class="w-3xl">
     <PageHeader title="Storage">
       {#snippet actions()}
         <Button variant="secondary">Refresh</Button>

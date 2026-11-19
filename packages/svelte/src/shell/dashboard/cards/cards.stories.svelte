@@ -66,6 +66,24 @@
   const contextOf = (devices: readonly Device[]) =>
     dashboardContextOver(fakeCore().client, devices).context;
 
+  const unnamed = (id: string, minutes: number): Device => {
+    const device = printing(id, id, 0, minutes);
+    const job = device.job;
+    if (job === undefined) throw new Error('the printing fixture has no job');
+    return { ...device, job: { ...job, display_name: '', path: '' } };
+  };
+  const estimatesMissing = contextOf([unnamed('no-estimate', 0)]);
+  const estimatesMixed = contextOf([
+    printing('known', 'Known estimate', 30, 10),
+    unnamed('unknown', 0),
+  ]);
+  const detailsMissing = contextOf([
+    waiting('missing', 'Printing without details', 'PRINTING'),
+  ]);
+  const statusUnknown = contextOf([
+    waiting('unknown', 'Unknown status', 'UNKNOWN'),
+  ]);
+
   const fleet = contextOf(FLEET);
   const noPrinters = contextOf([]);
   const allIdle = contextOf(FLEET.filter((device) => device.id === 'mk4'));
@@ -176,4 +194,17 @@
   <div class="flex h-80 w-96 flex-col rounded-sm border border-border p-3">
     <UnknownTile type="spools/left" />
   </div>
+</Story>
+
+<Story name="Finishing Estimates Unavailable" asChild>
+  <TileStory context={estimatesMissing} tile={FinishingTile} type="finishing" />
+</Story>
+<Story name="Finishing Some Estimates Missing" asChild>
+  <TileStory context={estimatesMixed} tile={FinishingTile} type="finishing" />
+</Story>
+<Story name="Finishing Print Details Missing" asChild>
+  <TileStory context={detailsMissing} tile={FinishingTile} type="finishing" />
+</Story>
+<Story name="Finishing Status Unavailable" asChild>
+  <TileStory context={statusUnknown} tile={FinishingTile} type="finishing" />
 </Story>

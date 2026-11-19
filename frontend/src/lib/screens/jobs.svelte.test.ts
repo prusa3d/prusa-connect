@@ -121,7 +121,7 @@ describe('the jobs page', () => {
     await page.getByRole('menuitem', { name: 'Print again' }).click();
     await page
       .getByRole('dialog')
-      .getByRole('button', { name: 'Print' })
+      .getByRole('button', { name: /^Print( on \d+ printers?)?$/ })
       .click();
 
     await expect.poll(() => bodies).toEqual([{ path: '/usb/part-a.bgcode' }]);

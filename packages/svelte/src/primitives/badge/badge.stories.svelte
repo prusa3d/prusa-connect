@@ -1,4 +1,5 @@
 <script module lang="ts">
+  import StoreIcon from '@lucide/svelte/icons/store';
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
   import { PrinterIcon } from '../printer-icon';
@@ -12,11 +13,17 @@
 
   const states: [BadgeVariant, string][] = [
     ['stateActive', 'Printing'],
-    ['stateDone', 'Finished'],
+    ['stateBusy', 'Busy'],
+    ['stateMoving', 'Moving'],
+    ['stateReady', 'Ready'],
+    ['stateFinished', 'Finished'],
+    ['stateStopped', 'Stopped'],
+    ['statePaused', 'Paused'],
     ['stateIdle', 'Idle'],
     ['stateAttention', 'Needs attention'],
     ['stateFault', 'Error'],
-    ['stateQuiet', 'Offline'],
+    ['stateQuiet', 'Unknown'],
+    ['stateOffline', 'Offline'],
   ];
 </script>
 
@@ -95,4 +102,13 @@
     <Badge variant="secondary" size="md" numeric>120 mm/s</Badge>
     <Badge variant="secondary" size="md" numeric>215 °C</Badge>
   </div>
+</Story>
+
+<!-- In the size and weight of the text it stands in. -->
+<Story name="Text Size" asChild>
+  <Badge size="text" variant="outline">Marketplace</Badge>
+</Story>
+
+<Story name="Plain Size" asChild>
+  <Badge size="plain" variant="outline"><StoreIcon />Marketplace</Badge>
 </Story>

@@ -193,6 +193,21 @@ const MATERIAL_MEMBER =
 export const toolPath = (id: string, member: string): string =>
   `/tools/${id}/${member}`;
 
+/** Tools announced by flattened state, including feeder slots. */
+export const reportedToolIds = (
+  state: Device['state'],
+  paths: readonly string[] = [],
+): string[] => [
+  ...new Set(
+    [...Object.keys(state), ...paths].flatMap((path) => {
+      const id = /^\/tools\/((?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))*)\//.exec(
+        path,
+      )?.[1];
+      return id === undefined ? [] : [id];
+    }),
+  ),
+];
+
 /** The nozzle temperature of one head, counted from 0. */
 export const nozzlePath = (head: number): string =>
   toolPath(String(head), 'nozzle_temp');
@@ -237,7 +252,7 @@ const booleanOf = (
  * The material of one tool, as the tree carries it: a word, `''` for a tool
  * the printer says is empty, and `undefined` when the printer did not say.
  */
-const materialOf = (
+export const materialOf = (
   telemetry: { value(path: string): unknown },
   device: Device,
   id: string,
@@ -280,7 +295,7 @@ const depthOf = (id: string): number => id.split('.').length;
  * active tool whose tools above it are all active, as
  * `connectorapi.ActiveToolOf` derives it. There is no path for it.
  */
-const activeToolOf = (
+export const activeToolOf = (
   telemetry: {
     value(path: string): unknown;
     readonly paths?: readonly string[] | undefined;

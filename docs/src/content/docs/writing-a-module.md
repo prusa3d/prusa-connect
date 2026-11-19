@@ -363,9 +363,11 @@ cannot start until an operator writes the key, so a required key has no
 default.
 
 That list is the module's own configuration. An operator can also edit it on the
-module's page, under Settings, Extensions, on the Settings tab. The form checks
-each value against its type (`int`, `number`, `bool`, `list` and so on) before
-it saves. A `secret` shows empty, with a note that a value is stored. Left
+module's page, under Settings, Extensions, on the Settings tab. An option has
+no title field, so the form labels each key by its name with spaces in place of
+the underscores: `shelf_size` is labelled "Shelf size". The form checks each
+value against its type (`int`, `number`, `bool`, `list` and so on) before it
+saves. A `secret` shows empty, with a note that a value is stored. Left
 untouched, the stored value is kept. An operator who writes no `config`
 block gets every default, and `module add` writes no settings into any file.
 

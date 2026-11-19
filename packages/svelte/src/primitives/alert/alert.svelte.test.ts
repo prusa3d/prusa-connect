@@ -76,7 +76,7 @@ describe('Alert', () => {
     });
     expect(
       iconColumn(withIcon.container.querySelector('[data-slot="alert"]')!),
-    ).toBe(16);
+    ).toBeGreaterThan(0);
   });
 
   // The description names no colour of its own, so a status alert reads in one

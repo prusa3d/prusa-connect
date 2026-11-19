@@ -15,13 +15,10 @@
     t,
   } from '../../i18n';
   import {
-    Badge,
-    type BadgeVariant,
     Button,
-    Card,
-    CardContent,
     FaultAlert,
     SettingsPane,
+    SettingsRow,
     Skeleton,
   } from '../../primitives';
   import { printerHref } from '../printers';
@@ -34,11 +31,6 @@
     pass: 'settingsServer.verdict.pass',
     degraded: 'settingsServer.verdict.degraded',
     fail: 'settingsServer.verdict.fail',
-  };
-  const VERDICT_VARIANT: Readonly<Record<string, BadgeVariant>> = {
-    pass: 'success',
-    degraded: 'warning',
-    fail: 'destructive',
   };
   const STATE: Readonly<Record<string, string>> = {
     connected: 'settingsServer.state.connected',
@@ -85,6 +77,12 @@
       'unit',
     );
 
+  const totalText = (rollup: ConnectorRollup): string =>
+    [
+      t('settingsServer.connectors.total', { count: rollup.total }),
+      ...(rollup.total > 0 ? [countsText(rollup)] : []),
+    ].join(' · ');
+
   const readiness = $derived(source.readiness);
   const blocked = $derived(readiness?.blocked ?? []);
   // An optional instance that is not serving leaves the server ready, which
@@ -109,96 +107,102 @@
   );
 </script>
 
-<SettingsPane
-  class="w-full"
-  title={t('settingsServer.health.title')}
-  description={t('settingsServer.health.description')}
->
-  <div class="flex flex-col gap-6 pb-6">
-    {#if !source.loaded}
-      <div aria-busy="true" aria-label={t('settingsServer.loading')}>
-        <Skeleton class="h-10 w-full" />
-      </div>
-    {:else}
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-semibold">
-          {t('settingsServer.readiness.heading')}
-        </h3>
+<div class="flex w-full flex-col gap-4">
+  <SettingsPane class="w-full" title={t('settingsServer.readiness.heading')}>
+    <div
+      class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+    >
+      {#if !source.loaded}
+        <div aria-busy="true" aria-label={t('settingsServer.loading')}>
+          <Skeleton class="h-10 w-full" />
+        </div>
+      {:else}
         <FaultAlert fault={readinessFault} />
         {#if readiness}
-          <div class="flex flex-wrap items-center gap-2">
-            <Badge variant={readiness.ready ? 'success' : 'destructive'}>
-              {readiness.ready
-                ? t('settingsServer.readiness.ready')
-                : t('settingsServer.readiness.notReady')}
-            </Badge>
-            <span class="text-sm text-muted-foreground">
-              {t('settingsServer.readiness.serving', {
-                serving: readiness.serving,
-                declared: readiness.declared,
-              })}
-            </span>
-          </div>
+          <SettingsRow label={t('settingsServer.overview.status')}>
+            {#snippet control()}
+              <span>
+                <span class={[!readiness.ready && 'text-destructive-text']}>
+                  {readiness.ready
+                    ? t('settingsServer.readiness.ready')
+                    : t('settingsServer.readiness.notReady')}
+                </span>
+                <span class="ms-2 text-caption text-muted-foreground">
+                  {t('settingsServer.readiness.serving', {
+                    serving: readiness.serving,
+                    declared: readiness.declared,
+                  })}
+                </span>
+              </span>
+            {/snippet}
+          </SettingsRow>
           {#if idle.length > 0}
-            <p class="text-sm text-muted-foreground">
-              {t('settingsServer.readiness.optional')}
-            </p>
-            <ul class="flex flex-col gap-1">
-              {#each idle as instance (instance.resource)}
-                <li class="flex flex-wrap items-baseline gap-x-2 text-sm">
-                  <span class="font-mono text-xs">{instance.resource}</span>
-                  <span class="text-muted-foreground">{instance.state}</span>
-                </li>
-              {/each}
-            </ul>
+            <div class="flex flex-col gap-1">
+              <p class="text-body text-muted-foreground">
+                {t('settingsServer.readiness.optional')}
+              </p>
+              <ul class="flex flex-col gap-1">
+                {#each idle as instance (instance.resource)}
+                  <li class="flex flex-wrap items-baseline gap-x-2">
+                    <span class="font-mono text-xs">{instance.resource}</span>
+                    <span class="text-caption text-muted-foreground"
+                      >{instance.state}</span
+                    >
+                  </li>
+                {/each}
+              </ul>
+            </div>
           {/if}
           {#if blocked.length > 0}
-            <p class="text-sm">{t('settingsServer.readiness.blocked')}</p>
-            <ul class="flex flex-col gap-1">
-              {#each blocked as resource (resource)}
-                <li class="font-mono text-xs">{resource}</li>
-              {/each}
-            </ul>
+            <div class="flex flex-col gap-1">
+              <p class="text-body">{t('settingsServer.readiness.blocked')}</p>
+              <ul class="flex flex-col gap-1">
+                {#each blocked as resource (resource)}
+                  <li class="font-mono text-xs">{resource}</li>
+                {/each}
+              </ul>
+            </div>
           {/if}
         {/if}
-      </section>
+      {/if}
+    </div>
+  </SettingsPane>
 
-      <section class="flex flex-col gap-3">
-        <h3 class="text-sm font-semibold">
-          {t('settingsServer.connectors.heading')}
-        </h3>
+  {#if source.loaded}
+    <SettingsPane class="w-full" title={t('settingsServer.connectors.heading')}>
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+      >
         <FaultAlert fault={connectorsFault} />
         {#if anyAway}
-          <p class="text-sm text-muted-foreground">
+          <p class="text-body max-w-3xl text-muted-foreground">
             {t('settingsServer.connectors.away')}
           </p>
         {/if}
         {#if connectorsFault === undefined && source.connectors.length === 0}
-          <p class="text-sm text-muted-foreground">
+          <p class="text-body text-muted-foreground">
             {t('settingsServer.connectors.empty')}
           </p>
         {/if}
         {#each source.connectors as rollup (rollup.connector)}
-          <Card>
-            <CardContent class="flex flex-col gap-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-mono text-sm">{rollup.connector}</span>
-                <Badge variant={VERDICT_VARIANT[rollup.status] ?? 'secondary'}>
+          <div
+            class="grid max-w-3xl gap-form-note @lg/pane:grid-cols-settings-form @lg/pane:gap-0"
+          >
+            <span class="text-body font-mono break-all">{rollup.connector}</span
+            >
+            <div class="flex min-w-0 flex-col gap-1">
+              <span>
+                <span
+                  class={[rollup.status === 'fail' && 'text-destructive-text']}
+                >
                   {verdictText(rollup)}
-                </Badge>
-              </div>
-              <p class="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
-                <span>
-                  {t('settingsServer.connectors.total', {
-                    count: rollup.total,
-                  })}
                 </span>
-                {#if rollup.total > 0}
-                  <span>{countsText(rollup)}</span>
-                {/if}
-              </p>
+                <span class="ms-2 text-caption text-muted-foreground">
+                  {totalText(rollup)}
+                </span>
+              </span>
               {#if (rollup.degraded ?? []).length > 0}
-                <ul class="flex flex-col gap-1 text-sm">
+                <ul class="mt-1 flex flex-col gap-1">
                   {#each rollup.degraded ?? [] as device (device.id)}
                     <li class="flex flex-wrap items-baseline gap-x-2">
                       <Button variant="link">
@@ -214,14 +218,14 @@
                       </Button>
                       <span>{stateText(device.state)}</span>
                       {#if device.last_seen}
-                        <span class="text-xs text-muted-foreground">
+                        <span class="text-caption text-muted-foreground">
                           {t('settingsServer.device.lastSeen', {
                             at: formatDateTime(device.last_seen),
                           })}
                         </span>
                       {/if}
                       {#if device.since}
-                        <span class="text-xs text-muted-foreground">
+                        <span class="text-caption text-muted-foreground">
                           {t('settingsServer.device.since', {
                             at: formatDateTime(device.since),
                           })}
@@ -233,7 +237,7 @@
                         >
                       {/if}
                       {#if device.attempts > 0}
-                        <span class="text-xs text-muted-foreground">
+                        <span class="text-caption text-muted-foreground">
                           {t('settingsServer.device.attempts', {
                             count: device.attempts,
                           })}
@@ -243,17 +247,17 @@
                   {/each}
                 </ul>
                 {#if rollup.degraded_truncated > 0}
-                  <p class="text-xs text-muted-foreground">
+                  <p class="text-caption text-muted-foreground">
                     {t('settingsServer.connectors.more', {
                       count: rollup.degraded_truncated,
                     })}
                   </p>
                 {/if}
               {/if}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         {/each}
-      </section>
-    {/if}
-  </div>
-</SettingsPane>
+      </div>
+    </SettingsPane>
+  {/if}
+</div>

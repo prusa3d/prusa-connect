@@ -60,6 +60,8 @@ type moduleGraph interface {
 // running are two different facts and the caller asked about the second.
 type runningModules interface {
 	Stop(instance ref.Ref) bool
+	// Restart rebuilds a running instance from its declaration.
+	Restart(instance ref.Ref) bool
 	Status(instance ref.Ref) (httpapi.ResourceStatus, bool)
 	// Database is what a running module reported about its own database
 	// when it started: the schema version and the migrations it applied.
@@ -269,6 +271,7 @@ func (m *moduleInstaller) Install(
 	// the facts the answer carries about this server are read from the plane
 	// that has just acted on it.
 	restart := m.converge(ctx, "install")
+	m.reopenSameRelease(held)
 	started := m.startOf(ctx, held.instance, held.enabled, restart, m.settleFor(held))
 
 	if err = m.settleUpdate(ctx, who, strings.TrimSpace(release.Module), held, started); err != nil {
@@ -386,6 +389,20 @@ func (m *moduleInstaller) stopInstance(instance ref.Ref) bool {
 	}
 
 	return m.plane.Stop(instance)
+}
+
+// reopenSameRelease rebuilds the instance an install of its own version
+// replaced. The declaration is unchanged, so the store plans nothing, and the
+// running instance would keep serving from the directory this install deleted:
+// its browser bundle answered 404 until the next start.
+func (m *moduleInstaller) reopenSameRelease(held moduleReport) {
+	declared := held.replaced
+	if m.plane == nil || declared.Ref.IsZero() || declared.Spec.Module == nil ||
+		declared.Spec.Module.Version != held.version {
+		return
+	}
+
+	m.plane.Restart(held.instance)
 }
 
 // converge makes the overlay this call has just written take effect, and

@@ -31,7 +31,7 @@
   <ScrollAreaPrimitive.Viewport
     data-slot="scroll-area-viewport"
     tabindex={0}
-    class="size-full rounded-[inherit] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    class="size-full rounded-scroll-viewport transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   >
     {@render children?.()}
   </ScrollAreaPrimitive.Viewport>

@@ -2,7 +2,7 @@ import type { Snippet } from 'svelte';
 import type { ClassValue, HTMLAttributes } from 'svelte/elements';
 
 /**
- * The looks a badge takes. The first seven are the general ones. The six
+ * The looks a badge takes. The first seven are the general ones. The
  * `state*` names are printer state, and a caller picks one from the printer's
  * own state rather than from the colour it wants.
  */
@@ -15,13 +15,19 @@ export type BadgeVariant =
   | 'info'
   | 'destructive'
   | 'stateActive'
-  | 'stateDone'
+  | 'stateBusy'
+  | 'stateMoving'
+  | 'stateReady'
+  | 'stateFinished'
+  | 'stateStopped'
+  | 'statePaused'
+  | 'stateOffline'
   | 'stateIdle'
   | 'stateAttention'
   | 'stateFault'
   | 'stateQuiet';
 
-export type BadgeSize = 'sm' | 'md' | 'lg';
+export type BadgeSize = 'sm' | 'md' | 'lg' | 'text' | 'plain';
 
 export interface BadgeProps extends Omit<
   HTMLAttributes<HTMLSpanElement>,
@@ -30,7 +36,9 @@ export interface BadgeProps extends Omit<
   variant?: BadgeVariant;
   /**
    * `sm` is `py-0.5` and `md` is `py-1`. `lg` is a pill that holds a picture
-   * at its start: roomier, with larger text.
+   * at its start: roomier, with larger text. `text` is set in the body size
+   * and weight with a 24px glyph, and `plain` is that with no border and no
+   * inline padding.
    */
   size?: BadgeSize;
   /**

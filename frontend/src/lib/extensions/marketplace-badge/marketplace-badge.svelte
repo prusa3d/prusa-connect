@@ -56,6 +56,7 @@
 
 <Badge
   variant={VARIANT[shown]}
+  size="text"
   data-part="marketplace-state"
   data-state={shown}
 >

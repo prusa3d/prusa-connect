@@ -83,7 +83,7 @@
     busy = true;
     fault = undefined;
     try {
-      const count = await service.addSpools(draft.body());
+      const { added: count } = await service.addSpools(draft.body());
       toast.success(t('materials.add.created', { n: count }));
       onadded(count);
       onclose();
@@ -101,18 +101,20 @@
     if (!next) onclose();
   }}
 >
-  <!-- The panel is drawn outside the module's slot, so it carries the
-       module's name for its utilities. GuidedDialog caps its panel with this
-       very class, and a long form scrolls inside the screen. -->
-  <!-- eslint-disable no-restricted-syntax -->
+  <!-- Portalled, so the panel carries the module's name for the utilities
+       inside it. A scoped rule never matches the scope's root, so the
+       panel's own cap is the host's. -->
   <DialogContent
     data-module={OWN_MODULE}
     size="xl"
-    class="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+    class="max-h-dialog-height overflow-y-auto"
   >
-    <!-- eslint-enable no-restricted-syntax -->
     <DialogHeader>
-      <DialogTitle>{t('materials.add.title')}</DialogTitle>
+      <DialogTitle>
+        {material === undefined
+          ? t('materials.add.title')
+          : t('materials.spools.add')}
+      </DialogTitle>
       <DialogDescription class="sr-only">
         {draft?.step === 2
           ? t('materials.add.spoolNote')

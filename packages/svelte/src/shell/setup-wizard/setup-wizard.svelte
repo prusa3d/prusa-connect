@@ -23,7 +23,7 @@
     AlertDescription,
     AlertTitle,
     Button,
-    Logo,
+    ConnectLogo,
     PrinterIcon,
     Progress,
     StepList,
@@ -406,16 +406,16 @@
 </script>
 
 <div
-  class="@container/setup min-h-svh bg-background text-foreground"
+  class="@container/setup min-h-svh bg-background text-foreground not-dark:bg-shell-canvas"
   data-part="setup-wizard"
 >
   <div class="flex min-h-svh">
     <aside
-      class="hidden w-88 shrink-0 flex-col justify-between gap-10 bg-muted px-10 py-12 @4xl/setup:flex"
+      class="hidden w-88 shrink-0 flex-col justify-between gap-10 border-e border-border bg-muted px-10 py-12 not-dark:border-panel-outline not-dark:bg-shell-chrome @4xl/setup:flex"
     >
       <div class="flex flex-col gap-10">
         <div class="flex flex-col gap-3">
-          <Logo size="md" />
+          <ConnectLogo size="md" label="Prusa Connect" />
           <p class="text-sm text-muted-foreground">
             {t('setupWizard.aside.tagline')}
           </p>
@@ -446,7 +446,9 @@
     >
       <div class="flex w-full max-w-xl flex-col gap-8">
         <div class="flex items-center justify-between gap-4">
-          <span class="@4xl/setup:invisible"><Logo size="sm" /></span>
+          <span class="shrink-0 @4xl/setup:invisible"
+            ><ConnectLogo size="sm" label="" /></span
+          >
           <WizardToolbar onlanguage={chooseLanguage} />
         </div>
         <div class="flex flex-col gap-2 @4xl/setup:hidden">
@@ -457,7 +459,7 @@
             })}
           </span>
           <Progress
-            class="h-1"
+            size="sm"
             value={Math.round(((index + 1) / steps.length) * 100)}
             aria-label={t('setupWizard.steps.label')}
           />

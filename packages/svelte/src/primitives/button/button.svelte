@@ -36,6 +36,7 @@
     iconLinkBase,
     linkBase,
     linkSize,
+    radii,
     sizes,
     variants,
   } from './variants';
@@ -43,6 +44,7 @@
   let {
     variant = 'default',
     size = 'md',
+    radius = 'sm',
     type,
     label,
     pending = false,
@@ -60,6 +62,7 @@
     'aria-label': label,
     class: [
       variant !== 'link' && base,
+      variant !== 'link' && radii[radius],
       variant === 'link' && size !== 'inline-icon' && linkBase,
       variant === 'link' && size === 'inline-icon' && iconLinkBase,
       variants[variant],
@@ -94,6 +97,7 @@
       type={type ?? 'button'}
       class={[
         variant !== 'link' && base,
+        variant !== 'link' && radii[radius],
         variant === 'link' && size !== 'inline-icon' && linkBase,
         variant === 'link' && size === 'inline-icon' && iconLinkBase,
         variants[variant],

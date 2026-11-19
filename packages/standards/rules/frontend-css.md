@@ -14,10 +14,7 @@ paths:
   Tailwind theme, as a CSS custom property the theme exposes. A component reads
   the theme and never restates a value
 - no arbitrary values. `p-[13px]`, `text-[#333]` and `w-[calc(...)]` are
-  refused in review. A value the theme lacks is added to the theme, once. The
-  one exception is `packages/svelte/src/primitives/`, where a component copies
-  its class names from the React design system and
-  `primitives/classes.fixture.json` holds the exact set
+  refused in review. A value the theme lacks is added to the theme, once
 - a component is composed from utilities in its markup. A repeated group of
   utilities becomes a component or a `@apply` class in the component's own
   `<style>`, never a global stylesheet

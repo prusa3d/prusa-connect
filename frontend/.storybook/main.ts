@@ -15,11 +15,19 @@
 // one runtime, because `svelte()` from vite-plugin-svelte puts `svelte` in
 // `resolve.dedupe`. Two runtimes would fail with "Function called outside
 // component initialization".
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { StorybookConfig } from '@storybook/svelte-vite';
-import { mergeConfig, type PluginOption, searchForWorkspaceRoot } from 'vite';
+import {
+  mergeConfig,
+  type Plugin,
+  type PluginOption,
+  searchForWorkspaceRoot,
+} from 'vite';
+
+import { storageThumbnails } from '../test/story/storage-thumbnails.ts';
 
 import { importMap, sourceAliases } from '../vite/import-map.ts';
 
@@ -35,6 +43,29 @@ const isImportMap = (plugin: PluginOption): boolean =>
   plugin !== null &&
   'name' in plugin &&
   plugin.name === 'prusa-connect:import-map';
+
+const filePreviews: Plugin = {
+  name: 'prusa-connect:storybook-file-thumbnails',
+  configureServer(server) {
+    server.middlewares.use(
+      '/api/v1/storages/local/thumbnail',
+      (request, response, next) => {
+        const url = new URL(request.url ?? '', 'http://localhost');
+        const preview = storageThumbnails.get(
+          url.searchParams.get('path') ?? '',
+        );
+        if (request.method !== 'GET' || preview === undefined) {
+          next();
+          return;
+        }
+        response.setHeader('Content-Type', 'image/png');
+        response.end(
+          readFileSync(path.join(here, '../test/story/assets', preview.file)),
+        );
+      },
+    );
+  },
+};
 
 const config: StorybookConfig = {
   // A self-hosted open-source tool must not phone home on every build.
@@ -53,6 +84,7 @@ const config: StorybookConfig = {
   // `extensions/fleet-stats/ui`, which `make frontend-storybook` runs first.
   staticDirs: [
     { from: '../public/img', to: '/img' },
+    { from: '../public/fonts', to: '/fonts' },
     {
       from: '../../extensions/fleet-stats/ui/dist/ui',
       to: '/modules/fleet-stats',
@@ -62,14 +94,36 @@ const config: StorybookConfig = {
     mergeConfig(
       {
         ...vite,
-        plugins: (vite.plugins ?? [])
-          .flat()
-          .map((p) =>
-            isImportMap(p) ? importMap({ page: 'iframe.html' }) : p,
-          ),
+        plugins: [
+          filePreviews,
+          ...(vite.plugins ?? [])
+            .flat()
+            .map((p) =>
+              isImportMap(p) ? importMap({ page: 'iframe.html' }) : p,
+            ),
+        ],
       },
       {
-        resolve: { alias: sourceAliases() },
+        resolve: {
+          alias: [
+            ...sourceAliases(),
+            {
+              find: '@prusa/connect-ui/app.css',
+              replacement: path.resolve(
+                here,
+                '../../packages/svelte/src/styles/app.css',
+              ),
+            },
+            {
+              find: '@prusa/connect-ui/tokens.css',
+              replacement: path.resolve(
+                here,
+                '../../packages/svelte/src/styles/tokens.css',
+              ),
+            },
+          ],
+          dedupe: ['svelte'],
+        },
         // A list here replaces Vite's default of the workspace root, which
         // holds Storybook's own runtime, so the root is named again.
         server: {

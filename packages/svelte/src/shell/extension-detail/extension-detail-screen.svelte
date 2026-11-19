@@ -47,13 +47,16 @@
   });
 </script>
 
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-6">
+<!-- The header, the strip and every tab's panes share the page width, as
+     the other settings screens do; the text inside a pane stops at
+     `max-w-3xl`. -->
+<div class="flex w-full flex-col gap-section-gap">
   <PageTrail
     trail={[{ label: t('extensionDetail.extensions'), href: extensionsHref }]}
     page={title}
   />
   <DetailHeader {title} {loading} {actions} {titleAside} {meta} />
-  <DetailTabs {tabs} active={tab} onChange={onTabChange} />
+  <DetailTabs {tabs} active={tab} onChange={onTabChange} segmented />
 </div>
 
 {#snippet titleAside()}

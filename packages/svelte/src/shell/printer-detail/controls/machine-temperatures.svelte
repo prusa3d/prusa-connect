@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import {
     BED_PATH,
     BED_TARGET_PATH,
@@ -8,7 +10,7 @@
     nozzleTargetPath,
     PREHEAT_PRESETS,
     type PreheatPreset,
-    toolArgument,
+    type Device,
     type ToolReading,
   } from '../../../domain';
   import { formatUnit, t } from '../../../i18n';
@@ -18,12 +20,15 @@
     ValueEditor,
     type ValuePreset,
   } from '../../../primitives';
+  import { toolLabel } from '../../printers/tool-label';
+  import FilamentPositions from '../filament-positions.svelte';
+  import type { TelemetrySource } from '../types';
+  import NozzleEditor from './nozzle-editor.svelte';
   import {
     BED_MAX_CELSIUS,
     blocked,
     degreeScale,
     groupReason,
-    NOZZLE_MAX_CELSIUS,
     READING_TILE,
     SECTION_TITLE,
     VERBS,
@@ -39,8 +44,18 @@
     slots = [],
     perTool = false,
     chamberMax,
+    device,
+    telemetry,
+    assign,
   }: SectionProps & {
     material: string | undefined;
+    device?: Device | undefined;
+    telemetry?: TelemetrySource | undefined;
+    /**
+     * Draws the material of a tool the reader may assign, handed its id and
+     * the chip to fall back on: the Tools table's cell, so both assign alike.
+     */
+    assign?: Snippet<[string, Snippet]> | undefined;
     /** The toolheads of a tool changer. Empty draws nothing. */
     slots?: readonly ToolReading[];
     /** Whether the nozzle verb takes a tool, so each head is set alone. */
@@ -82,19 +97,18 @@
     })),
   ];
 
-  const nozzlePresets = $derived(presetsFor((preset) => preset.nozzleCelsius));
+  // A head with a feeder holds no material, its slots do, and a head the
+  // printer switched off holds none to assign.
+  const assignable = (id: number): boolean => {
+    const tool = device?.tools?.tools[String(id)];
+
+    return tool !== null && !tool?.feeder?.slot_count;
+  };
+
   const bedPresets = $derived(presetsFor((preset) => preset.bedCelsius));
 
-  const send = (
-    verb: string,
-    argument: string,
-    next: number,
-    extra?: Record<string, string>,
-  ) =>
-    onCommand(verb, {
-      [argument]: String(Math.round(scale.celsius(next))),
-      ...extra,
-    });
+  const send = (verb: string, argument: string, next: number) =>
+    onCommand(verb, { [argument]: String(Math.round(scale.celsius(next))) });
 </script>
 
 <section class="flex flex-col gap-3">
@@ -105,15 +119,18 @@
 
   <!-- One row per heater, each the full width of the column. -->
   <div class="grid gap-2">
-    <HeaterRow
-      class={READING_TILE}
-      label={t('printerDetailControls.nozzle.label')}
-      kind="tool"
-      nozzleTemp={reading(headNozzlePath)}
-      targetTemp={reading(headTargetPath)}
-      material={material ?? t('printerDetailControls.noFilament')}
-      {...nozzle.kind === 'absent' ? {} : { action: nozzleEditor }}
-    />
+    {#if slots.length === 0 || !perTool}
+      <HeaterRow
+        class={READING_TILE}
+        label={t('printerDetailControls.nozzle.label')}
+        kind="tool"
+        nozzleTemp={reading(headNozzlePath)}
+        targetTemp={reading(headTargetPath)}
+        material={material ?? t('printerDetailControls.noFilament')}
+        {...assign && assignable(head) ? { materialChip: headChip } : {}}
+        {...nozzle.kind === 'absent' ? {} : { action: nozzleEditor }}
+      />
+    {/if}
     {#if slots.length > 0}
       <div class={READING_TILE}>
         <h4 class="text-xs font-medium text-muted-foreground">
@@ -121,37 +138,31 @@
         </h4>
         {#each slots as slot (slot.index)}
           {@const target = slot.target}
-          {@const subject = t('printerDetailControls.tools.label', {
-            n: slot.index,
-          })}
           <HeaterRow
-            label={subject}
+            label={toolLabel(slot.index)}
             kind="tool"
             nozzleTemp={slot.temperature}
             targetTemp={target}
             material={slot.material ?? t('printerDetailControls.noFilament')}
             active={slot.active}
+            {...assign && assignable(slot.index)
+              ? { materialChip: toolChip }
+              : {}}
             {...perTool && nozzle.kind !== 'absent'
               ? { action: toolEditor }
               : {}}
           />
 
+          {#snippet toolChip()}{@render chip(slot.index)}{/snippet}
           {#snippet toolEditor()}
-            <ValueEditor
-              label={t('printerDetailControls.nozzle.label')}
-              {subject}
-              currentLabel={celsius(slot.temperature)}
-              target={scale.shown(target ?? 0)}
-              unit={scale.unit}
-              min={scale.shown(0)}
-              max={scale.shown(NOZZLE_MAX_CELSIUS)}
-              step={scale.step}
-              presets={nozzlePresets}
-              disabled={blocked(nozzle, busy)}
-              onCommit={(next: number) =>
-                send(VERBS.nozzle, 'nozzle_temperature', next, {
-                  tool: toolArgument(slot.index),
-                })}
+            <NozzleEditor
+              {resolve}
+              {busy}
+              {onCommand}
+              perTool
+              temperature={slot.temperature}
+              target={slot.target}
+              tool={slot.index}
             />
           {/snippet}
         {/each}
@@ -182,19 +193,25 @@
   {/if}
 </section>
 
+{#snippet headChip()}{@render chip(head)}{/snippet}
+
+{#snippet chip(id: number)}
+  {#snippet own()}
+    {#if device !== undefined && telemetry !== undefined}
+      <FilamentPositions {device} {telemetry} only={String(id)} />
+    {/if}
+  {/snippet}
+  {#if assign}{@render assign(String(id), own)}{/if}
+{/snippet}
+
 {#snippet nozzleEditor()}
-  <ValueEditor
-    label={t('printerDetailControls.nozzle.label')}
-    currentLabel={celsius(reading(headNozzlePath))}
-    target={scale.shown(reading(headTargetPath) ?? 0)}
-    unit={scale.unit}
-    min={scale.shown(0)}
-    max={scale.shown(NOZZLE_MAX_CELSIUS)}
-    step={scale.step}
-    presets={nozzlePresets}
-    disabled={blocked(nozzle, busy)}
-    announceTarget={reading(headTargetPath) !== undefined}
-    onCommit={(next: number) => send(VERBS.nozzle, 'nozzle_temperature', next)}
+  <NozzleEditor
+    {resolve}
+    {busy}
+    {onCommand}
+    {perTool}
+    temperature={reading(headNozzlePath)}
+    target={reading(headTargetPath)}
   />
 {/snippet}
 

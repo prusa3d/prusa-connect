@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { createRawSnippet } from 'svelte';
+import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import type { Device } from '../../../domain';
 import { expectNoViolations } from '../../../test/axe';
+import { fakeDevice } from '../../../test/fakes';
+import { openSurface } from '../../../test/open-surface';
 import PrinterTools from './printer-tools.svelte';
 
 type Tools = NonNullable<Device['tools']>;
@@ -90,7 +93,7 @@ describe('PrinterTools', () => {
 
     const drawn = await render(PrinterTools, { props: { tools: busy } });
 
-    expect(await rowText(/Head 0/)).toMatch(/MMU3 with 3 slots/);
+    expect(await rowText(/Tool 1/)).toMatch(/MMU3 with 3 slots/);
     await expect
       .element(page.getByText('Loading filament, step 17'))
       .toBeVisible();
@@ -138,7 +141,7 @@ describe('PrinterTools', () => {
       },
     });
 
-    const head = await rowText(/Head 0/);
+    const head = await rowText(/Tool 1/);
     expect(head).toMatch(/0.4\s*mm/);
     expect(head).toMatch(/PLA/);
     expect(head).toMatch(/215\s*°C/);
@@ -148,24 +151,24 @@ describe('PrinterTools', () => {
   it('draws one row per head with its nozzle and filament', async () => {
     await render(PrinterTools, { props: { tools: xl } });
 
-    const second = await rowText(/Head 1/);
+    const second = await rowText(/Tool 2/);
     expect(second).toMatch(/0.6\s*mm/);
     expect(second).toMatch(/Nothing loaded/);
-    expect(await rowText(/Head 0/)).toMatch(/PLA/);
-    expect(await rowText(/Head 0/)).toMatch(/215\s*°C/);
-    expect(await rowText(/Head 2/)).toMatch(/Switched off/);
-    await expect.element(page.getByText('Heads')).toBeVisible();
+    expect(await rowText(/Tool 1/)).toMatch(/PLA/);
+    expect(await rowText(/Tool 1/)).toMatch(/215\s*°C/);
+    expect(await rowText(/Tool 3/)).toMatch(/Switched off/);
+    await expect.element(page.getByText('Tool count')).toBeVisible();
     await expectNoViolations(page.getByRole('table').element());
   });
 
   it('lists the slots of a feeder under its head', async () => {
     await render(PrinterTools, { props: { tools: mmu } });
 
-    expect(await rowText(/Head 0/)).toMatch(/A feeder with 3 slots/);
-    expect(await rowText(/Slot 0.1/)).toMatch(/PETG/);
-    expect(await rowText(/Slot 0.2/)).toMatch(/Switched off/);
+    expect(await rowText(/Tool 1/)).toMatch(/A feeder with 3 slots/);
+    expect(await rowText(/Slot 2/)).toMatch(/PETG/);
+    expect(await rowText(/Slot 3/)).toMatch(/Switched off/);
     await expect
-      .element(page.getByRole('row', { name: /Slot 0.3/ }))
+      .element(page.getByRole('row', { name: /Slot 4/ }))
       .not.toBeInTheDocument();
 
     const order = [...page.getByRole('row').elements()].map(
@@ -196,8 +199,8 @@ describe('PrinterTools', () => {
       },
     });
 
-    expect(await rowText(/Head 0/)).toMatch(/Nothing loaded/);
-    expect(await rowText(/Head 1/)).not.toMatch(/Nothing loaded/);
+    expect(await rowText(/Tool 1/)).toMatch(/Nothing loaded/);
+    expect(await rowText(/Tool 2/)).not.toMatch(/Nothing loaded/);
   });
 
   it('shows the build volume the driver reports', async () => {
@@ -217,6 +220,110 @@ describe('PrinterTools', () => {
       },
     });
 
-    expect(await rowText(/Head 0/)).toMatch(/No reading yet/);
+    expect(await rowText(/Tool 1/)).toMatch(/No reading yet/);
+  });
+
+  describe('assigning from the table', () => {
+    const device: Device = {
+      ...fakeDevice('printer-1', 'XL'),
+      connected: true,
+      capabilities: [
+        'core.command.set_nozzle_temperature',
+        'core.command.set_nozzle_temperature#tool',
+      ],
+      state: { '/state': 'IDLE' },
+    };
+    const telemetry = { value: () => undefined, points: () => [] };
+
+    it('heats one head with the editor of the nozzle chip', async () => {
+      const onCommand = vi.fn();
+      await render(PrinterTools, {
+        props: {
+          tools: xl,
+          live: { device, telemetry, commands: { onCommand } },
+        },
+      });
+
+      await page
+        .getByRole('button', { name: 'Set Tool 2 extruder target' })
+        .click();
+      await (await openSurface()).getByRole('button', { name: 'PETG' }).click();
+      await (
+        await openSurface()
+      )
+        .getByRole('button', { name: 'Set', exact: true })
+        .click();
+
+      expect(onCommand).toHaveBeenCalledWith(
+        'core.command.set_nozzle_temperature',
+        { nozzle_temperature: '230', tool: '1' },
+      );
+    });
+
+    it('offers no editor to a printer that is not reporting', async () => {
+      await render(PrinterTools, {
+        props: {
+          tools: xl,
+          live: {
+            device: { ...device, connected: false },
+            telemetry,
+            commands: { onCommand: vi.fn() },
+          },
+        },
+      });
+
+      await expect
+        .element(page.getByRole('button', { name: /extruder target/ }))
+        .not.toBeInTheDocument();
+    });
+
+    it('draws the chip of the header where no extension assigns materials', async () => {
+      await render(PrinterTools, {
+        props: {
+          tools: xl,
+          live: { device: { ...device, tools: xl }, telemetry },
+        },
+      });
+
+      await expect
+        .element(page.getByRole('row', { name: /Tool 1/ }).getByRole('button'))
+        .toHaveTextContent('PLA');
+    });
+
+    it('opens the editor of a refused head with the reason', async () => {
+      await render(PrinterTools, {
+        props: {
+          tools: xl,
+          live: {
+            device,
+            telemetry,
+            commands: { onCommand: vi.fn(), locked: true },
+          },
+        },
+      });
+
+      await page
+        .getByRole('button', { name: 'Set Tool 1 extruder target' })
+        .click();
+      await expect
+        .element((await openSurface()).getByText('This printer is locked.'))
+        .toBeVisible();
+    });
+
+    it('hands a head and a slot to the material picker, and a feeder not', async () => {
+      const material = createRawSnippet((id: () => string) => ({
+        render: () => `<button>Assign ${id()}</button>`,
+      }));
+      await render(PrinterTools, {
+        props: { tools: { ...mmu, tools: { ...mmu.tools } }, material },
+      });
+
+      await expect
+        .element(page.getByRole('button', { name: 'Assign 0.1' }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole('button', { name: 'Assign 0', exact: true }))
+        .not.toBeInTheDocument();
+    });
   });
 });

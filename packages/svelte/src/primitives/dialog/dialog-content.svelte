@@ -42,7 +42,7 @@
     data-slot="dialog-content"
     data-size={size}
     class={[
-      'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] grid-cols-1 gap-4 rounded-sm border border-border bg-background p-6 outline-none data-[state=closed]:animate-scale-out data-[state=open]:animate-scale-in',
+      'fixed top-1/2 left-1/2 z-50 grid w-full max-w-dialog -translate-x-1/2 -translate-y-1/2 grid-cols-1 gap-4 rounded-md border border-border bg-background p-6 outline-none state-open:animate-scale-in state-closed:animate-scale-out',
       WIDTH[size],
       className,
     ]}

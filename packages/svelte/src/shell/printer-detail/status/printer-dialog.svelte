@@ -137,7 +137,7 @@
               disabled={reason !== undefined || commands.sending}
               pending={commands.pending === VERB}
               onclick={() => {
-                commands.onCommand(VERB, dialogAnswer(dialog, button));
+                void commands.onCommand(VERB, dialogAnswer(dialog, button));
               }}
             >
               {(buddy ? printerButtonLabel(button) : undefined) ??

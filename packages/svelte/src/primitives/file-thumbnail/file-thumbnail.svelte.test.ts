@@ -1,5 +1,5 @@
 import FolderIcon from '@lucide/svelte/icons/folder';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
@@ -18,7 +18,7 @@ const plate =
 const name = 'Bracket_Left_Reinforced_v4_FINAL.gcode';
 
 const draw = async (
-  props: Partial<FileThumbnailProps> = {},
+  props: Pick<FileThumbnailProps, 'thumbnailUrl'> = {},
 ): Promise<HTMLElement> => {
   const { container } = await render(FileThumbnail, {
     props: { name, glyph: FolderIcon, thumbnailUrl: plate, ...props },
@@ -230,6 +230,25 @@ describe('FileThumbnail', () => {
     held[1]?.();
   });
 
+  it('shows the artwork, not an empty box, while it waits for a slot', async () => {
+    const artwork =
+      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"/>';
+    const held = holdBothSlots();
+    try {
+      const { container } = await render(FileThumbnail, {
+        props: { name, glyphSrc: artwork, thumbnailUrl: plate },
+      });
+      await settle();
+
+      expect(box(container).tagName).toBe('BUTTON');
+      expect(box(container).querySelector('img')?.getAttribute('src')).toBe(
+        artwork,
+      );
+    } finally {
+      for (const give of held) give();
+    }
+  });
+
   it('leaves the queue when unmounted before its turn', async () => {
     const held = holdBothSlots();
     const { unmount } = await render(FileThumbnail, {
@@ -249,6 +268,83 @@ describe('FileThumbnail', () => {
     expect(started).toBe(true);
     next();
     held[1]?.();
+  });
+
+  // A printer that never answers the picture. Its address is held back on the
+  // element, so the request neither loads nor fails.
+  it('drops a picture that has not answered in 20 s, and its slot', async () => {
+    HTMLImageElement.prototype.setAttribute = function (attr, value) {
+      Element.prototype.setAttribute.call(
+        this,
+        attr === 'src' ? 'data-asked' : attr,
+        value,
+      );
+    };
+    HTMLImageElement.prototype.removeAttribute = function (attr) {
+      Element.prototype.removeAttribute.call(
+        this,
+        attr === 'src' ? 'data-asked' : attr,
+      );
+    };
+    const other = takeThumbnailSlot(() => undefined);
+    try {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      let stuck: HTMLImageElement | null = null;
+      try {
+        const container = await draw();
+        await expect.poll(() => container.querySelector('img')).not.toBeNull();
+        stuck = container.querySelector('img');
+        expect(stuck?.getAttribute('data-asked')).toBe(plate);
+        vi.advanceTimersByTime(20_000);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      // Dropping the address is what cancels the request.
+      await expect.poll(() => stuck?.getAttribute('data-asked')).toBeNull();
+      expect(stuck?.isConnected).toBe(false);
+      let started = false;
+      const next = takeThumbnailSlot(() => {
+        started = true;
+      });
+      expect(started).toBe(true);
+      next();
+    } finally {
+      other();
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'setAttribute');
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'removeAttribute');
+    }
+  });
+
+  // Paging or leaving the page before the picture answered.
+  it('cancels a picture that has not answered when it is unmounted', async () => {
+    HTMLImageElement.prototype.setAttribute = function (attr, value) {
+      Element.prototype.setAttribute.call(
+        this,
+        attr === 'src' ? 'data-asked' : attr,
+        value,
+      );
+    };
+    HTMLImageElement.prototype.removeAttribute = function (attr) {
+      Element.prototype.removeAttribute.call(
+        this,
+        attr === 'src' ? 'data-asked' : attr,
+      );
+    };
+    try {
+      const { container, unmount } = await render(FileThumbnail, {
+        props: { name, glyph: FolderIcon, thumbnailUrl: plate },
+      });
+      await expect.poll(() => container.querySelector('img')).not.toBeNull();
+      const pending = container.querySelector('img');
+      expect(pending?.getAttribute('data-asked')).toBe(plate);
+
+      await unmount();
+      expect(pending?.getAttribute('data-asked')).toBeNull();
+    } finally {
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'setAttribute');
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'removeAttribute');
+    }
   });
 
   it('leaves the focus on the trigger while the preview is up', async () => {

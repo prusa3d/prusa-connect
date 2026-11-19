@@ -1,11 +1,10 @@
 <script lang="ts">
   import { t } from '../../i18n';
-  import { Logo, Notifications, Toaster } from '../../primitives';
+  import { ConnectLogo, Notifications, Toaster } from '../../primitives';
   import { applyTheme, theme } from '../../styles/theme.svelte';
   import { AppFooter } from '../app-footer';
   import { ConnectionStatus } from '../connection-status';
   import { PhoneBar } from '../phone-bar';
-  import { productSubtitle } from '../product-subtitle';
   import { Rail } from '../rail';
   import { SendsIndicator } from '../sends-indicator';
   import { ThemeToggle } from '../theme-toggle';
@@ -81,6 +80,10 @@
   $effect(() => publishHeight(bar, '--app-phone-bar-height'));
 </script>
 
+{#snippet brand()}
+  <ConnectLogo size="xs" label={productName} />
+{/snippet}
+
 {#snippet bell()}
   {#if sends !== undefined}
     <SendsIndicator {sends} />
@@ -97,11 +100,21 @@
 <div
   bind:this={root}
   data-slot="app-shell"
-  class="@container/app-shell flex min-h-svh flex-col bg-background text-foreground"
+  class="@container/app-shell flex min-h-svh flex-col bg-background text-foreground not-dark:bg-shell-canvas"
 >
+  <!-- The first Tab stop, so a keyboard reader passes the header and the nine
+       navigation stops in one key. The router leaves a fragment link to the
+       browser, which moves focus to `main`. It waits above the
+       screen until it has focus. -->
+  <a
+    href="#main"
+    class="fixed start-2 -top-full z-70 rounded-sm bg-background px-4 py-2 text-sm font-medium text-foreground outline-none focus-visible:top-2 focus-visible:ring-2 focus-visible:ring-ring"
+  >
+    {t('shell.skipToContent')}
+  </a>
   <header
     bind:this={header}
-    class="sticky top-0 z-10 hidden items-center justify-between gap-x-4 border-b border-border bg-muted px-4 py-1 @xl/app-shell:px-6 @3xl/app-shell:flex"
+    class="sticky top-0 z-10 hidden items-center justify-between gap-x-4 border-b border-border bg-muted px-4 py-4 not-dark:border-panel-outline not-dark:bg-shell-chrome @xl/app-shell:px-6 @3xl/app-shell:flex"
   >
     <span class="shrink-0">
       {#if homeHref}
@@ -110,10 +123,10 @@
           class="rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
           aria-label={t('shell.home')}
         >
-          <Logo size="sm" subtitle={productSubtitle(productName)} />
+          {@render brand()}
         </a>
       {:else}
-        <Logo size="sm" subtitle={productSubtitle(productName)} />
+        {@render brand()}
       {/if}
     </span>
     <div class="flex items-center gap-2">
@@ -143,7 +156,11 @@
 
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       {@render banner?.()}
-      <main class="isolate min-w-0 flex-1 px-4 py-6 @xl/app-shell:px-6">
+      <main
+        id="main"
+        tabindex="-1"
+        class="isolate min-w-0 flex-1 px-4 py-6 outline-none @xl/app-shell:px-6"
+      >
         {@render children()}
       </main>
       <AppFooter
@@ -178,3 +195,10 @@
   <UserMenu {principal} {principalDetail} {onSignOut} />
   <ThemeToggle />
 {/snippet}
+
+<style>
+  header {
+    padding-block: calc(var(--spacing) * 4);
+    min-block-size: 3.5rem;
+  }
+</style>

@@ -7,6 +7,12 @@ Write the entry in the same change as the code. One bullet per behaviour a
 person outside this repository can observe: a route, a setting, a screen, a
 refusal. Name the route and the setting key, never a function or a file.
 
+## 0.3.4 - 2026-11-17
+
+### Changed
+
+- The page takes the Ember look of the web app. The trend axis starts at zero, printer names in the heatmap have room, and the failures table lists only printers with failures.
+
 ## 0.3.3 - 2026-11-16
 
 ### Changed

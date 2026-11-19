@@ -9,8 +9,9 @@
   A person who may not write sees the material and its spools and no control
   the module would refuse.
 
-  The printers the spools are on are read after the spools, only to name
-  them. A failed read draws the rows without names.
+  The printers the spools are on are read after the spools, to name them,
+  and so are their tools, for what each row offers as the Tools tab does. A
+  failed read draws the rows without names or without those actions.
 -->
 <script lang="ts">
   import {
@@ -37,7 +38,8 @@
     Toggle,
     toast,
   } from '@prusa/connect-ui/primitives';
-  import { onMount } from 'svelte';
+  import { STATE_PATH, textAt } from '@prusa/connect-ui/domain';
+  import { onMount, untrack } from 'svelte';
 
   import AddDialog from '../add-dialog/add-dialog.svelte';
   import CustomMaterialForm from '../add-dialog/custom-material-form.svelte';
@@ -58,6 +60,8 @@
   import { OWN_MODULE } from '../own-module';
   import { heldList } from '../list.svelte';
   import FaultNote from '../materials-page/fault-note.svelte';
+  import { holdPrinterMaterials } from '../printer-material/printer-material-state.svelte';
+  import { unloadFilament } from '../printer-material/tool-offer';
   import EditSpoolDialog from './edit-spool-dialog.svelte';
   import SpoolTable from './spool-table.svelte';
 
@@ -101,53 +105,171 @@
     detail?.material !== undefined || detail?.custom !== undefined,
   );
 
+  let nameVersion = 0;
+
   /**
    * Reads the printers the listed spools are on. Each printer answered costs
    * the module a question to the host, so the page asks for no others.
    */
   const name = (): void => {
+    const version = ++nameVersion;
     const ids = new Set(
       spools.flatMap((s) => (s.tool ? [s.tool.device_id] : [])),
     );
     if (ids.size === 0) return;
     service.printers([...ids]).then(
-      (found) => (printers = found),
+      (found) => {
+        if (version === nameVersion) printers = found;
+      },
       () => undefined,
     );
   };
 
-  const read = async (): Promise<void> => {
+  /**
+   * Each printer still holding a listed spool's tool, held as its Tools tab
+   * holds it: read on mount, again a moment after one of its tools changes,
+   * and every few seconds while the page is in view. A printer the person
+   * may not observe has no id here.
+   */
+  const heldIds = $derived(
+    JSON.stringify(
+      [
+        ...new Set(
+          spools.flatMap((s) =>
+            s.tool && !s.tool.gone && s.tool.device_id !== ''
+              ? [s.tool.device_id]
+              : [],
+          ),
+        ),
+      ].sort(),
+    ),
+  );
+  // Not reactive: the holds are taken and released by the effect below.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const holds = new Map<string, ReturnType<typeof holdPrinterMaterials>>();
+  let held = $state.raw<
+    ReadonlyMap<string, ReturnType<typeof holdPrinterMaterials>['state']>
+  >(new Map());
+  $effect(() => {
+    const ids = JSON.parse(heldIds) as string[];
+    untrack(() => {
+      for (const [id, hold] of holds) {
+        if (!ids.includes(id)) {
+          hold.release();
+          holds.delete(id);
+        }
+      }
+      for (const id of ids) {
+        if (!holds.has(id))
+          holds.set(id, holdPrinterMaterials(host, service, id));
+      }
+      held = new Map([...holds].map(([id, hold]) => [id, hold.state]));
+    });
+  });
+  onMount(() => () => {
+    for (const hold of holds.values()) hold.release();
+    holds.clear();
+  });
+
+  /** The tools of each held printer, once read. */
+  const tools = $derived(
+    new Map(
+      [...held].flatMap(([id, state]) =>
+        state.printer === undefined ? [] : [[id, state.printer]],
+      ),
+    ),
+  );
+
+  /**
+   * The state word and link of each held printer, as the host's fleet keeps
+   * them live. A print that starts or ends changes what the rules allow, and
+   * the module tells of no such change, so the Tools tab's read follows it.
+   */
+  const live = $derived(
+    new Map(
+      [...held.keys()].map((id) => {
+        const device = host.fleet.device(id);
+        return [
+          id,
+          device === undefined
+            ? ''
+            : `${String(device.connected)} ${textAt(device, STATE_PATH) ?? ''}`,
+        ];
+      }),
+    ),
+  );
+  /** What each held printer's last read already answers for. */
+  let seen = new Map<string, string>();
+  $effect(() => {
+    const now = live;
+    untrack(() => {
+      for (const [id, state] of now) {
+        if (seen.has(id) && seen.get(id) !== state) held.get(id)?.soon();
+      }
+      seen = now;
+    });
+  });
+
+  let readVersion = 0;
+
+  const read = async (
+    keepPages = false,
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    const version = ++readVersion;
     fault = undefined;
     try {
       const [found, first] = await Promise.all([
-        service.material(uuid),
-        service.spools(uuid),
+        service.material(uuid, signal),
+        service.spools(uuid, undefined, signal),
       ]);
+      const rows = [...first.spools];
+      let offset = first.next;
+      while (
+        keepPages &&
+        rows.length < spools.length &&
+        offset !== undefined &&
+        version === readVersion
+      ) {
+        const page = await service.spools(uuid, offset, signal);
+        rows.push(...page.spools);
+        offset = page.next;
+      }
+      if (version !== readVersion || signal?.aborted) return;
       detail = found;
-      spools = first.spools;
-      next = first.next;
+      spools = rows;
+      next = offset;
       name();
-      // A tick on a spool no longer listed would delete one nobody sees.
-      selection.clear();
+      if (keepPages) {
+        selection.set(
+          rows.filter((spool) => spool.tool != null).map((spool) => spool.id),
+          false,
+        );
+      } else {
+        selection.clear();
+      }
     } catch (thrown) {
+      if (version !== readVersion || signal?.aborted) return;
       if ((thrown as { status?: number }).status === 404) gone = true;
       else fault = thrown;
     } finally {
-      loaded = true;
+      if (version === readVersion && !signal?.aborted) loaded = true;
     }
   };
 
   const more = async (): Promise<void> => {
     if (next === undefined) return;
+    const version = readVersion;
     fault = undefined;
     busy = true;
     try {
       const page = await service.spools(uuid, next);
+      if (version !== readVersion) return;
       spools = [...spools, ...page.spools];
       next = page.next;
       name();
     } catch (thrown) {
-      fault = thrown;
+      if (version === readVersion) fault = thrown;
     } finally {
       busy = false;
     }
@@ -156,8 +278,7 @@
   /**
    * A spool of this material told of on the event stream, such as one losing
    * filament as it prints, takes its new weight in place: a read again would
-   * lose the pages read and the ticks. Only a lost place in the stream reads
-   * again.
+   * otherwise reread the pages for every change in weight.
    */
   const weigh = (change: SpoolChange): void => {
     if (change.material_uuid !== uuid || change.deleted === true) return;
@@ -175,20 +296,24 @@
       return;
     }
 
-    void read();
     const following = new AbortController();
-    follow(
-      host.client,
-      AbortSignal.any([following.signal, host.signal]),
-      ['spool'],
-      (_, change) => {
-        // A lost place in the stream may have missed any weight.
-        if (change === undefined) void read();
-        else weigh(change as SpoolChange);
-      },
-    );
+    const signal = AbortSignal.any([following.signal, host.signal]);
+    let refresh: ReturnType<typeof setTimeout> | undefined;
+    void read(false, signal);
+    follow(host.client, signal, ['spool', 'tool'], (endpoint, change) => {
+      if (change !== undefined && 'spool_uuid' in change) {
+        weigh(change);
+      } else if (endpoint === 'tool') {
+        // The spool route applies the caller's permissions to the tool's location.
+        clearTimeout(refresh);
+        refresh = setTimeout(() => void read(true, signal), 300);
+      }
+    });
 
-    return () => following.abort();
+    return () => {
+      clearTimeout(refresh);
+      following.abort();
+    };
   });
 
   /** Runs one write; a refusal is kept for the dialog or page that asked. */
@@ -279,8 +404,6 @@
     }
   };
 
-  // A spool on a tool that is gone is cleared here, as no printer page shows
-  // that tool.
   const unassignSpool = async (spool: Spool): Promise<void> => {
     const on = spool.tool;
     if (on == null) return;
@@ -289,6 +412,19 @@
       await service.unassign(on.device_id, on.tool_id);
     });
     if (cleared) await read();
+    else {
+      fault = dialogFault;
+      dialogFault = undefined;
+    }
+  };
+
+  // The printer unloads the head it prints with, which is the one this row
+  // offers it on.
+  const unloadSpool = async (spool: Spool): Promise<void> => {
+    const on = spool.tool;
+    if (on == null) return;
+    fault = undefined;
+    if (await attempt(() => unloadFilament(host, on.device_id))) await read();
     else {
       fault = dialogFault;
       dialogFault = undefined;
@@ -484,11 +620,14 @@
               {spools}
               packages={detail.packages}
               mayWrite={list.mayWrite}
+              {busy}
               {printers}
+              {tools}
               mergeable={next !== undefined ||
                 spools.some((s) => s.source === 'printer')}
               onassign={(spool: Spool) => (assigning = spool)}
               onunassign={(spool: Spool) => void unassignSpool(spool)}
+              onunload={(spool: Spool) => void unloadSpool(spool)}
               onmerge={(spool: Spool) => {
                 dialogFault = undefined;
                 merging = spool;
@@ -557,15 +696,14 @@
     if (!next) editingMaterial = false;
   }}
 >
-  <!-- Portalled, so it carries the module's name for its utilities; the cap
-       is the one the host's own GuidedDialog uses. -->
-  <!-- eslint-disable no-restricted-syntax -->
+  <!-- Portalled, so the panel carries the module's name for the utilities
+       inside it. A scoped rule never matches the scope's root, so the
+       panel's own cap is the host's. -->
   <DialogContent
     data-module={OWN_MODULE}
     size="xl"
-    class="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+    class="max-h-dialog-height overflow-y-auto"
   >
-    <!-- eslint-enable no-restricted-syntax -->
     <DialogHeader>
       <DialogTitle>{t('materials.material.editTitle')}</DialogTitle>
     </DialogHeader>

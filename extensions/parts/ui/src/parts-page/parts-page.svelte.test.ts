@@ -516,6 +516,20 @@ describe('the parts page', () => {
     expect(comments.nth(1).getByRole('button').elements()).toHaveLength(1);
   });
 
+  it('keeps the folder tree behind a toggle on a narrow page', async () => {
+    await page.viewport(480, 900);
+    try {
+      await open();
+      const tree = page.getByTestId('folder-tree');
+
+      await expect.element(tree).not.toBeVisible();
+      await userEvent.click(page.getByTestId('tree-toggle'));
+      await expect.element(tree).toBeVisible();
+    } finally {
+      await page.viewport(1280, 900);
+    }
+  });
+
   it('closes and opens a folder of the tree, and every folder at once', async () => {
     const stub = await open({
       routes: {

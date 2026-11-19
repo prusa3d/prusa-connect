@@ -2,6 +2,7 @@
      the printers behind each connector, updates, backups, and how the server
      appears on the local network. -->
 <script lang="ts">
+  import { translateFor } from '@prusa/connect-ui/i18n';
   import type { RestartMode } from '@prusa/connect-ui/data';
   import {
     ServerOverview,
@@ -17,9 +18,12 @@
   import { untrack } from 'svelte';
 
   import { restartAllowed } from '../restart-access';
+  import { APP_NAMESPACE } from '../i18n';
   import { PATHS } from '../routes';
   import type { AppContext } from '../screens';
   import NotFound from './not-found.svelte';
+
+  const t = translateFor(APP_NAMESPACE);
 
   let { ctx }: { ctx: AppContext } = $props();
 
@@ -76,7 +80,7 @@
 {#if !upgrades && (active === 'updates' || active === 'backups')}
   <NotFound {ctx} />
 {:else}
-  <SettingsScreen>
+  <SettingsScreen title={t('app.nav.settings.server')}>
     <ServerSettingsShell
       {active}
       overviewHref={PATHS.settingsServerOverview}
@@ -84,9 +88,10 @@
       {updatesHref}
       {backupsHref}
       networkHref={PATHS.settingsServerNetwork}
+      onNavigate={ctx.go}
     >
       {#if active === 'overview'}
-        <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-4">
           <ServerOverview
             {health}
             {maintenance}

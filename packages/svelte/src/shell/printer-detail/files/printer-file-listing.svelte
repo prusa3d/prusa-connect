@@ -9,6 +9,7 @@
     Button,
     EmptyState,
     FaultAlert,
+    Label,
     ListingNoMatch,
     type ListingState,
     ListingSkeleton,
@@ -19,6 +20,7 @@
     TableBody,
     TableCaption,
     TableHead,
+    SortableTableHead,
     TableHeader,
     TableRow,
   } from '../../../primitives';
@@ -27,8 +29,11 @@
   import PrinterFileTiles from './printer-file-tiles.svelte';
   import type { PrinterFileEntry, PrinterFileRowContext } from './types';
 
+  const DIRECTION = { asc: 'ascending', desc: 'descending' } as const;
+
   let {
     listing,
+    thumbnailSize = 0,
     row,
     actions,
     refusal,
@@ -47,6 +52,7 @@
     onClearSearch,
   }: {
     listing: ListingState<PrinterFileEntry>;
+    thumbnailSize?: number;
     row: PrinterFileRowContext;
     actions: Snippet<[PrinterFileEntry]>;
     refusal?: FaultText | undefined;
@@ -95,6 +101,20 @@
       : formatDuration((now - Date.parse(readingSince)) / 1000),
   );
 </script>
+
+{#snippet column(field: 'name' | 'size' | 'modified', className?: string)}
+  {@const sort = listing.sort}
+  <SortableTableHead
+    label={t(`printerDetailFiles.column.${field}`)}
+    class={className}
+    direction={sort?.field === field ? DIRECTION[sort.order] : undefined}
+    onSort={(order: 'asc' | 'desc' | undefined) => {
+      if (order === undefined) return;
+      listing.setSort(field, order);
+      listing.setPage(0);
+    }}
+  />
+{/snippet}
 
 <div
   class="@container/printer-file-listing flex flex-col gap-4"
@@ -149,12 +169,12 @@
     <PrinterFileTiles
       rows={listing.page}
       name={(entry: PrinterFileEntry) => row.nameOf(entry)}
-      glyph={(entry: PrinterFileEntry) => row.glyphOf(entry)}
       thumbnail={(entry: PrinterFileEntry) => row.thumbnailOf(entry)}
       shows={(field: string) => row.shows(field)}
       selection={row.selection}
       onOpen={(path: string) => row.onOpenFolder(path)}
       {actions}
+      {thumbnailSize}
     />
   {:else}
     <Table>
@@ -164,23 +184,27 @@
       <TableHeader>
         <TableRow>
           <TableHead class="w-11">
-            <span class="flex size-11 items-center justify-center">
+            <!-- A label, so the whole cell ticks the box: the column's resize
+                 handle sits a few pixels from the 16px box itself. -->
+            <Label class="h-9 w-11 justify-center">
               <SelectAllCheckbox
                 selection={row.selection}
                 keys={listing.page.map((entry) => entry.path)}
                 label={t('printerDetailFiles.select.page')}
               />
-            </span>
+            </Label>
           </TableHead>
-          <TableHead>{t('printerDetailFiles.column.name')}</TableHead>
-          {#if row.shows('size')}
-            <TableHead>{t('printerDetailFiles.column.size')}</TableHead>
-          {/if}
-          {#if row.shows('modified')}
-            <TableHead class="hidden @xl/printer-file-listing:table-cell">
-              {t('printerDetailFiles.column.modified')}
-            </TableHead>
-          {/if}
+          {@render column('name', '@xl/printer-file-listing:w-1/2')}
+          {#if row.shows('size')}{@render column(
+              'size',
+              '@max-lg/printer-file-listing:hidden @xl/printer-file-listing:w-1/10',
+            )}{/if}
+          <!-- Drawn whenever the pane has room, and never offered as a
+               field: a toggle the pane overrules would do nothing. -->
+          {@render column(
+            'modified',
+            'hidden @4xl/printer-file-listing:table-cell',
+          )}
           <TableHead class="sr-only">
             {t('printerDetailFiles.column.actions')}
           </TableHead>
@@ -188,7 +212,7 @@
       </TableHeader>
       <TableBody>
         {#each listing.page as entry (entry.path)}
-          <PrinterFileRow {entry} depth={0} {row} />
+          <PrinterFileRow {entry} depth={0} {row} {thumbnailSize} />
         {/each}
       </TableBody>
     </Table>

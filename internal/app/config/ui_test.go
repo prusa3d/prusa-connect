@@ -13,9 +13,9 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/app/config"
 )
 
-// repoRoot is this package's distance from the top of the tree. The two tests
-// below read files the app owns, because the point of them is that the core and
-// the app cannot drift apart quietly.
+// repoRoot is this package's distance from the top of the tree. The language
+// test below reads a file the app owns, because the point of it is that the core
+// and the app cannot drift apart quietly.
 const repoRoot = "../../.."
 
 // TestTheAppIsServedUnlessItIsSwitchedOff is the owner's rule of 2026-09-14: a
@@ -51,7 +51,6 @@ core:
     title: "Workshop floor"
     default_language: cs
     theme: dark
-    skin: slicer
     printer_address: https://shop.example.net
     support_url: https://portal.example/beta
 `))
@@ -61,15 +60,14 @@ core:
 	require.Equal(t, "Workshop floor", core.Frontend.Title)
 	require.Equal(t, "cs", core.Frontend.DefaultLanguage)
 	require.Equal(t, "dark", core.Frontend.Theme)
-	require.Equal(t, "slicer", core.Frontend.Skin)
 	require.Equal(t, "https://shop.example.net", core.Frontend.PrinterAddress)
 	require.Equal(t, "https://portal.example/beta", core.Frontend.SupportURL)
 	require.NoError(t, core.Validate())
 }
 
 // TestAValueTheAppCannotDrawIsRefused is why these keys are validated at all.
-// Each one is handed to a browser, and a language with no catalogue or a skin
-// with no file is a page of missing labels rather than an error anybody sees.
+// Each one is handed to a browser, and a language with no catalogue is a page of
+// missing labels rather than an error anybody sees.
 func TestAValueTheAppCannotDrawIsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -81,7 +79,6 @@ func TestAValueTheAppCannotDrawIsRefused(t *testing.T) {
 			block: "    default_language: kl\n", says: "default_language",
 		},
 		"a theme that is not one of the three": {block: "    theme: sepia\n", says: "theme"},
-		"a skin with no file behind it":        {block: "    skin: neon\n", says: "skin"},
 		"a title nobody could read": {
 			block: "    title: \"" + strings.Repeat("x", config.MaxTitleBytes+1) + "\"\n", says: "title",
 		},
@@ -163,38 +160,11 @@ func TestTheLanguagesAreTheCataloguesTheAppShips(t *testing.T) {
 	}
 }
 
-// TestTheSkinsAreTheOnesTheThemeDeclares holds the skin list to the stylesheet
-// the blocks live in, for the same reason: a skin the operator names has to be
-// one the library can draw. Each skin marks its light block with a
-// "@tokens <name> light" comment, and tokens.test.ts reads the same marker.
-func TestTheSkinsAreTheOnesTheThemeDeclares(t *testing.T) {
-	t.Parallel()
-
-	theme, err := os.ReadFile(filepath.Join(repoRoot, "packages/svelte/src/styles/tokens.css"))
-	require.NoError(t, err)
-
-	marker := regexp.MustCompile(`/\* @tokens ([a-z]+) light \*/`)
-	found := marker.FindAllStringSubmatch(string(theme), -1)
-	require.NotEmpty(t, found, "the theme declares no skin; this test reads tokens.css by path")
-
-	for _, match := range found {
-		require.NoErrorf(t, skinAccepted(match[1]),
-			"the theme declares the %s skin and core.frontend.skin refuses it", match[1])
-	}
-}
-
-// languageAccepted and skinAccepted ask the validator rather than a list, so
-// these tests hold the refusal an operator meets and not a variable beside it.
+// languageAccepted asks the validator rather than a list, so the test holds the
+// refusal an operator meets and not a variable beside it.
 func languageAccepted(language string) error {
 	core := config.Default().WithDefaults("config/config.yaml")
 	core.Frontend.DefaultLanguage = language
-
-	return core.Validate()
-}
-
-func skinAccepted(skin string) error {
-	core := config.Default().WithDefaults("config/config.yaml")
-	core.Frontend.Skin = skin
 
 	return core.Validate()
 }

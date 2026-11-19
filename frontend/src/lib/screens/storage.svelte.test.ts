@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
@@ -51,6 +51,12 @@ const waiting = {
 };
 
 describe('the storage page', () => {
+  // Wide enough for every file row act: a phone-width pane folds them into
+  // the row's menu.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   it('lists the files of the first storage', async () => {
     await render(StorageFiles, { props: { ctx: appContext(SERVED) } });
 
@@ -227,6 +233,63 @@ describe('the storage page', () => {
     expect(run).toHaveBeenCalledWith('local:bracket.bgcode');
   });
 
+  // A wide pane draws the row's acts on the row, so with no module entry
+  // there is nothing for a menu to hold.
+  it('draws no row menu on a wide pane when no module adds a file action', async () => {
+    await render(StorageFiles, { props: { ctx: appContext(SERVED) } });
+
+    await expect
+      .element(page.getByRole('button', { name: 'Rename bracket.bgcode' }))
+      .toBeVisible();
+    expect(
+      page.getByRole('button', { name: 'Actions for bracket.bgcode' }).query(),
+    ).toBeNull();
+  });
+
+  it('folds the row acts into a menu on a narrow pane with no module', async () => {
+    await page.viewport(375, 800);
+    await render(StorageFiles, { props: { ctx: appContext(SERVED) } });
+
+    const menu = page.getByRole('button', {
+      name: 'Actions for bracket.bgcode',
+    });
+    await expect.element(menu).toBeVisible();
+    expect(
+      page.getByRole('button', { name: 'Rename bracket.bgcode' }).query(),
+    ).toBeNull();
+  });
+
+  // A phone-width pane folds the row's acts into a menu, and a module's file
+  // action joins that menu rather than drawing a second one beside it.
+  it('keeps one menu on a file row of a narrow pane with a module file action', async () => {
+    await page.viewport(375, 800);
+    localStorage.clear();
+    const registry = new SlotRegistry();
+    registry.declare('test.later', {
+      file_action: [{ id: 'later', title: 'Print later', destructive: false }],
+    });
+    registry.registerAction('test.later', 'file-action', 'later', vi.fn());
+    const ctx = appContext(SERVED);
+
+    await render(WithSlots, { props: { registry, screen: StorageFiles, ctx } });
+
+    const menu = page.getByRole('button', {
+      name: 'Actions for bracket.bgcode',
+    });
+    await expect.element(menu).toBeInTheDocument();
+    expect(menu.elements()).toHaveLength(1);
+    const scroller = page.getByRole('table').element().parentElement!;
+    expect(scroller.scrollWidth).toBeLessThanOrEqual(scroller.clientWidth);
+
+    await menu.click();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Rename' }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole('menuitem', { name: 'Print later' }))
+      .toBeInTheDocument();
+  });
+
   // An operator hides one file action of a module (ADR-20261021-3dp); the module's
   // other action stays in the row's menu.
   it('leaves a hidden module file action out of the row menu', async () => {
@@ -261,6 +324,12 @@ describe('the storage page', () => {
 });
 
 describe('the storage page on a Fractal server', () => {
+  // Wide enough for every file row act: a phone-width pane folds them into
+  // the row's menu.
+  beforeEach(async () => {
+    await page.viewport(1400, 900);
+  });
+
   const MOUNT = '/api/v1/modules/com.github.aux.prusa3d.fractal-link';
 
   const fractal = {

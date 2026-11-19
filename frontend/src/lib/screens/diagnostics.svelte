@@ -1,6 +1,7 @@
 <!-- The Diagnostics room inside Settings: a redacted bundle for a support
      ticket, carrying this browser's own log. -->
 <script lang="ts">
+  import { translateFor } from '@prusa/connect-ui/i18n';
   import {
     type DiagnosticsChoice,
     downloadDiagnostics,
@@ -18,10 +19,13 @@
   import { client } from '../client';
   import { saveBlob } from '../download';
   import { entries } from '../log';
+  import { APP_NAMESPACE } from '../i18n';
   import type { AppContext } from '../screens';
   import { sendDiagnosticsToPortal } from '../send-diagnostics';
   import { DiagnosticsExtensions } from '../stores/diagnostics-extensions.svelte';
   import NotFound from './not-found.svelte';
+
+  const t = translateFor(APP_NAMESPACE);
 
   let { ctx }: { ctx: AppContext } = $props();
 
@@ -77,7 +81,7 @@
 
 <!-- A server that leaves the bundle out does not answer this address. -->
 {#if ctx.settings.diagnostics}
-  <SettingsScreen>
+  <SettingsScreen title={t('app.nav.settings.diagnostics')}>
     <SettingsDiagnosticsScreen
       {onDownload}
       {onCopy}

@@ -186,7 +186,7 @@
         <InfoIcon aria-hidden="true" class="size-4 text-muted-foreground" />
         {t('parts.overview.facts')}
       </h2>
-      <KeyValueList rows={facts} />
+      <KeyValueList rows={facts} labelWidth="14rem" />
     </section>
   </div>
 {/if}

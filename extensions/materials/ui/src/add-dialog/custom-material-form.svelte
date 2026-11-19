@@ -18,24 +18,23 @@
   import PlusIcon from '@lucide/svelte/icons/plus';
   import {
     Button,
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
     Chip,
     ColorInput,
+    Combobox,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
     DialogFooter,
     Field,
     Input,
     SwatchPicker,
   } from '@prusa/connect-ui/primitives';
-  import { onMount, untrack } from 'svelte';
+  import { onMount, type Snippet, untrack } from 'svelte';
 
   import type { MaterialFields } from '../api';
   import { heldHost } from '../host';
   import { heldList } from '../list.svelte';
   import FaultNote from '../materials-page/fault-note.svelte';
-  import SearchSelect from '../search-select.svelte';
   import {
     CERTIFICATIONS,
     MAX_SECONDARY,
@@ -47,6 +46,8 @@
 
   let {
     initial,
+    filamentOnly = false,
+    compact = false,
     submitLabel,
     busy,
     fault,
@@ -54,6 +55,8 @@
     oncancel,
   }: {
     initial?: MaterialFields | undefined;
+    filamentOnly?: boolean;
+    compact?: boolean;
     submitLabel: string;
     busy: boolean;
     fault: unknown;
@@ -142,7 +145,9 @@
 
   // The form is made new each time it is shown, so it starts from `initial`.
   const start = untrack(() => initial);
-  let klass = $state<'FFF' | 'SLA'>(start?.class === 'SLA' ? 'SLA' : 'FFF');
+  let klass = $state<'FFF' | 'SLA'>(
+    !untrack(() => filamentOnly) && start?.class === 'SLA' ? 'SLA' : 'FFF',
+  );
   let preset = $state<string | undefined>(undefined);
   let brand = $state(start?.brand_name ?? '');
   let type = $state(start?.type ?? '');
@@ -263,6 +268,13 @@
   const required = (label: string): string => `${label} *`;
 </script>
 
+{#snippet block(heading: string, body: Snippet)}
+  <section class="flex flex-col gap-4 pt-6 first:pt-0">
+    <h3 class="text-sm font-semibold">{heading}</h3>
+    {@render body()}
+  </section>
+{/snippet}
+
 {#snippet numberField(key: Numeric, label: string)}
   <Field
     label={t(label)}
@@ -279,36 +291,40 @@
 {/snippet}
 
 {#snippet identity()}
-  <div
-    class="flex flex-wrap gap-2"
-    role="group"
-    aria-label={t('materials.filter.class')}
-  >
-    {#each ['FFF', 'SLA'] as const as chosen (chosen)}
-      <Chip
-        selected={klass === chosen}
-        onclick={() => {
-          klass = chosen;
-          // A resin has no filament type, so neither the type nor a preset
-          // built around one survives the switch.
-          if (chosen === 'SLA') {
-            type = '';
-            preset = undefined;
-          }
-          follow();
-        }}
-      >
-        {chosen}
-      </Chip>
-    {/each}
-  </div>
+  {#if !filamentOnly}
+    <div
+      class="flex flex-wrap gap-2"
+      role="group"
+      aria-label={t('materials.filter.class')}
+    >
+      {#each ['FFF', 'SLA'] as const as chosen (chosen)}
+        <Chip
+          selected={klass === chosen}
+          onclick={() => {
+            klass = chosen;
+            // A resin has no filament type, so neither the type nor a preset
+            // built around one survives the switch.
+            if (chosen === 'SLA') {
+              type = '';
+              preset = undefined;
+            }
+            follow();
+          }}
+        >
+          {chosen}
+        </Chip>
+      {/each}
+    </div>
+  {/if}
 
   {#if !resin}
     <div class="flex flex-col gap-2">
       <p class="text-sm font-medium">{t('materials.custom.presets')}</p>
-      <p class="text-xs text-muted-foreground">
-        {t('materials.custom.presetsHint')}
-      </p>
+      {#if !compact}
+        <p class="text-xs text-muted-foreground">
+          {t('materials.custom.presetsHint')}
+        </p>
+      {/if}
       <div
         class="flex flex-wrap gap-2"
         role="group"
@@ -324,7 +340,7 @@
   {/if}
 
   <!-- Two fields to a row where the dialog has the width for it. -->
-  <div class="pair grid gap-4">
+  <div class={['pair grid', compact ? 'compact-pair gap-2' : 'gap-4']}>
     <div class="flex flex-col gap-2">
       <Field
         label={required(t('materials.custom.brand'))}
@@ -360,26 +376,26 @@
       {/if}
     </div>
     {#if !resin}
-      <div class="flex flex-col gap-2">
-        <p class="text-sm font-medium">
-          {required(t('materials.custom.type'))}
-        </p>
-        <SearchSelect
-          label={t('materials.custom.type')}
-          allLabel={t('materials.custom.typePlaceholder')}
-          options={typeOptions}
-          value={type === '' ? undefined : type}
-          onPick={(picked: string | undefined) => {
+      <Field
+        label={required(t('materials.custom.type'))}
+        control={Combobox}
+        controlProps={{
+          items: typeOptions,
+          value: type === '' ? undefined : type,
+          label: t('materials.custom.type'),
+          placeholder: t('materials.custom.typePlaceholder'),
+          onPick: (picked: string | undefined) => {
             type = picked ?? '';
             // A preset only stands for as long as its own type does.
             if (preset !== type) preset = undefined;
             follow();
-          }}
-        />
-      </div>
+          },
+        }}
+      />
     {/if}
     <Field
       label={required(t('materials.custom.name'))}
+      class={compact ? 'col-span-full' : undefined}
       control={Input}
       controlProps={{
         name: 'name',
@@ -389,17 +405,9 @@
         oninput: (e: Event) => (name = typed(e)),
       }}
     />
-    <Field
-      label={t('materials.custom.abbreviation')}
-      control={Input}
-      controlProps={{
-        name: 'abbreviation',
-        autocomplete: 'off',
-        placeholder: type,
-        value: abbreviation,
-        oninput: (e: Event) => (abbreviation = typed(e)),
-      }}
-    />
+    {#if !compact}
+      {@render abbreviationField()}
+    {/if}
   </div>
 
   <div class="flex flex-col gap-2">
@@ -411,7 +419,7 @@
         swatches={PRIMARY_SWATCHES}
         value={primary}
         label={t('materials.custom.primary')}
-        size="md"
+        size={compact ? 'sm' : 'md'}
         onPick={(hex: string | undefined) => {
           if (hex !== undefined) primary = hex;
         }}
@@ -427,6 +435,26 @@
     </div>
   </div>
 
+  {#if !compact}
+    {@render colourDetails()}
+  {/if}
+{/snippet}
+
+{#snippet abbreviationField()}
+  <Field
+    label={t('materials.custom.abbreviation')}
+    control={Input}
+    controlProps={{
+      name: 'abbreviation',
+      autocomplete: 'off',
+      placeholder: type,
+      value: abbreviation,
+      oninput: (e: Event) => (abbreviation = typed(e)),
+    }}
+  />
+{/snippet}
+
+{#snippet colourDetails()}
   <div class="flex flex-col gap-2">
     <p class="text-sm font-medium">{t('materials.custom.secondary')}</p>
     <div class="flex flex-wrap items-center gap-2">
@@ -501,7 +529,12 @@
   </div>
   <div class="flex flex-col gap-2">
     <p class="text-sm font-medium">{t('materials.details.tags')}</p>
-    <div class="max-h-48 overflow-y-auto rounded-md border border-border p-2">
+    <div
+      class={[
+        'rounded-md border border-border p-2',
+        { 'max-h-48 overflow-y-auto': !compact },
+      ]}
+    >
       <div
         class="flex flex-wrap gap-2"
         role="group"
@@ -520,54 +553,46 @@
   </div>
 {/snippet}
 
-<form data-part="custom-material" class="flex flex-col gap-4" onsubmit={submit}>
+<form
+  data-part="custom-material"
+  class={['flex flex-col', compact ? 'gap-3' : 'gap-4']}
+  onsubmit={submit}
+>
   <FaultNote {fault} />
-  <Card>
-    <CardHeader>
-      <CardTitle
-        ><h3 class="contents">{t('materials.custom.identity')}</h3></CardTitle
+  {#if compact}
+    {@render identity()}
+    <Collapsible class="rounded-sm border border-border">
+      <CollapsibleTrigger
+        type="button"
+        class="cursor-pointer px-3 py-2 text-sm font-medium hover:bg-accent"
       >
-    </CardHeader>
-    <CardContent class="flex flex-col gap-4">
-      {@render identity()}
-    </CardContent>
-  </Card>
-  {#if !resin}
-    <Card>
-      <CardHeader>
-        <CardTitle
-          ><h3 class="contents">
-            {t('materials.custom.temperatures')}
-          </h3></CardTitle
-        >
-      </CardHeader>
-      <CardContent class="flex flex-col gap-4">
+        {t('materials.custom.advanced')}
+      </CollapsibleTrigger>
+      <CollapsibleContent
+        forceMount
+        class="compact-options grid gap-4 border-t border-border p-3"
+      >
+        {@render abbreviationField()}
+        {@render colourDetails()}
+        <h3 class="text-sm font-medium">
+          {t('materials.custom.temperatures')}
+        </h3>
         {@render temperatures()}
-      </CardContent>
-    </Card>
+        <h3 class="text-sm font-medium">{t('materials.custom.physical')}</h3>
+        {@render physical()}
+        {@render classification()}
+      </CollapsibleContent>
+    </Collapsible>
+  {:else}
+    <div class="flex flex-col gap-6 divide-y divide-border">
+      {@render block(t('materials.custom.identity'), identity)}
+      {#if !resin}
+        {@render block(t('materials.custom.temperatures'), temperatures)}
+      {/if}
+      {@render block(t('materials.custom.physical'), physical)}
+      {@render block(t('materials.custom.classification'), classification)}
+    </div>
   {/if}
-  <Card>
-    <CardHeader>
-      <CardTitle
-        ><h3 class="contents">{t('materials.custom.physical')}</h3></CardTitle
-      >
-    </CardHeader>
-    <CardContent class="flex flex-col gap-4">
-      {@render physical()}
-    </CardContent>
-  </Card>
-  <Card>
-    <CardHeader>
-      <CardTitle
-        ><h3 class="contents">
-          {t('materials.custom.classification')}
-        </h3></CardTitle
-      >
-    </CardHeader>
-    <CardContent class="flex flex-col gap-4">
-      {@render classification()}
-    </CardContent>
-  </Card>
   <DialogFooter>
     <Button type="button" variant="secondary" onclick={oncancel}>
       {t('materials.add.cancel')}
@@ -583,6 +608,14 @@
 </form>
 
 <style>
+  :global(.compact-options[data-state='closed']) {
+    display: none;
+  }
+
+  .pair.compact-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .pair {
     grid-template-columns: repeat(
       auto-fit,

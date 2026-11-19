@@ -20,9 +20,6 @@ const (
 	DefaultLanguage = "en"
 	// DefaultTheme lets the operating system decide between light and dark.
 	DefaultTheme = ThemeSystem
-	// DefaultSkin is the skin the component library's theme declares without
-	// an attribute.
-	DefaultSkin = "prusa"
 	// MaxTitleBytes bounds core.frontend.title. It is served unauthenticated
 	// and written into a browser tab.
 	MaxTitleBytes = 64
@@ -41,20 +38,17 @@ const (
 	ThemeDark   = "dark"
 )
 
-// languages is the catalogue set the app ships, and skins is the set of brand
-// files beside its theme. Both are copied here because the binary carries
-// neither set of files, and the core must not serve a value the page has no
-// catalogue for.
+// languages is the catalogue set the app ships. It is copied here because the
+// binary carries no catalogue, and the core must not serve a value the page has
+// no catalogue for.
 //
-// TestTheLanguagesAreTheCataloguesTheAppShips and
-// TestTheSkinsAreTheFilesTheLibraryShips compare each list with the tree it
+// TestTheLanguagesAreTheCataloguesTheAppShips compares the list with the tree it
 // was copied from.
 //
 //nolint:gochecknoglobals // two closed sets read at validation time, never written.
 var (
 	languages = []string{"en", "cs", "de", "es", "fr", "it", "pl"}
 	themes    = []string{ThemeSystem, ThemeLight, ThemeDark}
-	skins     = []string{DefaultSkin, "slicer", "prusapro"}
 )
 
 // Frontend is the web app served at the origin root, and how it looks before
@@ -62,8 +56,8 @@ var (
 //
 // Every key here reaches the browser through GET /api/v1/ui, which takes no
 // credential, because the page reads it before its first paint. There is
-// nothing private in it: a name, a language, a palette, a brand file and the
-// address every printer is already told to dial.
+// nothing private in it: a name, a language, a palette and the address every
+// printer is already told to dial.
 //
 // Enabled is a pointer so that an operator who wrote `enabled: false` is told
 // apart from one who wrote no block. The default is on: a server nobody
@@ -81,10 +75,6 @@ type Frontend struct {
 	DefaultLanguage string `yaml:"default_language"`
 	// Theme is system, light or dark.
 	Theme string `yaml:"theme"`
-	// Skin is the skin the component library draws in, written onto the root
-	// element as data-skin. "prusa" is the theme's own values and carries no
-	// attribute.
-	Skin string `yaml:"skin"`
 	// PrinterAddress is the origin a printer dials, as the add-printer page
 	// writes it into prusa_printer_settings.ini. Empty means the address the
 	// page was opened on. It is set when printers reach this server by another
@@ -105,7 +95,7 @@ type Frontend struct {
 func (f Frontend) On() bool { return f.Enabled == nil || *f.Enabled }
 
 // validate reports the first key the app will not be served on. Each value
-// here is handed to a browser, so a value the page has no file or catalogue
+// here is handed to a browser, so a value the page has no palette or catalogue
 // for is refused at startup.
 func (f Frontend) validate() error {
 	if strings.TrimSpace(f.Title) == "" {
@@ -125,11 +115,6 @@ func (f Frontend) validate() error {
 	if !slices.Contains(themes, f.Theme) {
 		return fmt.Errorf("%w: core.frontend.theme is %q, expected one of %v",
 			ErrInvalid, f.Theme, themes)
-	}
-
-	if !slices.Contains(skins, f.Skin) {
-		return fmt.Errorf("%w: core.frontend.skin is %q, expected one of %v",
-			ErrInvalid, f.Skin, skins)
 	}
 
 	if err := validPrinterAddress(f.PrinterAddress); err != nil {

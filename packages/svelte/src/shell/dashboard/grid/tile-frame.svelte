@@ -100,14 +100,14 @@
       if (editing) editor.selected = tile.id;
     }}
     class={[
-      'isolate flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card text-card-foreground outline-none',
+      'isolate flex h-full flex-col overflow-hidden rounded-md border border-border/65 bg-card text-card-foreground outline-none not-dark:border-panel-outline',
       editing &&
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       selected && 'ring-2 ring-primary',
       dragged !== undefined && 'shadow-lg',
     ]}
   >
-    <div class="flex h-full min-h-0 flex-col p-3" inert={editing}>
+    <div class="tile-body flex h-full min-h-0 flex-col" inert={editing}>
       <CardBody card={tile} {editing} />
     </div>
 
@@ -178,6 +178,21 @@
 
   .board-tile[data-dragged='move'] {
     transform: translate(var(--dx), var(--dy));
+  }
+
+  .board-tile {
+    container: dashboard-tile / inline-size;
+  }
+
+  .tile-body {
+    --dashboard-panel-padding: var(--spacing-dashboard-panel-padding);
+    --dashboard-heading-gap: var(--spacing-dashboard-heading-gap);
+    padding-block: var(--spacing-dashboard-padding-block);
+    padding-inline: var(--dashboard-panel-padding);
+  }
+
+  .board-tile[data-kind='core/summary'] .tile-body {
+    padding-block: var(--spacing-dashboard-summary-padding);
   }
 
   /* A pointer on a grip drags. Without this a touch screen scrolls instead.

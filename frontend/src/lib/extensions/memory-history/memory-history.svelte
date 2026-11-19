@@ -47,7 +47,7 @@
 </script>
 
 <div class="flex flex-col gap-3" data-part="memory-history">
-  <h2 class="text-sm font-medium">{t(`${KEY}.title`)}</h2>
+  <h3 class="text-sm font-medium">{t(`${KEY}.title`)}</h3>
   {#if missing}
     <p class="text-sm" data-part="history-gone">{t(`${SHARED}.gone`)}</p>
   {:else if series === undefined && fault !== undefined}
@@ -85,7 +85,7 @@
   {#if !missing && history !== undefined}
     <Separator />
     <div class="flex flex-col gap-2" data-part="recent-stops">
-      <h3 class="text-sm font-medium">{t(`${KEY}.stops`)}</h3>
+      <h4 class="text-sm font-medium">{t(`${KEY}.stops`)}</h4>
       {#if stops.length === 0}
         <p class="text-sm text-muted-foreground">{t(`${KEY}.stopsNone`)}</p>
       {:else}

@@ -143,63 +143,71 @@
   const timeSwitchId = `${switchId}-time`;
 </script>
 
-<SettingsPane
-  class="w-full"
-  title={t('settingsNetwork.title')}
-  description={t('settingsNetwork.description')}
->
-  <div class="flex flex-col gap-3 pb-6">
-    {#if !source.loaded && fault === undefined}
-      <div aria-busy="true" aria-label={t('settingsNetwork.loading')}>
-        <Skeleton class="h-10 w-full" />
-      </div>
-    {:else}
-      <SettingsRow
-        label={t('settingsNetwork.hidden.label')}
-        description={t('settingsNetwork.hidden.note')}
-      >
-        {#snippet control()}
-          <Switch
-            id={switchId}
-            aria-label={t('settingsNetwork.hidden.label')}
-            bind:checked={() => source.hidden, setHidden}
-            disabled={source.saving || !source.loaded}
-          />
-        {/snippet}
-      </SettingsRow>
+<div class="flex w-full flex-col gap-4">
+  <SettingsPane class="w-full" title={t('settingsNetwork.title')}>
+    <div
+      class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+    >
+      {#if !source.loaded && fault === undefined}
+        <div aria-busy="true" aria-label={t('settingsNetwork.loading')}>
+          <Skeleton class="h-10 w-full" />
+        </div>
+      {:else}
+        <SettingsRow
+          layout="switch"
+          label={t('settingsNetwork.hidden.label')}
+          description={t('settingsNetwork.hidden.note')}
+        >
+          {#snippet control()}
+            <Switch
+              id={switchId}
+              aria-label={t('settingsNetwork.hidden.label')}
+              bind:checked={() => source.hidden, setHidden}
+              disabled={source.saving || !source.loaded}
+            />
+          {/snippet}
+        </SettingsRow>
 
-      {#if announcementText}
-        <p class="text-sm text-muted-foreground" aria-live="polite">
-          {announcementText}
-        </p>
-      {/if}
-
-      {#if verdict === 'bridged'}
-        <Alert variant="warning" data-part="bridged">
-          <AlertTitle>{t('settingsNetwork.bridged.title')}</AlertTitle>
-          <AlertDescription
-            >{t('settingsNetwork.bridged.body')}</AlertDescription
+        {#if announcementText}
+          <p
+            class="max-w-3xl text-caption text-muted-foreground"
+            aria-live="polite"
           >
-        </Alert>
+            {announcementText}
+          </p>
+        {/if}
+
+        {#if verdict === 'bridged'}
+          <Alert variant="warning" data-part="bridged">
+            <AlertTitle>{t('settingsNetwork.bridged.title')}</AlertTitle>
+            <AlertDescription
+              >{t('settingsNetwork.bridged.body')}</AlertDescription
+            >
+          </Alert>
+        {/if}
       {/if}
 
-      {#if announced.length > 0}
-        <section class="flex flex-col gap-3 pt-3">
-          <h3 class="text-sm font-semibold">
-            {t('settingsNetwork.announced.heading')}
-          </h3>
-          <KeyValueList rows={announced} />
-        </section>
-      {/if}
-    {/if}
+      <FaultAlert {fault} />
+    </div>
+  </SettingsPane>
 
-    <FaultAlert {fault} />
+  {#if announced.length > 0}
+    <SettingsPane class="w-full" title={t('settingsNetwork.announced.heading')}>
+      <div class="p-panel-padding-mobile @lg/pane:p-panel-padding">
+        <KeyValueList rows={announced} />
+      </div>
+    </SettingsPane>
+  {/if}
 
-    {#if timeServer !== undefined}
-      <section class="flex flex-col gap-3 pt-3" data-part="time-server">
-        <h3 class="text-sm font-semibold">
-          {t('settingsNetwork.timeServer.heading')}
-        </h3>
+  {#if timeServer !== undefined}
+    <SettingsPane
+      class="w-full"
+      title={t('settingsNetwork.timeServer.heading')}
+    >
+      <div
+        class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+        data-part="time-server"
+      >
         {#if !timeServer.loaded && timeFault === undefined}
           <div
             aria-busy="true"
@@ -209,6 +217,7 @@
           </div>
         {:else if timeServer.loaded}
           <SettingsRow
+            layout="switch"
             label={t('settingsNetwork.timeServer.label')}
             description={t('settingsNetwork.timeServer.note')}
           >
@@ -250,14 +259,17 @@
               {/if}
             </Alert>
           {:else if timeStateText}
-            <p class="text-sm text-muted-foreground" aria-live="polite">
+            <p
+              class="max-w-3xl text-caption text-muted-foreground"
+              aria-live="polite"
+            >
               {timeStateText}
             </p>
           {/if}
         {/if}
 
         <FaultAlert fault={timeFault} />
-      </section>
-    {/if}
-  </div>
-</SettingsPane>
+      </div>
+    </SettingsPane>
+  {/if}
+</div>

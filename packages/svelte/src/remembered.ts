@@ -4,6 +4,8 @@
 export interface RememberedStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  // Optional, so a fake that only reads and writes still fits.
+  removeItem?(key: string): void;
 }
 
 const browser: {
@@ -53,5 +55,16 @@ export const writeRemembered = (
     storage?.setItem(key, value);
   } catch {
     // A browser that refuses to remember still draws the choice it was given.
+  }
+};
+
+export const forgetRemembered = (
+  storage: RememberedStorage | null | undefined,
+  key: string,
+): void => {
+  try {
+    storage?.removeItem?.(key);
+  } catch {
+    // A browser that refuses to forget keeps a value nothing reads.
   }
 };

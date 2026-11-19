@@ -18,6 +18,7 @@
     AlertTitle,
     Button,
     FaultAlert,
+    SettingsPane,
     Skeleton,
   } from '../../primitives';
   import { PortalPairingWizard } from '../portal-pairing';
@@ -70,106 +71,94 @@
   });
 </script>
 
-<section class="flex flex-col gap-4" aria-labelledby="online-update-heading">
-  <div>
-    <h3 id="online-update-heading" class="text-sm font-semibold">
-      {t('settingsMaintenance.online.heading')}
-    </h3>
-    <p class="text-sm text-muted-foreground">
-      {t('settingsMaintenance.online.description')}
-    </p>
-  </div>
-
-  {#if source.portal === undefined}
-    <p class="text-sm text-muted-foreground">
-      {t('settingsMaintenance.delivery.unavailable')}
-    </p>
-  {:else}
-    <PortalPairingWizard pairing={source.portal} />
-  {/if}
-
-  <div class="flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h4 class="text-sm font-semibold">
-        {t('settingsMaintenance.releases.heading')}
-      </h4>
-      <p class="text-sm text-muted-foreground">
-        {t('settingsMaintenance.releases.description')}
+<SettingsPane class="w-full" title={t('settingsMaintenance.online.heading')}>
+  <div
+    class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
+    {#if source.portal === undefined}
+      <p class="text-body text-muted-foreground">
+        {t('settingsMaintenance.delivery.unavailable')}
       </p>
-    </div>
-  </div>
-  {#if source.releaseLoading}
-    <div class="flex flex-col gap-2" aria-busy="true">
-      <Skeleton class="h-20 w-full" />
-      <Skeleton class="h-20 w-full" />
-    </div>
-  {:else if limited}
-    <div class="flex flex-col gap-3" data-part="release-limited">
-      <Alert variant="warning">
-        <ClockIcon aria-hidden="true" />
-        <AlertTitle>{t('settingsMaintenance.releases.limited')}</AlertTitle>
-        <AlertDescription>
-          {waitSeconds > 0
-            ? t('settingsMaintenance.releases.limitedWait', {
-                wait: formatDuration(shownWait),
-              })
-            : t('settingsMaintenance.releases.limitedOver')}
-        </AlertDescription>
-      </Alert>
-      <Button
-        class="self-start"
-        variant="secondary"
-        disabled={working || waitSeconds > 0}
-        onclick={() => void source.refreshReleases()}
-      >
-        {t('settingsMaintenance.releases.retry')}
-      </Button>
-    </div>
-  {:else if unpaired}
-    <p class="text-sm text-muted-foreground" data-part="release-unpaired">
-      {t('settingsMaintenance.releases.unpaired')}
+    {:else}
+      <PortalPairingWizard pairing={source.portal} />
+    {/if}
+
+    <p class="text-body text-muted-foreground">
+      {t('settingsMaintenance.releases.description')}
     </p>
-  {:else if releaseFault}
-    <div class="flex flex-col gap-3">
-      <FaultAlert fault={releaseFault} />
-      <Button
-        class="self-start"
-        variant="secondary"
-        disabled={working}
-        onclick={() => void source.refreshReleases()}
-      >
-        {t('settingsMaintenance.releases.retry')}
-      </Button>
-    </div>
-  {:else if source.releases.length === 0}
-    <p class="text-sm text-muted-foreground">
-      {t('settingsMaintenance.releases.empty')}
-    </p>
-  {:else}
-    <div class="divide-y divide-border border-y border-border">
-      {#each source.releases as release (release.version)}
-        <article class="py-4">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h5 class="font-medium">{release.name}</h5>
-              <p class="text-xs text-muted-foreground">
-                {formatDateTime(release.published_at)}
-                · {formatBytes(release.binary.size)}
-              </p>
+    {#if source.releaseLoading}
+      <div class="flex flex-col gap-2" aria-busy="true">
+        <Skeleton class="h-20 w-full" />
+        <Skeleton class="h-20 w-full" />
+      </div>
+    {:else if limited}
+      <div class="flex flex-col gap-3" data-part="release-limited">
+        <Alert variant="warning">
+          <ClockIcon aria-hidden="true" />
+          <AlertTitle>{t('settingsMaintenance.releases.limited')}</AlertTitle>
+          <AlertDescription>
+            {waitSeconds > 0
+              ? t('settingsMaintenance.releases.limitedWait', {
+                  wait: formatDuration(shownWait),
+                })
+              : t('settingsMaintenance.releases.limitedOver')}
+          </AlertDescription>
+        </Alert>
+        <Button
+          class="self-start"
+          variant="secondary"
+          disabled={working || waitSeconds > 0}
+          onclick={() => void source.refreshReleases()}
+        >
+          {t('settingsMaintenance.releases.retry')}
+        </Button>
+      </div>
+    {:else if unpaired}
+      <p class="text-body text-muted-foreground" data-part="release-unpaired">
+        {t('settingsMaintenance.releases.unpaired')}
+      </p>
+    {:else if releaseFault}
+      <div class="flex flex-col gap-3">
+        <FaultAlert fault={releaseFault} />
+        <Button
+          class="self-start"
+          variant="secondary"
+          disabled={working}
+          onclick={() => void source.refreshReleases()}
+        >
+          {t('settingsMaintenance.releases.retry')}
+        </Button>
+      </div>
+    {:else if source.releases.length === 0}
+      <p class="text-body text-muted-foreground">
+        {t('settingsMaintenance.releases.empty')}
+      </p>
+    {:else}
+      <div class="divide-y divide-border">
+        {#each source.releases as release (release.version)}
+          <article class="py-3 first:pt-0 last:pb-0">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 class="text-body font-medium">{release.name}</h3>
+                <p class="text-caption text-muted-foreground">
+                  {formatDateTime(release.published_at)}
+                  · {formatBytes(release.binary.size)}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={working}
+                onclick={() => void source.stage(release)}
+              >
+                {t('settingsMaintenance.action.stage')}
+              </Button>
             </div>
-            <Button
-              size="sm"
-              disabled={working}
-              onclick={() => void source.stage(release)}
-            >
-              {t('settingsMaintenance.action.stage')}
-            </Button>
-          </div>
-          {#if release.notes}
-            <p class="mt-2 text-sm whitespace-pre-line">{release.notes}</p>
-          {/if}
-        </article>
-      {/each}
-    </div>
-  {/if}
-</section>
+            {#if release.notes}
+              <p class="text-body mt-2 whitespace-pre-line">{release.notes}</p>
+            {/if}
+          </article>
+        {/each}
+      </div>
+    {/if}
+  </div>
+</SettingsPane>

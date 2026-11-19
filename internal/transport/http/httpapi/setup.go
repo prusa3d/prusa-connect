@@ -589,9 +589,9 @@ func setupFault(err error, doing string) error {
 // The frontend at the origin root is not here: it is a mount and not an
 // operation, so it is served whatever this reports, and a person can reach the
 // page that records the decision. get-ui-settings is here because the page
-// reads the title, the language, the theme and the skin before its first
-// paint. A pending server that refused it would draw the setup screen with no
-// name and in the wrong colours.
+// reads the title, the language and the theme before its first paint. A
+// pending server that refused it would draw the setup screen with no name and
+// in the wrong colours.
 //
 //nolint:gochecknoglobals // a lookup table, read-only after init.
 var setupOpenOperations = map[string]bool{

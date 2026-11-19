@@ -58,6 +58,7 @@ export interface PlotInput {
   readonly drawn: readonly ChartSeries[];
   readonly unit: string | undefined;
   readonly minStep: number | undefined;
+  readonly zeroBaseline?: boolean | undefined;
   readonly threshold: ChartThreshold | undefined;
   readonly markers: readonly ChartMarker[] | undefined;
   readonly regions: readonly ChartRegion[] | undefined;
@@ -82,7 +83,11 @@ export const plotOf = (input: PlotInput) => {
   const { drawn, unit, threshold, regions } = input;
 
   const yScale = valueScale(
-    Math.min(...drawn.map(lowestOf), threshold?.value ?? Infinity),
+    Math.min(
+      ...drawn.map(lowestOf),
+      threshold?.value ?? Infinity,
+      input.zeroBaseline ? 0 : Infinity,
+    ),
     Math.max(...drawn.map(highestOf), threshold?.value ?? -Infinity),
     undefined,
     input.minStep,

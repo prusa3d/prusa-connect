@@ -21,6 +21,7 @@
     state,
     path,
     held,
+    largePrintAgain = false,
   }: {
     device: Device;
     commands: CommandPort;
@@ -29,6 +30,7 @@
     /** The file to print again, when the machine has named one. */
     path: string | undefined;
     /** Whether the printer still holds that file, or undefined until known. */
+    largePrintAgain?: boolean;
     held?: boolean | undefined;
   } = $props();
 
@@ -64,7 +66,7 @@
   });
 
   const send = (verb: LifecycleVerb): void => {
-    commands.onCommand(
+    void commands.onCommand(
       capabilityFor(verb),
       verb === 'start_print' && path !== undefined ? { path } : undefined,
     );
@@ -94,7 +96,7 @@
       </span>
     {:else if printVerb}
       <Button
-        size="sm"
+        size={largePrintAgain && printVerb === 'start_print' ? 'lg' : 'sm'}
         variant={printVerb === 'pause_print' ? 'secondary' : 'default'}
         disabled={commands.sending}
         pending={commands.pending === capabilityFor(printVerb)}

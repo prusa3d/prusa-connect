@@ -29,4 +29,4 @@ window.addEventListener('unhandledrejection', (event) => {
   });
 });
 
-mount(App, { target });
+mount(App, { target, props: { useServerAppearance: true } });

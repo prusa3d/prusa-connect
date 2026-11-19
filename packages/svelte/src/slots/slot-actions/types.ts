@@ -22,6 +22,12 @@ export type SlotActionsProps = WithSlotDevice<ActionOutletTarget> & {
   /** Classes for the menu's button. */
   class?: string | undefined;
   /**
+   * Classes the menu's button adds while it holds only `items`, for a screen
+   * that draws those acts on the subject itself at some widths and needs the
+   * menu only where they fold.
+   */
+  itemsOnlyClass?: string | undefined;
+  /**
    * Draws the entries marked primary as buttons before the menu, which is
    * what the subject's own page does. Everywhere else they stay menu items
    * (ADR-20261029-dgv).

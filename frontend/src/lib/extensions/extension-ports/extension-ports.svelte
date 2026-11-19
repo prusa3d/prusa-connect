@@ -75,7 +75,7 @@
   };
 </script>
 
-<div class="flex flex-col gap-4" data-part="ports">
+<div class="flex flex-col gap-section-gap" data-part="ports">
   <p class="text-sm text-muted-foreground">
     {t('app.settings.extensions.ports.note')}
   </p>
@@ -137,9 +137,10 @@
     <p class="text-xs text-muted-foreground">
       {t('app.settings.extensions.confirm.portsMove')}
     </p>
-    <div>
+    <div class="flex justify-end">
       <Button
-        size="sm"
+        size="control"
+        data-settings-action
         disabled={busy || !allValid || !changed}
         aria-busy={busy}
         onclick={() => {

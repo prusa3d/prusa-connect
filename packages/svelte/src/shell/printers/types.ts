@@ -39,6 +39,10 @@ export interface PrinterRow {
   tier: PrinterSeverityTier;
   /** Absent when the machine has never printed. */
   jobName: string | undefined;
+  jobThumbnailUrl?: string | undefined;
+  jobRunning?: boolean | undefined;
+  remaining?: number | undefined;
+  filamentTool?: string | undefined;
   /** Whole percent, or `null` when the machine reports none. */
   progress: number | null;
   nozzle: number | undefined;
@@ -74,6 +78,8 @@ export interface PrinterCardProps {
   picture?: Component;
   /** The device-card slot's outlet, drawn under the status when given. */
   line?: Snippet<[deviceId: string]>;
+  /** Told each time the card's actions menu opens or shuts. */
+  onMenuOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 export interface PrinterFrameProps {
@@ -128,6 +134,9 @@ export interface TagFilter {
 
 export interface PrintersScreenProps {
   listing: FleetListingSource;
+  /** Address of the preview for a file on the printer's storage. */
+  thumbnailFor?:
+    ((deviceId: string, path: string) => string | undefined) | undefined;
   /** How many printers the whole fleet holds; decides the hero shape and the empty fleet. */
   printerCount: number;
   /** Without it, the screen offers no tag filter. */

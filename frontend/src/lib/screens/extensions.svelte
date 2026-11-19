@@ -44,6 +44,7 @@
   import PackageIcon from '@lucide/svelte/icons/package';
   import Settings2Icon from '@lucide/svelte/icons/settings-2';
   import ShieldAlertIcon from '@lucide/svelte/icons/shield-alert';
+  import { SettingsScreen } from '@prusa/connect-ui/shell';
   import {
     describeFault,
     formatDateTime,
@@ -69,7 +70,8 @@
     ListingSkeleton,
     ListingState,
     ListingToolbar,
-    PageHeader,
+    Label,
+    Switch,
     Pager,
     viewModes,
   } from '@prusa/connect-ui/primitives';
@@ -102,11 +104,13 @@
     NO_EXTENSIONS_SELECTED,
     searchTerm,
     SOURCES,
+    SOURCE_KEY,
     STATES,
     TRUSTS,
   } from '../extensions/rows';
   import { OFFICIAL } from '../extensions/trust';
   import { SwitchedOffAlerts } from '../extensions/switched-off-alerts';
+  import { compareVersions } from '../semver';
   import { removableOf } from '../extensions/switch';
   import type { ExtensionFieldId } from '../extensions/types';
   import { APP_NAMESPACE } from '../i18n';
@@ -180,12 +184,18 @@
         listed.some((row) => row.trust === value),
     ),
   );
+  const hasMemory = $derived(
+    all.some((row) => row.instance?.status.memory !== undefined),
+  );
+  const shownFields = $derived(
+    hasMemory ? FIELDS : FIELDS.filter(({ id }) => id !== 'memory'),
+  );
   const term = $derived(searchTerm(query));
   const matching = $derived(filterExtensions(listed, selection, term));
 
   const store = browserStore();
-  const listing = new ListingState<ExtensionRow>({
-    id: 'settings-extensions',
+  const listing: ListingState<ExtensionRow> = new ListingState<ExtensionRow>({
+    id: 'settings-extension-modules',
     fields: FIELDS,
     views: viewModes(['table', 'rows']),
     initialView: 'table',
@@ -196,7 +206,68 @@
       },
     },
     rows: () => matching,
-    compare: compareExtensions,
+    compare: (a: ExtensionRow, b: ExtensionRow): number => {
+      if (listing.sort?.field === 'author') {
+        if (a.author === '' || b.author === '') {
+          return Number(a.author === '') - Number(b.author === '');
+        }
+        const order = listing.sort.order === 'asc' ? 1 : -1;
+        return (
+          order *
+            a.author.localeCompare(b.author, undefined, {
+              sensitivity: 'base',
+              numeric: true,
+            }) ||
+          a.title.localeCompare(b.title, undefined, {
+            sensitivity: 'base',
+            numeric: true,
+          })
+        );
+      }
+      if (listing.sort?.field === 'title') {
+        const order = listing.sort.order === 'asc' ? 1 : -1;
+        return (
+          order *
+          a.title.localeCompare(b.title, undefined, {
+            sensitivity: 'base',
+            numeric: true,
+          })
+        );
+      }
+      if (listing.sort) {
+        const { field, order } = listing.sort;
+        const direction = order === 'asc' ? 1 : -1;
+        if (field === 'version') {
+          const versionOf = (row: ExtensionRow): string =>
+            [
+              row.installedVersion,
+              row.instance?.module?.version,
+              row.version,
+            ].find((version) => Boolean(version)) ?? '';
+          const left = versionOf(a);
+          const right = versionOf(b);
+          if (!left || !right) return Number(!left) - Number(!right);
+          return (
+            direction *
+            (compareVersions(left, right) ??
+              left.localeCompare(right, undefined, { numeric: true }))
+          );
+        }
+        if (field === 'source') {
+          return (
+            direction *
+            t(SOURCE_KEY[a.source]).localeCompare(t(SOURCE_KEY[b.source]))
+          );
+        }
+        if (field === 'state') {
+          return (
+            direction * STATES.indexOf(a.state) -
+            direction * STATES.indexOf(b.state)
+          );
+        }
+      }
+      return compareExtensions(a, b);
+    },
   });
 
   // Every key is written out rather than assembled from a value.
@@ -253,11 +324,20 @@
   );
 
   const shows = (field: ExtensionFieldId): boolean =>
-    listing.fields.visible.includes(field);
+    (field !== 'memory' || hasMemory) && listing.fields.visible.includes(field);
 
   const onSearch = (next: string): void => {
     query = next;
     listing.setPage(0);
+  };
+
+  const narrowed = $derived(
+    term !== '' || Object.values(selection).some((values) => values.length > 0),
+  );
+
+  const clearFilters = (): void => {
+    onSearch('');
+    clearFacets(listing.facets);
   };
 
   // An index that could not be read is said above the listing, and the
@@ -515,12 +595,13 @@
 
   const refusedId = $props.id();
   const settingsId = `${refusedId}-marketplace`;
+  const marketplaceSwitchId = `${refusedId}-marketplace-header-switch`;
 </script>
 
-<div class="flex flex-col gap-6">
-  <PageHeader title={t('app.settings.extensions.title')} />
-
-  <MemoryPool pool={catalogue.memoryPool} {budgets} configHref={poolDocs} />
+{#snippet content()}
+  {#if catalogue.memoryPool?.pool_bytes !== undefined || (catalogue.memoryPool?.committed_bytes ?? 0) > 0}
+    <MemoryPool pool={catalogue.memoryPool} {budgets} configHref={poolDocs} />
+  {/if}
 
   <SwitchedOffAlerts
     rows={all}
@@ -544,7 +625,7 @@
     </section>
   {/if}
 
-  <Card data-part="catalogue" aria-busy={catalogue.loading}>
+  <Card data-settings-panel data-part="catalogue" aria-busy={catalogue.loading}>
     <CardHeader>
       <CardTitle>
         <h2 class="contents">
@@ -556,10 +637,40 @@
 
       {#if catalogue.loaded && catalogue.modulesOn}
         <CardAction class="flex flex-wrap items-center gap-2">
-          <MarketplaceBadge marketplace={catalogue.marketplace} />
+          {#if catalogue.marketplace !== undefined}
+            <div
+              class="flex items-center gap-2"
+              title={catalogue.mayAdministerOrg === false
+                ? t('app.settings.extensions.marketplace.locked')
+                : undefined}
+            >
+              <Switch
+                id={marketplaceSwitchId}
+                aria-label={t('app.settings.extensions.source.marketplace')}
+                bind:checked={
+                  () => catalogue.marketplace?.enabled ?? false,
+                  (enabled: boolean) => {
+                    void catalogue.setMarketplace(enabled);
+                  }
+                }
+                disabled={catalogue.mayAdministerOrg === false ||
+                  catalogue.switching ||
+                  catalogue.acting !== undefined}
+                data-part="marketplace-header-switch"
+              />
+              <Label for={marketplaceSwitchId} class="text-sm font-normal">
+                {t('app.settings.extensions.source.marketplace')}
+              </Label>
+            </div>
+            {#if catalogue.marketplace.enabled && !catalogue.marketplace.reachable}
+              <MarketplaceBadge marketplace={catalogue.marketplace} />
+            {/if}
+          {:else}
+            <MarketplaceBadge marketplace={catalogue.marketplace} />
+          {/if}
           <Button
             variant="ghost"
-            size="sm"
+            size="control"
             aria-expanded={settingsOpen}
             aria-controls={settingsId}
             data-part="marketplace-settings"
@@ -567,12 +678,12 @@
               settingsOpen = !settingsOpen;
             }}
           >
-            <Settings2Icon aria-hidden="true" />
+            <Settings2Icon aria-hidden="true" class="size-6" />
             {t('app.settings.extensions.marketplace.settings')}
             <ChevronDownIcon
               aria-hidden="true"
               class={[
-                'transition-transform motion-reduce:transition-none',
+                'size-6 transition-transform motion-reduce:transition-none',
                 settingsOpen && 'rotate-180',
               ]}
             />
@@ -582,6 +693,9 @@
     </CardHeader>
 
     <CardContent class="flex flex-col gap-4">
+      {#if !settingsOpen && catalogue.switchError !== undefined}
+        <FaultAlert fault={describeFault(catalogue.switchError)} />
+      {/if}
       {#if !catalogue.modulesOn}
         <!-- An empty listing says it in its own note. A person who may not
              manage modules is not told that one can be removed. -->
@@ -695,8 +809,10 @@
         {/if}
       {:else if listed.length > 0}
         <ListingToolbar
+          filtersActive={narrowed}
+          onClearFilters={clearFilters}
           facets={listing.facets}
-          fields={FIELDS}
+          fields={shownFields}
           fieldState={listing.fields}
           view={listing.view}
         >
@@ -715,10 +831,7 @@
             heading={t('app.settings.extensions.filtered.heading')}
             headingLevel="h3"
             description={t('app.settings.extensions.filtered.note')}
-            onClear={() => {
-              onSearch('');
-              clearFacets(listing.facets);
-            }}
+            onClear={clearFilters}
           />
         {:else}
           <ExtensionsListing
@@ -729,10 +842,15 @@
             {go}
             {ask}
             {highlighted}
+            {listing}
           />
 
           {#if listing.pager}
-            <Pager {...listing.pager} total={listing.total} />
+            <Pager
+              {...listing.pager}
+              total={listing.total}
+              class="border-t border-border pt-listing-footer"
+            />
           {/if}
         {/if}
       {/if}
@@ -740,7 +858,11 @@
   </Card>
 
   <LeftDatabases store={ctx.leftDatabases} />
-</div>
+{/snippet}
+
+<SettingsScreen title={t('app.settings.extensions.title')}>
+  {@render content()}
+</SettingsScreen>
 
 <ExtensionDialog
   {catalogue}

@@ -7,7 +7,7 @@
   import {
     capabilityFor,
     PRINTER_STATE_LABEL_KEY,
-    printerStateOf,
+    printStateOf,
   } from '../../../domain';
   import {
     describeFault,
@@ -162,7 +162,12 @@
       ? (transfer.bytesSent / transfer.bytesTotal) * PERCENT
       : null;
 
-  const stateOf = (job: PrintRow) => printerStateOf(job.state);
+  const stateOf = (job: PrintRow) =>
+    printStateOf({
+      state: job.state,
+      ended: job.ended !== undefined,
+      outcome: job.outcome,
+    });
 
   // `ended` is what tells a finished print from the running one.
   const spanOf = (job: PrintRow): string | undefined => {
@@ -183,7 +188,7 @@
   );
 
   const printAgain = (job: PrintRow): void => {
-    commands.onCommand(capabilityFor('start_print'), { path: job.path });
+    void commands.onCommand(capabilityFor('start_print'), { path: job.path });
   };
 </script>
 
@@ -205,7 +210,8 @@
       <Progress
         value={percent}
         aria-label={t('printerDetailStatus.transfer.label', { name })}
-        class="h-1 flex-1"
+        size="sm"
+        class="flex-1"
       />
       {#if percent !== null}
         <span
@@ -242,7 +248,8 @@
         aria-label={t('printerDetailStatus.transfer.label', {
           name: upload.name,
         })}
-        class="h-1 flex-1"
+        size="sm"
+        class="flex-1"
       />
       {#if percent !== null}
         <span
@@ -268,7 +275,11 @@
 
 {#snippet printRow(job: PrintRow)}
   {#snippet outcome()}
-    <Badge variant={stateBadgeVariant(stateOf(job))}>
+    <Badge
+      variant={stateBadgeVariant(stateOf(job))}
+      mono={false}
+      class="font-mono"
+    >
       {t(PRINTER_STATE_LABEL_KEY[stateOf(job)])}
     </Badge>
   {/snippet}
@@ -332,7 +343,7 @@
 {/snippet}
 
 {#if anything}
-  <Card>
+  <Card radius="md">
     <CardContent class="flex flex-col gap-6">
       {#if moving.length > 0 || (uploads?.length ?? 0) > 0}
         <div class="flex flex-col gap-2">

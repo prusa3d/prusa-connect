@@ -33,7 +33,6 @@
     jobFacetCounts,
     jobFacetValues,
     jobRowsOf,
-    nextSort,
     NO_JOBS_SELECTED,
     searchTerm,
   } from './presentation';
@@ -55,6 +54,7 @@
     onPrint,
     onPrinted,
     thumbnailFor,
+    notice,
   }: JobsScreenProps = $props();
 
   // The print whose file the dialog sends again, while the dialog is open.
@@ -166,8 +166,14 @@
     listing.setPage(0);
   };
 
-  const onSort = (column: JobSortColumn): void => {
-    sort = nextSort(sort, column);
+  const clearFilters = (): void => {
+    onSearch('');
+    clearFacets(listing.facets);
+  };
+
+  const onSort = (column: JobSortColumn, order: 'asc' | 'desc'): void => {
+    sort = { column, ascending: order === 'asc' };
+    listing.setPage(0);
   };
 
   const nothingPrintedYet = $derived(jobs.loaded && all.length === 0);
@@ -175,6 +181,10 @@
 
 {#snippet toolbar()}
   <ListingToolbar
+    filtersActive={term !== '' ||
+      selection.printer.length > 0 ||
+      selection.state.length > 0}
+    onClearFilters={clearFilters}
     facets={listing.facets}
     fields={FIELDS}
     fieldState={listing.fields}
@@ -193,20 +203,28 @@
 
 <div class="flex flex-col gap-4">
   <PageHeader title={t('jobs.title')} />
+  {@render notice?.()}
 
   {#if refusal}
     <FaultAlert fault={refusal} />
   {:else if jobs.loading && !jobs.loaded}
-    <Card>
-      <CardContent class="flex flex-col gap-4">
+    <!-- As tall as the window: the list's rows are taller than the
+         skeleton's, and a shorter card leaves the footer on screen for the
+         arriving list to push down. -->
+    <Card density="panel" class="min-h-svh">
+      <CardContent
+        class="flex flex-col gap-section-inline pt-section-block pb-panel-padding-mobile @lg/card:pb-panel-padding"
+      >
         {@render toolbar()}
         <ListingSkeleton label={t('jobs.loading')} art rows={5} />
       </CardContent>
     </Card>
   {:else if nothingPrintedYet}
     <!-- No toolbar: there is nothing to filter, sort or reshape yet. -->
-    <Card>
-      <CardContent>
+    <Card density="panel">
+      <CardContent
+        class="pt-section-block pb-panel-padding-mobile @lg/card:pb-panel-padding"
+      >
         <EmptyState
           icon={InboxIcon}
           heading={t('jobs.empty.heading')}
@@ -216,8 +234,10 @@
       </CardContent>
     </Card>
   {:else}
-    <Card>
-      <CardContent class="flex flex-col gap-4">
+    <Card density="panel">
+      <CardContent
+        class="flex flex-col gap-section-inline pt-section-block pb-panel-padding-mobile @lg/card:pb-panel-padding"
+      >
         {@render toolbar()}
 
         {#if listing.total === 0}
@@ -225,10 +245,7 @@
             heading={t('jobs.filtered.heading')}
             headingLevel="h2"
             description={t('jobs.filtered.note')}
-            onClear={() => {
-              onSearch('');
-              clearFacets(listing.facets);
-            }}
+            onClear={clearFilters}
           />
         {:else}
           {#if listing.view.value === 'rows'}

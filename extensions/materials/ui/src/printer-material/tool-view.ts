@@ -3,6 +3,7 @@
 import type { Translate } from '@prusa/connect-ui/i18n';
 
 import type { Assignment, Spool, Tool } from '../api';
+import { toolLabel } from './tool-label';
 
 export interface ToolView {
   tool: Tool;
@@ -34,6 +35,14 @@ const ringOf = (tool: Tool, printing: boolean): ToolView['ring'] => {
   return printing ? 'turning' : 'still';
 };
 
+/** The type in a tool's circle: what the printer reports, else what is assigned. */
+export const circleOf = (tool: Tool): string =>
+  firstText(
+    tool.reported?.abbreviation,
+    tool.assignment?.abbreviation,
+    tool.assignment?.type,
+  );
+
 /** A printer's assignment without a spool may have no name. */
 export const nameOf = (a: Assignment): string =>
   a.material_name !== ''
@@ -41,23 +50,6 @@ export const nameOf = (a: Assignment): string =>
     : [...new Set([a.abbreviation, a.type])]
         .filter((s) => s !== '')
         .join(' · ');
-
-/**
- * The label on a tool's tile: "S n" for an MMU slot, "Extruder" for the only
- * tool of a printer, and "Tool n" for one of several.
- */
-export const tileLabel = (
-  t: Translate,
-  tool: Tool,
-  single: boolean,
-): string => {
-  const [head = '0', slot] = tool.id.split('.');
-  if (slot !== undefined)
-    return t('materials.tools.slot', { n: Number(slot) + 1 });
-  return single
-    ? t('materials.tools.extruder')
-    : t('materials.printer.tool', { n: Number(head) + 1 });
-};
 
 export const toolView = (
   t: Translate,
@@ -77,8 +69,8 @@ export const toolView = (
 
   return {
     tool,
-    label: tileLabel(t, tool, single),
-    circle: firstText(tool.reported?.abbreviation, a?.abbreviation, a?.type),
+    label: toolLabel(t, tool.id, single),
+    circle: circleOf(tool),
     colorRgba: colour === '' ? undefined : colour,
     name: named ? nameOf(a) : undefined,
     brand: named ? a.brand_name : '',

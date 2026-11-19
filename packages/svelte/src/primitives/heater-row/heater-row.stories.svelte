@@ -247,7 +247,7 @@
      material, so the floor it needs is smaller and testing against one misses
      the row shape the floor exists for. -->
 <Story name="Truncates At Heat Floor" tags={['!dev', '!autodocs']} asChild>
-  <div class="w-[14.25rem]">
+  <div class="w-heater-row">
     <HeaterRow
       label="Tool 2"
       kind="tool"
@@ -266,7 +266,7 @@
   tags={['!dev', '!autodocs']}
   asChild
 >
-  <div class="w-[14.25rem]">
+  <div class="w-heater-row">
     <HeaterRow
       label="Tool 2"
       kind="tool"

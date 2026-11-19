@@ -28,6 +28,12 @@ focus landing off-screen or a CSP refusal. A test that passes there says
 nothing about the browser. Browser mode gives a component test the engine the
 Playwright layer drives, at unit-test speed.
 
+A test of what a finger gets (`pointer: coarse`) goes in a
+`*.touch.svelte.test.ts` file, which runs in a page of its own with a touch
+screen. Never switch touch emulation on over CDP. Switched off again, it leaves
+a headless Chromium on Linux with no hover and no pointer for every later file
+in that page. Every `hover:` rule then stops matching there.
+
 Rune tests wrap effect-driven code in `$effect.root(...)` and flush with
 `flushSync()`. Dispose the root at the end.
 

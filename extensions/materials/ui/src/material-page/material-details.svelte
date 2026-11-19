@@ -28,10 +28,12 @@
   let {
     detail,
     bare = false,
+    wrapValues = false,
   }: {
     detail: Detail;
     /** Only the specs and tags: the add dialog names the material above them. */
     bare?: boolean;
+    wrapValues?: boolean;
   } = $props();
 
   const t = heldHost().t;
@@ -151,7 +153,7 @@
       </p>
     {/if}
     {#if shown.length > 0}
-      <dl class="specs grid gap-x-8 gap-y-4">
+      <dl class={['specs grid gap-x-8 gap-y-4', { 'wrap-values': wrapValues }]}>
         {#each shown as row (row.id)}
           <div class="flex min-w-0 flex-col gap-1">
             <dt class="text-xs tracking-wide text-muted-foreground uppercase">
@@ -169,7 +171,7 @@
                   material={{ name: detail.name, colorRgba: detail.color_rgba }}
                 />
               {/if}
-              <span class="truncate">{row.value}</span>
+              <span class="min-w-0 break-words">{row.value}</span>
             </dd>
           </div>
         {/each}
@@ -196,10 +198,14 @@
 </div>
 
 <style>
+  .specs.wrap-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .specs {
     grid-template-columns: repeat(
       auto-fill,
-      minmax(calc(var(--spacing) * 28), 1fr)
+      minmax(calc(var(--spacing) * 36), 1fr)
     );
   }
 </style>

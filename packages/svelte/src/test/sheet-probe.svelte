@@ -1,9 +1,6 @@
 <!--
   The printer settings sheet the sheet tests drive. The parts only work
   together, and a test cannot write markup of its own.
-
-  This file holds no class of its own, so it adds nothing to what
-  classes.test.ts compares.
 -->
 <script lang="ts">
   import Button from '../primitives/button/button.svelte';

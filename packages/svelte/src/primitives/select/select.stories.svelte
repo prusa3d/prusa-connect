@@ -71,17 +71,19 @@
   </div>
 </Story>
 
+<!-- The info fill, as the people listing marks an administrator's role. -->
 <Story name="Info Tone" asChild>
-  <Select value="mk4s" items={models}>
-    <SelectTrigger size="sm" tone="info" aria-label="Printer model">
+  <Select value="mk4s" items={mk4sOnly}>
+    <SelectTrigger
+      size="sm"
+      tone="info"
+      aria-label="Printer model"
+      class="w-40"
+    >
       <SelectValue />
     </SelectTrigger>
     <SelectContent>
-      {#each models as model (model.value)}
-        <SelectItem value={model.value} label={model.label}>
-          {model.label}
-        </SelectItem>
-      {/each}
+      <SelectItem value="mk4s" label="MK4S">MK4S</SelectItem>
     </SelectContent>
   </Select>
 </Story>

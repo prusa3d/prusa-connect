@@ -1,5 +1,5 @@
 // What the Status panel is handed, and the reading it draws.
-import type { DeviceDetail, Transfers } from '../../../data';
+import type { DeviceDetail, DeviceIssueEntry, Transfers } from '../../../data';
 import type { Device, UploadBlock } from '../../../domain';
 import type { CameraFeed } from '../../printer-cameras';
 import type { SendsIndicatorRow } from '../../sends-indicator';
@@ -22,6 +22,9 @@ export interface PrinterStatusPanelProps {
   /** The live readings, which outrank the record for a path both carry. */
   telemetry: TelemetrySource;
   commands: CommandPort;
+  issues?:
+    { entryOf(reason: string): DeviceIssueEntry | undefined } | undefined;
+  problemHref?: string | undefined;
   /** The moment the finish time is counted from. Absent, it is the moment the time left arrived. */
   now?: Date | undefined;
   /** The camera drawn beside a running print, with the live view it can play. */

@@ -64,6 +64,8 @@ export interface DataRowProps extends Omit<
    * never when.
    */
   wrapValues?: boolean;
+  /** 16px of block padding in place of 8px, for a row led by a print preview. */
+  roomy?: boolean;
   /** Trailing-edge content, typically an actions menu trigger. */
   actions?: Snippet;
   class?: ClassValue | undefined;

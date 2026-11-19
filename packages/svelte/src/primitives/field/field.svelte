@@ -35,6 +35,7 @@
     error,
     control: Control,
     controlProps,
+    layout = 'stack',
     class: className,
     ...rest
   }: FieldProps = $props();
@@ -78,7 +79,16 @@
   );
 </script>
 
-<div data-slot="field" class={['flex flex-col gap-2', className]} {...rest}>
+<div
+  data-slot="field"
+  class={[
+    layout === 'stack' && 'flex flex-col gap-2',
+    layout === 'row' &&
+      'grid gap-form-note @lg/pane:grid-cols-settings-form @lg/pane:items-center @lg/pane:gap-0',
+    className,
+  ]}
+  {...rest}
+>
   <Label for={controlId}>{label}</Label>
   <Wrapped
     {...controlProps}
@@ -88,13 +98,19 @@
     class={[controlProps?.class, error && invalidControl]}
   />
   {#if description}
-    <p id={descriptionId} class="text-sm text-muted-foreground">
+    <p id={descriptionId} class="col-span-full text-sm text-muted-foreground">
       {description}
     </p>
   {/if}
   {#if error}
-    <p id={errorId} role="alert" class="text-sm text-destructive-text">
+    <!-- eslint-disable no-restricted-syntax -- the field announces its own error; tests query it by role -->
+    <p
+      id={errorId}
+      role="alert"
+      class="col-span-full text-sm text-destructive-text"
+    >
       {error}
     </p>
+    <!-- eslint-enable no-restricted-syntax -->
   {/if}
 </div>

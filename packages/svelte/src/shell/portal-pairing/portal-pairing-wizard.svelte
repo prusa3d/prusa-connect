@@ -145,16 +145,16 @@
 {/snippet}
 
 <section
-  class="rounded-card @container/pairing border border-border bg-muted p-4"
+  class="@container/pairing"
   aria-labelledby={headingId}
   aria-busy={phase === 'loading'}
 >
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h4 id={headingId} class="text-sm font-medium">
+      <h3 id={headingId} class="text-body font-medium">
         {t('portalPairing.heading')}
-      </h4>
-      <p class="text-xs text-muted-foreground">
+      </h3>
+      <p class="text-caption text-muted-foreground">
         {t('portalPairing.description')}
       </p>
     </div>
@@ -171,9 +171,7 @@
       <Skeleton class="h-24 w-full" />
     </div>
   {:else}
-    <div
-      class="mt-4 grid gap-4 border-t border-border pt-4 @md/pairing:grid-cols-3"
-    >
+    <div class="mt-4 grid gap-4 @md/pairing:grid-cols-3">
       <StepList
         label={t('portalPairing.steps.label')}
         {steps}

@@ -15,7 +15,8 @@
 <ol
   data-slot="breadcrumb-list"
   class={[
-    'flex min-w-0 flex-wrap items-center gap-1.5 text-sm break-words text-muted-foreground sm:gap-2.5',
+    'flex min-w-0 flex-wrap break-words text-muted-foreground',
+    'items-baseline gap-form-gap text-lg font-normal',
     className,
   ]}
   {...rest}

@@ -57,3 +57,11 @@
     />
   </div>
 </Story>
+
+<Story name="Wide" asChild>
+  <FileThumbnail name="Brackets" glyph={FolderIcon} size="wide" class="w-60" />
+</Story>
+
+<Story name="Square Corners" asChild>
+  <FileThumbnail name="Brackets" glyph={FolderIcon} radius="none" />
+</Story>

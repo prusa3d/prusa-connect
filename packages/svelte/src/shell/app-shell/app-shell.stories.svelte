@@ -157,3 +157,17 @@
     </AppShell>
   </div>
 </Story>
+
+<Story name="Long mobile page" asChild>
+  <div class="w-80 border border-border">
+    <AppShell
+      productName="Prusa Connect"
+      {navItems}
+      currentPath="/printers"
+      connection="online"
+    >
+      <div class="min-h-screen p-4">The fleet</div>
+      <div class="min-h-screen p-4">More printers</div>
+    </AppShell>
+  </div>
+</Story>

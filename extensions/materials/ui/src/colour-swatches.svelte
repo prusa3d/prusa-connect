@@ -21,10 +21,12 @@
   let {
     value,
     onPick,
+    size = 'sm',
   }: {
     /** The picked family, undefined for every colour. */
     value: string | undefined;
     onPick: (family: string | undefined) => void;
+    size?: 'xs' | 'sm';
   } = $props();
 
   const t = heldHost().t;
@@ -42,7 +44,7 @@
     {value}
     label={t('materials.add.colour')}
     deselectable
-    size="sm"
+    {size}
     onPick={(family: string | undefined) => {
       onPick(family);
       close();

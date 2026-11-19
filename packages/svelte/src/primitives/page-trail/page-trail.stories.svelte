@@ -26,14 +26,14 @@
      itself. -->
 <Story name="One Ancestor" />
 
-<!-- A file's page: every folder above it, and the name in the value face,
-     the way the rest of this tree sets a file name. -->
+<!-- A file's page: every folder above it, and the name in the theme's sans
+     face. -->
 <Story
   name="A Path Of Folders"
   args={{
     trail: folders,
     page: 'left-bracket-v4.bgcode',
-    monoPage: true,
+    sansPage: true,
   }}
 />
 

@@ -1,8 +1,8 @@
 <!-- This screen lists the printers, however many this server holds. -->
 <script lang="ts">
   import ArchiveIcon from '@lucide/svelte/icons/archive';
-  import ArrowDownWideNarrowIcon from '@lucide/svelte/icons/arrow-down-wide-narrow';
-  import ArrowUpNarrowWideIcon from '@lucide/svelte/icons/arrow-up-narrow-wide';
+  import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+  import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
   import InboxIcon from '@lucide/svelte/icons/inbox';
   import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
   import PlusIcon from '@lucide/svelte/icons/plus';
@@ -40,7 +40,7 @@
     viewModes,
   } from '../../primitives';
   import FleetIssueSummary from './fleet-issue-summary.svelte';
-  import { browserStore, printerRowOf } from './presentation';
+  import { browserStore, inHeldOrder, printerRowOf } from './presentation';
   import PrinterCard from './printer-card.svelte';
   import PrinterFrame from './printer-frame.svelte';
   import PrintersListing from './printers-listing.svelte';
@@ -53,6 +53,7 @@
 
   let {
     listing,
+    thumbnailFor,
     printerCount,
     tags,
     cameras,
@@ -67,7 +68,7 @@
 
   type SortField = FleetListingSource['sorts'][number]['field'];
 
-  const GRID = 'grid auto-rows-fr grid-cols-printers gap-6';
+  const GRID = 'grid auto-rows-fr gap-6 grid-cols-printers';
 
   const FRAME_GRID = 'grid auto-rows-fr grid-cols-frames gap-6';
 
@@ -118,12 +119,21 @@
       write: (key, value) => store.write(key, value),
     },
     rows: () =>
-      listing.items.map((device) =>
-        printerRowOf(
+      listing.items.map((device) => {
+        const row = printerRowOf(
           device,
           issues && ((reason: string) => issues.entryOf(reason)),
-        ),
-      ),
+        );
+        const path = device.job?.path;
+        if (
+          row.jobName !== undefined &&
+          path &&
+          device.actions?.includes('operate') !== false
+        ) {
+          row.jobThumbnailUrl = thumbnailFor?.(device.id, path);
+        }
+        return row;
+      }),
     total: () => listing.total,
     shape: () =>
       homeShapeFor({ printerCount, preference }) === 'fleet' ? 'fleet' : 'hero',
@@ -132,6 +142,18 @@
   // Keyed by the filter's query parameter. The tags are the host's, so they
   // are not held here.
   let selection = $state.raw<Record<string, string[]>>({});
+
+  // The card order as it stood when a card's menu opened. The server re-sorts
+  // as printers change state, and a card moving under the pointer would hand
+  // its open menu's click to another printer. The rows stay live; only their
+  // order waits until the menu shuts. A card that leaves the page takes its
+  // menu with it and never reports it shut, so its absence lets go too.
+  let held = $state.raw<{ id: string; order: readonly string[] }>();
+  const cardRows = $derived(
+    held !== undefined && listingState.page.some((row) => row.id === held?.id)
+      ? inHeldOrder(listingState.page, held.order)
+      : listingState.page,
+  );
   let retired = $state(false);
   let typed = $state('');
   let search = $state('');
@@ -281,6 +303,17 @@
   const shownField = $derived(sort?.field ?? listing.sort);
   const shownOrder = $derived(sort?.order ?? listing.order ?? 'asc');
 
+  const sortChoices = $derived(
+    listing.sorts.map(({ field, default_order }) => ({
+      value: field,
+      label: t(SORT_LABEL_KEY[field]),
+      order: default_order,
+    })),
+  );
+  const selectedSort = $derived(
+    sortChoices.find((choice) => choice.value === shownField),
+  );
+
   const shows = (field: PrinterFieldId): boolean =>
     listingState.fields.visible.includes(field);
 
@@ -291,7 +324,7 @@
 
 {#snippet addButton()}
   <Button
-    size="md"
+    size="lg"
     onclick={() => {
       onAdd();
     }}
@@ -325,10 +358,15 @@
 
 {#snippet cards(layout: string)}
   <div class={layout}>
-    {#each listingState.page as row (row.id)}
+    {#each cardRows as row (row.id)}
       <PrinterCard
         {row}
         {shows}
+        onMenuOpenChange={(open: boolean) => {
+          held = open
+            ? { id: row.id, order: cardRows.map((one) => one.id) }
+            : undefined;
+        }}
         {...actions === undefined ? {} : { actions }}
         {...cardLine === undefined ? {} : { line: cardLine }}
       />
@@ -359,56 +397,65 @@
 {#snippet beforeControls()}
   {@render issueStrip()}
 
-  {#if listing.sorts.length > 0}
+  {#if listing.sorts.length > 0 && listingState.view.value !== 'table'}
     <div class="flex items-center gap-1">
       <Select
-        value={shownField ?? ''}
-        onValueChange={(field: string) => {
-          const offered = listing.sorts.find((one) => one.field === field);
-          if (offered !== undefined) sortBy(field, offered.default_order);
+        value={selectedSort?.value ?? ''}
+        onValueChange={(value: string) => {
+          const choice = sortChoices.find((one) => one.value === value);
+          if (choice !== undefined) sortBy(choice.value, choice.order);
         }}
-        items={listing.sorts.map((one) => ({
-          value: one.field,
-          label: t(SORT_LABEL_KEY[one.field]),
-        }))}
+        items={sortChoices}
       >
         <SelectTrigger
           size="sm"
           aria-label={t('printers.sort.label')}
           class="w-fit"
         >
-          <SelectValue />
+          <SelectValue placeholder={t('printers.sort.label')} />
         </SelectTrigger>
         <SelectContent aria-label={t('printers.sort.label')}>
-          {#each listing.sorts as one (one.field)}
-            <SelectItem value={one.field}>
-              {t(SORT_LABEL_KEY[one.field])}
+          {#each sortChoices as choice (choice.value)}
+            <SelectItem value={choice.value}>
+              {choice.label}
             </SelectItem>
           {/each}
         </SelectContent>
       </Select>
 
-      {#if shownField !== undefined}
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={t(ORDER_LABEL_KEY[shownOrder])}
-          onclick={() => {
-            sortBy(shownField, shownOrder === 'asc' ? 'desc' : 'asc');
-          }}
+      {#if selectedSort}
+        {@const choice = selectedSort}
+        <span
+          data-slot="table-sort-directions"
+          class="inline-flex items-stretch"
         >
-          {#if shownOrder === 'asc'}
-            <ArrowUpNarrowWideIcon aria-hidden="true" />
-          {:else}
-            <ArrowDownWideNarrowIcon aria-hidden="true" />
-          {/if}
-        </Button>
+          <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- sort direction buttons outside a table head; no primitive draws them -->
+          <button
+            type="button"
+            aria-label={`${choice.label}: ${t(ORDER_LABEL_KEY.asc)}`}
+            aria-pressed={shownOrder === 'asc'}
+            onclick={() => sortBy(choice.value, 'asc')}
+            class="grid min-h-input-height min-w-sort-direction place-items-center rounded-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:text-control-on"
+          >
+            <ArrowUpIcon aria-hidden="true" class="size-4" />
+          </button>
+          <!-- eslint-disable-next-line svelte/no-restricted-html-elements -- sort direction buttons outside a table head; no primitive draws them -->
+          <button
+            type="button"
+            aria-label={`${choice.label}: ${t(ORDER_LABEL_KEY.desc)}`}
+            aria-pressed={shownOrder === 'desc'}
+            onclick={() => sortBy(choice.value, 'desc')}
+            class="grid min-h-input-height min-w-sort-direction place-items-center rounded-sm text-muted-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:text-control-on"
+          >
+            <ArrowDownIcon aria-hidden="true" class="size-4" />
+          </button>
+        </span>
       {/if}
     </div>
   {/if}
 {/snippet}
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-6">
   <!-- An empty fleet offers the add act in its empty state, but the retired
        printers stay reachable. The retired list offers no add, because a
        printer added there would land in the other list, and its heading says
@@ -416,110 +463,130 @@
        the height of the large add button, so the page does not move when the
        fleet arrives. -->
   <PageHeader
-    class="min-h-11"
+    class="min-h-button-large [&_[data-slot=page-header-actions]]:ms-auto"
     title={retired ? t('printers.retired.only') : t('printers.title')}
     actions={fleetIsEmpty ? retiredToggle : headerActions}
   />
 
-  {#if listing.loading && !listing.loaded}
-    <div role="status" aria-label={t('printers.loading')} class={GRID}>
-      {#each { length: 6 }, card (card)}
-        <Card>
-          <CardHeader>
-            <Skeleton class="h-4 w-40" />
-            <Skeleton class="h-3 w-20" />
-          </CardHeader>
-          <CardContent class="flex flex-col gap-4">
-            <Skeleton class="h-10 w-full" />
-            <Skeleton class="h-8 w-full" />
-          </CardContent>
-        </Card>
-      {/each}
-    </div>
-  {:else if listing.error !== undefined}
-    <Card>
-      <CardContent>
-        <EmptyState
-          icon={TriangleAlertIcon}
-          heading={t('printers.unreadable.heading')}
-          headingLevel="h2"
-          description={t('printers.unreadable.note')}
-        />
-      </CardContent>
-    </Card>
-  {:else if fleetIsEmpty}
-    <Card>
-      <CardContent>
-        <EmptyState
-          icon={InboxIcon}
-          heading={t('printers.empty.heading')}
-          headingLevel="h2"
-          description={t('printers.empty.note')}
-          action={addButton}
-        />
-      </CardContent>
-    </Card>
-  {:else}
-    {#if listingState.shape !== 'fleet'}
-      {@render issueStrip()}
-      {#if filtersActive}
+  <Card density="flush" radius="md">
+    <div
+      class="flex min-w-0 flex-col gap-section-inline p-panel-padding-mobile @lg/card:p-panel-padding @lg/card:pt-section-block"
+    >
+      {#if listing.loaded && listing.error === undefined && !fleetIsEmpty && listingState.shape === 'fleet'}
         <ListingToolbar
-          facets={[]}
+          search={searchFilter === undefined ? undefined : searchBox}
+          {beforeControls}
+          facets={listingState.facets}
+          fields={FIELDS}
+          fieldState={listingState.fields}
+          view={listingState.view}
           {filtersActive}
           onClearFilters={clearFilters}
         />
       {/if}
-    {:else}
-      <ListingToolbar
-        search={searchFilter === undefined ? undefined : searchBox}
-        {beforeControls}
-        facets={listingState.facets}
-        fields={FIELDS}
-        fieldState={listingState.fields}
-        view={listingState.view}
-        {filtersActive}
-        onClearFilters={clearFilters}
-      />
-    {/if}
-
-    {#if listing.total === 0}
-      <Card>
-        <CardContent>
-          {#if retired}
+      {#if listing.loading && !listing.loaded}
+        <div role="status" aria-label={t('printers.loading')} class={GRID}>
+          {#each { length: 6 }, card (card)}
+            <Card>
+              <CardHeader>
+                <Skeleton class="h-4 w-40" />
+                <Skeleton class="h-3 w-20" />
+              </CardHeader>
+              <CardContent class="flex flex-col gap-4">
+                <Skeleton class="h-10 w-full" />
+                <Skeleton class="h-8 w-full" />
+              </CardContent>
+            </Card>
+          {/each}
+        </div>
+      {:else if listing.error !== undefined}
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={TriangleAlertIcon}
+              heading={t('printers.unreadable.heading')}
+              headingLevel="h2"
+              description={t('printers.unreadable.note')}
+            />
+          </CardContent>
+        </Card>
+      {:else if fleetIsEmpty}
+        <Card>
+          <CardContent>
             <EmptyState
               icon={InboxIcon}
-              heading={t('printers.retired.empty.heading')}
+              heading={t('printers.empty.heading')}
               headingLevel="h2"
-              description={t('printers.retired.empty.note')}
+              description={t('printers.empty.note')}
+              action={addButton}
             />
-          {:else}
-            <ListingNoMatch
-              heading={t('printers.filtered.heading')}
-              headingLevel="h2"
-              description={t('printers.filtered.note')}
-              onClear={clearSearchAndFilters}
+          </CardContent>
+        </Card>
+      {:else}
+        {#if listingState.shape !== 'fleet'}
+          {@render issueStrip()}
+          {#if filtersActive}
+            <ListingToolbar
+              facets={[]}
+              {filtersActive}
+              onClearFilters={clearFilters}
             />
           {/if}
-        </CardContent>
-      </Card>
-    {:else if listingState.shape === 'hero'}
-      {@render cards('flex flex-col gap-6')}
-    {:else if listingState.view.value === 'table'}
-      <PrintersListing rows={listingState.page} {shows} />
-    {:else if listingState.view.value === 'frames'}
-      <div class={FRAME_GRID}>
-        {#each listingState.page as row (row.id)}
-          <PrinterFrame {row} camera={cameras?.feedFor(row.id)} />
-        {/each}
-      </div>
-    {:else}
-      {@render cards(GRID)}
-    {/if}
+        {/if}
 
-    {#if listingState.pager}
-      <Pager {...listingState.pager} total={listing.total} />
-    {/if}
-  {/if}
+        {#if listing.total === 0}
+          <Card>
+            <CardContent>
+              {#if retired}
+                <EmptyState
+                  icon={InboxIcon}
+                  heading={t('printers.retired.empty.heading')}
+                  headingLevel="h2"
+                  description={t('printers.retired.empty.note')}
+                />
+              {:else}
+                <ListingNoMatch
+                  heading={t('printers.filtered.heading')}
+                  headingLevel="h2"
+                  description={t('printers.filtered.note')}
+                  onClear={clearSearchAndFilters}
+                />
+              {/if}
+            </CardContent>
+          </Card>
+        {:else if listingState.shape === 'hero'}
+          {@render cards('flex flex-col gap-6')}
+        {:else if listingState.view.value === 'table'}
+          <PrintersListing
+            rows={listingState.page}
+            {shows}
+            sortField={shownField}
+            sortOrder={shownOrder}
+            onSort={{
+              name: listing.sorts.some(({ field }) => field === 'name')
+                ? (order: 'asc' | 'desc') => sortBy('name', order)
+                : undefined,
+              state: listing.sorts.some(({ field }) => field === 'state')
+                ? (order: 'asc' | 'desc') => sortBy('state', order)
+                : undefined,
+            }}
+          />
+        {:else if listingState.view.value === 'frames'}
+          <div class={FRAME_GRID}>
+            {#each listingState.page as row (row.id)}
+              <PrinterFrame {row} camera={cameras?.feedFor(row.id)} />
+            {/each}
+          </div>
+        {:else}
+          {@render cards(GRID)}
+        {/if}
+
+        {#if listingState.pager}
+          <Pager {...listingState.pager} total={listing.total} />
+        {/if}
+      {/if}
+    </div>
+  </Card>
 
   {@render nearby?.()}
 </div>

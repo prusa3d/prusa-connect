@@ -48,6 +48,10 @@ export interface FilePrint {
   printerHref: string;
   /** How long it ran. Absent while it is still on the bed. */
   durationSeconds?: number | undefined;
+  /** When the print ended, RFC 3339. Absent while it is still on the bed. */
+  ended?: string | undefined;
+  /** How an ended print ended, as the core records it. */
+  outcome?: string | undefined;
 }
 
 export interface FileDetailScreenProps {

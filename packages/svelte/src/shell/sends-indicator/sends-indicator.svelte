@@ -116,7 +116,8 @@
                   name: row.name,
                   printer: row.printerName,
                 })}
-                class="h-1 flex-1"
+                size="sm"
+                class="flex-1"
               />
               {#if percent !== null}
                 <span

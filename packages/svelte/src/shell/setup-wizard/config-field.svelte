@@ -140,7 +140,7 @@
   data-locked={key.locked}
 >
   {#if key.kind === 'switch'}
-    <SettingsRow {label} {description}>
+    <SettingsRow layout="switch" {label} {description}>
       {#snippet control()}
         <Switch
           aria-label={label}

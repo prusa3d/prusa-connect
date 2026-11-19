@@ -7,5 +7,7 @@ export interface RowListProps extends Omit<
 > {
   /** The rows; each draws its own separator. */
   children: Snippet;
+  /** The corner. `md` matches a panel the list stands in for. */
+  radius?: 'sm' | 'md' | undefined;
   class?: ClassValue | undefined;
 }

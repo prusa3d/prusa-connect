@@ -1,9 +1,14 @@
 <!-- The API credentials room of settings. -->
 <script lang="ts">
+  import SortableTableHead from '../../primitives/table/sortable-table-head.svelte';
+
+  import { compareValues } from '../../primitives/table/ordering';
+
   import KeyRoundIcon from '@lucide/svelte/icons/key-round';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
-  import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+
+  import { SvelteSet } from 'svelte/reactivity';
 
   import {
     type ApiCredential,
@@ -12,9 +17,6 @@
   } from '../../data';
   import { describeFault, formatDateTime, formatList, t } from '../../i18n';
   import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
     Badge,
     Button,
     Card,
@@ -24,7 +26,7 @@
     CardHeader,
     CardTitle,
     ConfirmDialog,
-    CopyField,
+    CopyButton,
     DataRow,
     Dialog,
     DialogContent,
@@ -37,10 +39,12 @@
     FaultAlert,
     Field,
     Input,
+    Label,
     ListingSkeleton,
     ListingState,
     ListingToolbar,
     Pager,
+    PasswordInput,
     RowActions,
     RowList,
     Table,
@@ -52,6 +56,7 @@
     TableRow,
     type ListField,
     viewModes,
+    SORT_DIRECTION,
   } from '../../primitives';
   import { browserStore } from '../printers/presentation';
   import ScopeChoice from './scope-choice.svelte';
@@ -103,8 +108,16 @@
 
   // The heading names the card.
   const headingId = $props.id();
+  const tokenId = `${headingId}-token`;
 
-  const listing = new ListingState<ApiCredential>({
+  const sortValues = {
+    name: (row: ApiCredential) => row.name,
+    expires: (row: ApiCredential) => Date.parse(row.expires_at),
+    lastUsed: (row: ApiCredential) => Date.parse(row.last_used_at ?? ''),
+    created: (row: ApiCredential) => Date.parse(row.created_at),
+  };
+
+  const listing: ListingState<ApiCredential> = new ListingState<ApiCredential>({
     id: 'settings-credentials',
     fields: FIELDS,
     views: viewModes(['table', 'rows']),
@@ -114,6 +127,12 @@
       write: (key, value) => store.write(key, value),
     },
     rows: () => credentials.items,
+    compare: (a, b) => {
+      const sort = listing.sort;
+      if (!sort || !Object.hasOwn(sortValues, sort.field)) return 0;
+      const value = sortValues[sort.field as keyof typeof sortValues];
+      return compareValues(value(a), value(b), sort.order);
+    },
   });
 
   const shows = (field: CredentialFieldId): boolean =>
@@ -132,6 +151,38 @@
 
   /** The rows are on screen, which is what the toolbar and the pager act on. */
   const listed = $derived(!waiting && credentials.items.length > 0);
+
+  const publicId = (credential: ApiCredential): string => {
+    const peers = credentials.items.filter(
+      (other) => other.name === credential.name && other.id !== credential.id,
+    );
+    let length = 8;
+    while (
+      length < credential.id.length &&
+      peers.some((other) => other.id.endsWith(credential.id.slice(-length)))
+    ) {
+      length += 1;
+    }
+    return credential.id.slice(-length);
+  };
+
+  const duplicateNames = $derived.by(() => {
+    const names = credentials.items.map((credential) => credential.name);
+    return new SvelteSet(
+      names.filter((name, index) => names.indexOf(name) !== index),
+    );
+  });
+
+  const showId = (credential: ApiCredential): boolean =>
+    duplicateNames.has(credential.name);
+
+  const idLabel = (credential: ApiCredential): string =>
+    t('settingsCredentials.publicId', { id: publicId(credential) });
+
+  const describedName = (credential: ApiCredential): string =>
+    showId(credential)
+      ? `${credential.name} · ${idLabel(credential)}`
+      : credential.name;
 
   const FORTNIGHT_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -215,8 +266,21 @@
   };
 </script>
 
+{#snippet sortHead(field: string, label: string)}
+  {@const order =
+    listing.sort?.field === field ? listing.sort.order : undefined}
+  <SortableTableHead
+    {label}
+    class="font-normal"
+    direction={order && SORT_DIRECTION[order]}
+    onSort={(order: 'asc' | 'desc' | undefined) => {
+      if (order !== undefined) listing.setSort(field, order);
+    }}
+  />
+{/snippet}
+
 {#snippet rowActions(credential: ApiCredential)}
-  <RowActions name={credential.name}>
+  <RowActions name={describedName(credential)}>
     <DropdownMenuItem
       variant="destructive"
       onSelect={() => {
@@ -262,28 +326,29 @@
     </TableCaption>
     <TableHeader>
       <TableRow>
-        <TableHead>
-          {@render columnName(t('settingsCredentials.columns.name'))}
-        </TableHead>
+        {@render sortHead('name', t('settingsCredentials.columns.name'))}
         {#if shows('scopes')}
           <TableHead>
             {@render columnName(t('settingsCredentials.columns.scopes'))}
           </TableHead>
         {/if}
         {#if shows('expires')}
-          <TableHead>
-            {@render columnName(t('settingsCredentials.columns.expires'))}
-          </TableHead>
+          {@render sortHead(
+            'expires',
+            t('settingsCredentials.columns.expires'),
+          )}
         {/if}
         {#if shows('lastUsed')}
-          <TableHead>
-            {@render columnName(t('settingsCredentials.columns.lastUsed'))}
-          </TableHead>
+          {@render sortHead(
+            'lastUsed',
+            t('settingsCredentials.columns.lastUsed'),
+          )}
         {/if}
         {#if shows('created')}
-          <TableHead>
-            {@render columnName(t('settingsCredentials.columns.created'))}
-          </TableHead>
+          {@render sortHead(
+            'created',
+            t('settingsCredentials.columns.created'),
+          )}
         {/if}
         <TableHead>
           <span class="sr-only">
@@ -296,10 +361,18 @@
       {#each listing.page as credential (credential.id)}
         <TableRow>
           <TableCell class="max-w-64">
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="min-w-0 truncate" title={credential.name}>
-                {credential.name}
-              </span>
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
+              <div class="min-w-0">
+                <span class="block truncate" title={credential.name}
+                  >{credential.name}</span
+                >
+                {#if showId(credential)}
+                  <span
+                    class="block truncate font-mono text-xs text-muted-foreground"
+                    >{idLabel(credential)}</span
+                  >
+                {/if}
+              </div>
               {#if expiringSoon(credential.expires_at)}
                 {@render expiringBadge()}
               {/if}
@@ -346,6 +419,7 @@
         leading={keyIcon}
         wrapValues
         secondaryValues={[
+          showId(credential) && idLabel(credential),
           shows('scopes') && scopeWords(credential),
           expiringSoon(credential.expires_at) && expiringBadge,
           shows('expires') &&
@@ -372,23 +446,14 @@
   </RowList>
 {/snippet}
 
-<Card role="region" aria-labelledby={headingId}>
+<Card data-settings-panel role="region" aria-labelledby={headingId}>
   <CardHeader>
     <CardTitle>
       <h2 id={headingId} class="contents">
         {t('settingsCredentials.title')}
       </h2>
     </CardTitle>
-    <CardDescription>{t('settingsCredentials.note')}</CardDescription>
     <CardAction class="flex flex-wrap items-center gap-2">
-      <!-- A link drawn as the button, because pairing an app is a page of its own. -->
-      <Button variant="secondary" size="md">
-        {#snippet child({ props }: { props: Record<string, unknown> })}
-          <a {...props} href={pairHref}>
-            {t('settingsCredentials.pair')}
-          </a>
-        {/snippet}
-      </Button>
       <Button
         size="md"
         onclick={() => {
@@ -398,10 +463,19 @@
         <PlusIcon aria-hidden="true" />
         {t('settingsCredentials.new')}
       </Button>
+      <!-- A link drawn as the button, because pairing an app is a page of its own. -->
+      <Button variant="secondary" size="md">
+        {#snippet child({ props }: { props: Record<string, unknown> })}
+          <a {...props} href={pairHref}>
+            {t('settingsCredentials.pair')}
+          </a>
+        {/snippet}
+      </Button>
     </CardAction>
   </CardHeader>
 
   <CardContent class="flex flex-col gap-4">
+    <CardDescription>{t('settingsCredentials.note')}</CardDescription>
     {#if listed}
       <ListingToolbar
         fields={FIELDS}
@@ -411,24 +485,6 @@
     {/if}
     {#if fault !== undefined}
       <FaultAlert {fault} />
-    {/if}
-
-    {#if credentials.minted !== undefined}
-      <Alert variant="warning">
-        <TriangleAlertIcon aria-hidden="true" />
-        <AlertTitle>{t('settingsCredentials.shown.title')}</AlertTitle>
-        <AlertDescription class="flex flex-col items-start gap-3">
-          {t('settingsCredentials.shown.note')}
-          <CopyField
-            label={t('settingsCredentials.shown.label')}
-            value={credentials.minted.token}
-            class="w-full"
-          />
-          <Button variant="secondary" onclick={onDismiss}>
-            {t('settingsCredentials.shown.dismiss')}
-          </Button>
-        </AlertDescription>
-      </Alert>
     {/if}
 
     {#if waiting}
@@ -541,12 +597,55 @@
   </DialogContent>
 </Dialog>
 
+<!-- The token is drawn only while the store holds it, so closing the dialog
+     by any route removes it from the page. It starts masked, because the
+     screen may be shared. -->
+<Dialog
+  open={credentials.minted !== undefined}
+  onOpenChange={(next: boolean) => {
+    if (!next) onDismiss();
+  }}
+>
+  <DialogContent class="max-w-md">
+    <DialogHeader>
+      <DialogTitle>{t('settingsCredentials.shown.title')}</DialogTitle>
+      <DialogDescription>
+        {t('settingsCredentials.shown.note')}
+      </DialogDescription>
+    </DialogHeader>
+    {#if credentials.minted !== undefined}
+      <div class="flex flex-col gap-2">
+        <Label for={tokenId}>{t('settingsCredentials.shown.label')}</Label>
+        <div
+          class="flex items-start gap-2 *:data-[slot=password-input]:max-w-none *:data-[slot=password-input]:flex-1"
+        >
+          <PasswordInput
+            id={tokenId}
+            readonly
+            label={t('settingsCredentials.shown.label')}
+            value={credentials.minted.token}
+            class="font-mono"
+          />
+          <CopyButton value={credentials.minted.token} size="icon-lg" />
+        </div>
+      </div>
+    {/if}
+    <DialogFooter>
+      <Button size="lg" onclick={onDismiss}>
+        {t('settingsCredentials.shown.dismiss')}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
 <ConfirmDialog
   open={pending !== undefined}
   onOpenChange={(next: boolean) => {
     if (!next) pending = undefined;
   }}
-  title={t('settingsCredentials.revoke.title', { name: pending?.name ?? '' })}
+  title={t('settingsCredentials.revoke.title', {
+    name: pending ? describedName(pending) : '',
+  })}
   description={t('settingsCredentials.revoke.note')}
   confirmLabel={t('settingsCredentials.revoke')}
   onConfirm={() => {

@@ -28,7 +28,7 @@ A private catalogue of parts, with folders, versions of their files, comments an
 
 | | |
 |---|---|
-| version | 0.3.7 |
+| version | 0.3.8 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/parts` |
 | namespace | `com.github.aux.prusa3d.parts` |

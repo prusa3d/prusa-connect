@@ -28,7 +28,12 @@ const GENERAL: BadgeVariant[] = [
 
 const STATES: BadgeVariant[] = [
   'stateActive',
-  'stateDone',
+  'stateBusy',
+  'stateMoving',
+  'stateReady',
+  'stateFinished',
+  'stateStopped',
+  'statePaused',
   'stateIdle',
   'stateAttention',
   'stateFault',
@@ -83,36 +88,56 @@ const restingSelector = (utility: string): string | undefined => {
 };
 
 describe('Badge', () => {
-  // The two groups are compared on their own. `secondary` and `stateAttention`
+  // Compared without the printer states: `secondary` and `stateAttention`
   // read the same orange tint pair out of tokens.css, and a printer state
   // never renders beside a secondary badge.
-  it.each([
-    ['the general variants', GENERAL],
-    ['the printer states', STATES],
-  ])(
-    'renders %s with their own attribute and their own colours',
-    async (_name, group) => {
-      const looks = new Set<string>();
+  it('renders the general variants with their own attribute and their own colours', async () => {
+    const looks = new Set<string>();
 
-      for (const variant of group) {
-        const { container, unmount } = await render(Badge, {
-          props: { variant, children: label(variant) },
-        });
-        const badge = container.querySelector('[data-slot="badge"]');
-        expect(badge?.getAttribute('data-variant')).toBe(variant);
-        const style = getComputedStyle(badge!);
-        looks.add(`${style.backgroundColor}/${style.color}`);
-        await unmount();
-      }
+    for (const variant of GENERAL) {
+      const { container, unmount } = await render(Badge, {
+        props: { variant, children: label(variant) },
+      });
+      const badge = container.querySelector('[data-slot="badge"]');
+      expect(badge?.getAttribute('data-variant')).toBe(variant);
+      const style = getComputedStyle(badge!);
+      looks.add(`${style.backgroundColor}/${style.color}`);
+      await unmount();
+    }
 
-      // One rendering per variant. An entry that falls back to another's
-      // utilities collapses this set.
-      expect(looks.size).toBe(group.length);
-    },
-  );
+    // One rendering per variant. An entry that falls back to another's
+    // utilities collapses this set.
+    expect(looks.size).toBe(GENERAL.length);
+  });
+
+  it('renders each printer state with its own attribute and a fill', async () => {
+    for (const variant of STATES) {
+      const { container, unmount } = await render(Badge, {
+        props: { variant, children: label(variant) },
+      });
+      const badge = container.querySelector('[data-slot="badge"]');
+      expect(badge?.getAttribute('data-variant')).toBe(variant);
+      expect(getComputedStyle(badge!).backgroundColor).not.toBe(
+        'rgba(0, 0, 0, 0)',
+      );
+      await unmount();
+    }
+  });
+
+  // Offline is the one state drawn as an absence: no fill, a dashed outline.
+  it('draws stateOffline hollow and dashed', async () => {
+    const { container } = await render(Badge, {
+      props: { variant: 'stateOffline', children: label('Offline') },
+    });
+    const style = getComputedStyle(
+      container.querySelector('[data-slot="badge"]')!,
+    );
+    expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(style.borderTopStyle).toBe('dashed');
+  });
 
   it('names every variant the map declares', () => {
-    expect([...GENERAL, ...STATES].sort()).toEqual(
+    expect([...GENERAL, ...STATES, 'stateOffline'].sort()).toEqual(
       Object.keys(variants).sort(),
     );
   });
@@ -225,6 +250,16 @@ describe('Badge size and numeric', () => {
     await render(Badge, { props: { size: 'lg', children: label('Bench') } });
     const badge = document.querySelector<HTMLElement>('[data-slot="badge"]')!;
     expect(parseFloat(getComputedStyle(badge).fontSize)).toBeCloseTo(14, 0);
+  });
+
+  it('draws sm and md in the small type', async () => {
+    await render(Badge, { props: { size: 'sm', children: label('Small') } });
+    await render(Badge, { props: { size: 'md', children: label('Medium') } });
+    for (const badge of document.querySelectorAll<HTMLElement>(
+      '[data-slot="badge"]',
+    )) {
+      expect(parseFloat(getComputedStyle(badge).fontSize)).toBeCloseTo(12, 0);
+    }
   });
 
   it('keeps the case of a numeric reading and sets it in mono', async () => {

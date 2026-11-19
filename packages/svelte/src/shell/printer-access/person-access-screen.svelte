@@ -92,14 +92,14 @@
   {/if}
 {/snippet}
 
-<div class="mx-auto flex w-full max-w-7xl flex-col gap-6">
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-section-gap">
   <PageTrail
     trail={[{ label: t('printerAccess.person.people'), href: peopleHref }]}
     page={account?.username ?? t('printerAccess.person.missing')}
   />
 
   {#if account === undefined && accountsLoaded}
-    <Card>
+    <Card data-settings-panel>
       <CardContent>
         <EmptyState
           icon={UserXIcon}
@@ -118,6 +118,7 @@
 
     {#if account !== undefined}
       <AccessList
+        settingsPanel
         title={t('printerAccess.person.title')}
         description={t('printerAccess.person.description', { name })}
         {rows}

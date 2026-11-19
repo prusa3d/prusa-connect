@@ -268,7 +268,10 @@ describe('SlotOutlet', () => {
     ];
     expect(lines).toHaveLength(3);
     for (const line of lines) {
-      expect(line.getBoundingClientRect().height).toBe(20); // h-5
+      expect(line.getBoundingClientRect().height).toBeCloseTo(
+        Number.parseFloat(getComputedStyle(line).lineHeight),
+        1,
+      );
       expect(line.getAttribute('aria-label')).not.toBeNull();
       expect(line.querySelector('h3')).toBeNull();
     }

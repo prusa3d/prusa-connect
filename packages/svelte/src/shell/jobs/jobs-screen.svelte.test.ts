@@ -20,6 +20,9 @@ import {
 } from './fixtures';
 import JobsScreen from './jobs-screen.svelte';
 
+/** The send button, which names how many printers it sends to once one is ticked. */
+const PRINT = /^Print( on \d+ printers?)?$/;
+
 /** The printer that ran the first two prints, in the state a test names. */
 const rack = (state: string): Device => ({
   ...fakeDevice('prn-rack-3', 'MK4S, print farm rack 3'),
@@ -51,9 +54,18 @@ const dataRows = (): NodeListOf<HTMLElement> =>
 const panel = (): HTMLElement | null =>
   document.querySelector<HTMLElement>('[data-slot="popover-content"]');
 
-/** A panel stays open after a pick, so it is shut before the next one opens. */
+/**
+ * A panel stays open after a pick, so it is shut before the next one opens.
+ * The column's sort button shares the facet's name, so the trigger is the
+ * button of that name outside the table.
+ */
 const inPanel = async (trigger: string, value: string): Promise<void> => {
-  await page.getByRole('button', { name: new RegExp(trigger) }).click();
+  const button = page
+    .getByRole('button', { name: new RegExp(`^${trigger}`) })
+    .elements()
+    .find((node) => node.closest('table') === null);
+  if (button === undefined) throw new Error(`no ${trigger} facet`);
+  await page.elementLocator(button).click();
   await expect.poll(panel).not.toBeNull();
   const surface = panel();
   if (surface === null) throw new Error('no panel opened');
@@ -102,15 +114,20 @@ describe('JobsScreen', () => {
       .toHaveAttribute('aria-sort', 'none');
     expect(firstTableHref()).toBe('/jobs/prn-rack-3%3A42');
 
-    // A second press reverses the column, and the oldest print leads.
-    await page.getByRole('button', { name: 'Started' }).click();
+    // A press on the sorted header reverses it, and the oldest print leads.
+    await page.getByRole('button', { name: 'Started', exact: true }).click();
     await expect
       .element(header('Started'))
       .toHaveAttribute('aria-sort', 'ascending');
     await expect.poll(firstTableHref).toBe('/jobs/prn-mk3s%3A89');
 
-    // Handing the order to the other column starts it longest first.
-    await page.getByRole('button', { name: 'Duration' }).click();
+    // The other header takes the order ascending, and a second press reverses
+    // it, longest first.
+    await page.getByRole('button', { name: 'Duration', exact: true }).click();
+    await expect
+      .element(header('Duration'))
+      .toHaveAttribute('aria-sort', 'ascending');
+    await page.getByRole('button', { name: 'Duration', exact: true }).click();
     await expect
       .element(header('Duration'))
       .toHaveAttribute('aria-sort', 'descending');
@@ -247,7 +264,7 @@ describe('JobsScreen', () => {
         dialog.getByRole('checkbox', { name: /MK4S, print farm rack 3/ }),
       )
       .toBeChecked();
-    await dialog.getByRole('button', { name: 'Print' }).click();
+    await dialog.getByRole('button', { name: PRINT }).click();
 
     // The printer already holds the file, so nothing names a storage.
     expect(sent).toEqual([
@@ -277,7 +294,7 @@ describe('JobsScreen', () => {
       )
       .toBeVisible();
     await expect
-      .element(dialog.getByRole('button', { name: 'Print' }))
+      .element(dialog.getByRole('button', { name: PRINT }))
       .toBeDisabled();
     expect(onPrint).not.toHaveBeenCalled();
   });
@@ -294,10 +311,7 @@ describe('JobsScreen', () => {
 
     await menu('Bracket_Left_Reinforced_v4_FINAL.gcode');
     await page.getByRole('menuitem', { name: 'Print again' }).click();
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Print' })
-      .click();
+    await page.getByRole('dialog').getByRole('button', { name: PRINT }).click();
 
     await expect
       .element(page.getByText('core.printer/COMMAND_REFUSED'))

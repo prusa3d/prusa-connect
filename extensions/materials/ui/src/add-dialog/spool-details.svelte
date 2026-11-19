@@ -25,7 +25,11 @@
   import { typedWeight } from '../materials-page/weights';
   import type { SpoolDraftForm } from './draft.svelte';
 
-  let { draft }: { draft: SpoolDraftForm } = $props();
+  let {
+    draft,
+    section = 'all',
+  }: { draft: SpoolDraftForm; section?: 'all' | 'remaining' | 'optional' } =
+    $props();
 
   const t = heldHost().t;
   const uid = $props.id();
@@ -84,81 +88,7 @@
   });
 </script>
 
-<div data-part="spool-details" class="fields grid gap-4">
-  {#if packages.length > 0}
-    <!-- A row of its own and first: a package names its weights in full, which
-         a narrow cell cut through, and choosing it fills the fields below. -->
-    <div class="col-span-full flex min-w-0 flex-col gap-2">
-      <Label for="{uid}-package">{t('materials.spool.package')}</Label>
-      <Select
-        value={draft.packageUuid ?? NONE}
-        onValueChange={(chosen: string) => {
-          draft.choosePackage(chosen === NONE ? undefined : chosen);
-        }}
-        items={packageItems}
-      >
-        <SelectTrigger id="{uid}-package" class="w-full min-w-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {#each packageItems as item (item.value)}
-            <SelectItem value={item.value} label={item.label}>
-              {item.label}
-            </SelectItem>
-          {/each}
-        </SelectContent>
-      </Select>
-    </div>
-  {/if}
-
-  <Field
-    label={t('materials.spool.quantity')}
-    control={Input}
-    controlProps={{
-      name: 'quantity',
-      type: 'number',
-      inputmode: 'numeric',
-      min: 1,
-      max: 100,
-      step: 1,
-      required: true,
-      value: draft.quantity,
-      oninput: (e: Event) => (draft.quantity = grams(e) ?? 0),
-    }}
-  />
-
-  <Field
-    label={t('materials.spool.full')}
-    control={Input}
-    controlProps={{
-      name: 'full_weight_g',
-      ...weightProps(draft.fullWeightG),
-      oninput: (e: Event) => (draft.fullWeightG = weight(e)),
-    }}
-  />
-  <Field
-    label={t('materials.spool.empty')}
-    control={Input}
-    controlProps={{
-      name: 'empty_weight_g',
-      ...weightProps(draft.emptyWeightG),
-      oninput: (e: Event) => (draft.emptyWeightG = weight(e)),
-    }}
-  />
-  <Field
-    label={t('materials.spool.length')}
-    control={Input}
-    controlProps={{
-      name: 'length_mm',
-      type: 'number',
-      inputmode: 'numeric',
-      min: 0,
-      step: 1,
-      value: draft.lengthMM ?? '',
-      oninput: (e: Event) => (draft.lengthMM = grams(e)),
-    }}
-  />
-
+{#snippet remaining()}
   <Field
     label={t('materials.spool.remaining')}
     control={Input}
@@ -168,39 +98,141 @@
       oninput: (e: Event) => (draft.remainingG = weight(e)),
     }}
   />
+{/snippet}
 
-  <LocationField
-    class="col-span-full"
-    value={draft.locationId}
-    onpick={(id: number | undefined) => (draft.locationId = id)}
-  />
-  <div class="col-span-full flex flex-col gap-2">
-    <Label for="{uid}-notes">{t('materials.spool.notes')}</Label>
-    <Textarea id="{uid}-notes" rows={2} bind:value={draft.notes} />
-  </div>
-
-  <dl
-    data-part="summary"
-    class="col-span-full grid grid-cols-2 gap-x-4 gap-y-1 rounded-sm bg-muted p-3 text-sm"
+{#if section === 'remaining'}
+  {@render remaining()}
+{:else}
+  <div
+    data-part="spool-details"
+    class={['fields grid gap-4', { compact: section === 'optional' }]}
   >
-    <dt class="text-muted-foreground">{t('materials.spool.summary.count')}</dt>
-    <dd>{Number.isFinite(draft.quantity) ? draft.quantity : '–'}</dd>
-    <dt class="text-muted-foreground">{t('materials.spool.summary.each')}</dt>
-    <dd>
-      {draft.remaining === undefined
-        ? '–'
-        : t('materials.spool.grams', { g: draft.remaining })}
-    </dd>
-    <dt class="text-muted-foreground">{t('materials.spool.summary.total')}</dt>
-    <dd>
-      {draft.remaining === undefined || !Number.isFinite(draft.quantity)
-        ? '–'
-        : t('materials.spool.grams', { g: draft.remaining * draft.quantity })}
-    </dd>
-  </dl>
-</div>
+    {#if packages.length > 0}
+      <!-- A row of its own and first: a package names its weights in full, which
+         a narrow cell cut through, and choosing it fills the fields below. -->
+      <div class="col-span-full flex min-w-0 flex-col gap-2">
+        <Label for="{uid}-package">{t('materials.spool.package')}</Label>
+        <Select
+          value={draft.packageUuid ?? NONE}
+          onValueChange={(chosen: string) => {
+            draft.choosePackage(chosen === NONE ? undefined : chosen);
+          }}
+          items={packageItems}
+        >
+          <SelectTrigger id="{uid}-package" class="w-full min-w-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {#each packageItems as item (item.value)}
+              <SelectItem value={item.value} label={item.label}>
+                {item.label}
+              </SelectItem>
+            {/each}
+          </SelectContent>
+        </Select>
+      </div>
+    {/if}
+
+    {#if section === 'all'}
+      <Field
+        label={t('materials.spool.quantity')}
+        control={Input}
+        controlProps={{
+          name: 'quantity',
+          type: 'number',
+          inputmode: 'numeric',
+          min: 1,
+          max: 100,
+          step: 1,
+          required: true,
+          value: draft.quantity,
+          oninput: (e: Event) => (draft.quantity = grams(e) ?? 0),
+        }}
+      />
+    {/if}
+
+    <Field
+      label={t('materials.spool.full')}
+      control={Input}
+      controlProps={{
+        name: 'full_weight_g',
+        ...weightProps(draft.fullWeightG),
+        oninput: (e: Event) => (draft.fullWeightG = weight(e)),
+      }}
+    />
+    <Field
+      label={t('materials.spool.empty')}
+      control={Input}
+      controlProps={{
+        name: 'empty_weight_g',
+        ...weightProps(draft.emptyWeightG),
+        oninput: (e: Event) => (draft.emptyWeightG = weight(e)),
+      }}
+    />
+    <Field
+      label={t('materials.spool.length')}
+      control={Input}
+      controlProps={{
+        name: 'length_mm',
+        type: 'number',
+        inputmode: 'numeric',
+        min: 0,
+        step: 1,
+        value: draft.lengthMM ?? '',
+        oninput: (e: Event) => (draft.lengthMM = grams(e)),
+      }}
+    />
+
+    {#if section === 'all'}
+      {@render remaining()}
+    {/if}
+
+    <LocationField
+      class="col-span-full"
+      value={draft.locationId}
+      onpick={(id: number | undefined) => (draft.locationId = id)}
+    />
+    <div class="col-span-full flex flex-col gap-2">
+      <Label for="{uid}-notes">{t('materials.spool.notes')}</Label>
+      <Textarea id="{uid}-notes" rows={2} bind:value={draft.notes} />
+    </div>
+
+    {#if section === 'all'}
+      <dl
+        data-part="summary"
+        class="col-span-full grid grid-cols-2 gap-x-4 gap-y-1 rounded-sm bg-muted p-3 text-sm"
+      >
+        <dt class="text-muted-foreground">
+          {t('materials.spool.summary.count')}
+        </dt>
+        <dd>{Number.isFinite(draft.quantity) ? draft.quantity : '–'}</dd>
+        <dt class="text-muted-foreground">
+          {t('materials.spool.summary.each')}
+        </dt>
+        <dd>
+          {draft.remaining === undefined
+            ? '–'
+            : t('materials.spool.grams', { g: draft.remaining })}
+        </dd>
+        <dt class="text-muted-foreground">
+          {t('materials.spool.summary.total')}
+        </dt>
+        <dd>
+          {draft.remaining === undefined || !Number.isFinite(draft.quantity)
+            ? '–'
+            : t('materials.spool.grams', {
+                g: draft.remaining * draft.quantity,
+              })}
+        </dd>
+      </dl>
+    {/if}
+  </div>
+{/if}
 
 <style>
+  .fields.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .fields {
     grid-template-columns: repeat(
       auto-fit,

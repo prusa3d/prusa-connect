@@ -49,8 +49,8 @@ func TestTheAppIsMountedOnlyWhereTheConfigurationAsksForIt(t *testing.T) {
 // TestThePageIsToldHowToLookWhateverTheAnswerIs covers what GET /api/v1/ui
 // sends. Enabled is where the app stands and not what the file says, so a
 // client reading it from a build with no app is told the page is not here
-// rather than told to expect one. The four appearance keys travel either way: a
-// deployment serving its own page still reads the name and the brand this
+// rather than told to expect one. The three appearance keys travel either way:
+// a deployment serving its own page still reads the name and the theme this
 // server was configured with.
 func TestThePageIsToldHowToLookWhateverTheAnswerIs(t *testing.T) {
 	t.Parallel()
@@ -69,7 +69,6 @@ func TestThePageIsToldHowToLookWhateverTheAnswerIs(t *testing.T) {
 		require.Equal(t, "Workshop floor", settings.Title)
 		require.Equal(t, config.DefaultLanguage, settings.DefaultLanguage)
 		require.Equal(t, config.DefaultTheme, settings.Theme)
-		require.Equal(t, config.DefaultSkin, settings.Skin)
 		require.Equal(t, config.DefaultDiagnosticsSendURL, settings.DiagnosticsSendURL)
 	}
 }

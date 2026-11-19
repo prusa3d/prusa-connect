@@ -13,6 +13,7 @@
     description,
     children,
     actions,
+    headerEnd,
     message,
     messageIsFailure = false,
     edged = false,
@@ -28,22 +29,31 @@
   data-slot="settings-pane"
   aria-labelledby={headingId}
   class={[
-    'rounded-panel @container/pane flex flex-col bg-card text-card-foreground',
-    edged && 'border border-border',
+    'rounded-panel @container/pane relative flex flex-col overflow-clip rounded-md bg-card text-card-foreground shadow-settings-pane dark:shadow-none',
+    edged && 'border border-border not-dark:border-panel-outline',
     className,
   ]}
 >
-  <div class="flex flex-col gap-1 p-4 pb-2 @md/pane:p-6 @md/pane:pb-3">
-    <h2 id={headingId} class="text-lead font-semibold">{title}</h2>
-    {#if description}
-      <p class="text-body text-muted-foreground">{description}</p>
-    {/if}
+  <div
+    data-slot="settings-pane-header"
+    class="flex min-h-settings-header flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-t-md bg-secondary px-settings-header-inline py-settings-header-inset"
+  >
+    <h2 id={headingId} class="text-lead font-normal">
+      {title}
+    </h2>
+    {@render headerEnd?.()}
   </div>
 
-  <div
-    data-slot="settings-pane-body"
-    class="flex flex-col px-4 pb-4 @md/pane:px-6 @md/pane:pb-6"
-  >
+  <div data-slot="settings-pane-body" class="flex flex-col px-0 pb-0">
+    {#if description}
+      <!-- The pane spans the page, so the text keeps a settings row's
+           measure, set on its content box so both end at one edge. -->
+      <p
+        class="text-body box-content max-w-3xl px-panel-padding-mobile pt-section-gap text-muted-foreground @lg/pane:px-panel-padding"
+      >
+        {description}
+      </p>
+    {/if}
     {@render children?.()}
   </div>
 
@@ -52,7 +62,7 @@
       data-slot="settings-pane-message"
       role={messageIsFailure ? 'alert' : 'status'}
       class={[
-        'text-body px-4 pb-3 @md/pane:px-6',
+        'text-body px-panel-padding-mobile pb-section-gap @lg/pane:px-panel-padding',
         messageIsFailure ? 'text-destructive-text' : 'text-muted-foreground',
       ]}
     >
@@ -66,7 +76,7 @@
          for its own sake. -->
     <div
       data-slot="settings-pane-actions"
-      class="bg-tone-sunken text-tone-sunken-foreground flex flex-col-reverse gap-2 border-t border-border p-4 @xs/pane:flex-row @xs/pane:items-center @xs/pane:justify-end @md/pane:p-6"
+      class="bg-tone-sunken text-tone-sunken-foreground flex flex-col-reverse gap-2 border-t border-border p-panel-padding-mobile @xs/pane:flex-row @xs/pane:items-center @xs/pane:justify-end @lg/pane:p-panel-padding"
     >
       {@render actions()}
     </div>

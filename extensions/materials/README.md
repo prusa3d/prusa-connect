@@ -181,17 +181,16 @@ printers inside the limit. A permission taken away therefore takes up to 30 seco
 
 ## Materials on printers
 
-Each printer's page has a Tools tab. A printer with one tool gets the Extruder
-view. It shows the material's circle, name and brand, the spool with what is
-left of it, the Tool settings the printer reports (read-only) and the
-material's details. A printer with several tools gets a tile per tool, and an
-MMU a group of slot tiles under one header. The module follows the printers
-through the host, so the tab shows what a printer reports and what a person
-assigned.
+Each printer's page has a Tools tab. It has a tile per tool, and an MMU's slots
+as tiles under one header. A tile shows the nozzle, the material's colour
+circle, name and brand, and the spool with what is left of it. The module
+follows the printers through the host, so the tab shows what a printer reports
+and what a person assigned.
 
-A person who may operate the printer assigns a material or a spool to a tool,
-or changes it. On a connected printer a print head offers Unload, which sends
-the printer the same command as the Controls tab. The printer unloads its
+A person who may operate the printer assigns or changes the material or spool of
+a tool in one picker. The header chip and the Tools table open the same one. On a
+connected printer a print head offers Unload, which sends the printer the same
+command as the Controls tab. The printer unloads its
 active tool, so only that tool's tile offers it. An MMU has one Unload
 filament for its head. A slot, and any tool of a printer that is not
 connected, offers Unassign instead. The module applies these rules:
@@ -223,6 +222,12 @@ it. Its spools then stay on a tool that is gone, and so does a deleted
 printer's assignment. The row of a spool on a tool that is gone also has
 Unassign. For a printer the host no longer lists, write access to Materials is
 enough. A printer the host still lists needs a person who may operate it.
+
+The row of a spool on a tool that is still there offers what the Tools tab
+offers on that tool, by the same rules. Unload is on the print head a connected
+printer would unload. Unassign is on a slot, or on any tool of a printer that
+is not connected. A refused one is disabled, with the reason behind an info
+mark, such as while the printer prints or is paused.
 
 The Tools tab and a material's page follow the module's own `tool`
 and `spool` events on the host's event stream. A spool's weight drops as it

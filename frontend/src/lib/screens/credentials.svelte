@@ -1,12 +1,16 @@
 <script lang="ts">
+  import { translateFor } from '@prusa/connect-ui/i18n';
   import type { ApiCredential, CredentialScope } from '@prusa/connect-ui/data';
   import {
     SettingsCredentialsScreen,
     SettingsScreen,
   } from '@prusa/connect-ui/shell';
 
+  import { APP_NAMESPACE } from '../i18n';
   import { PATHS } from '../routes';
   import type { AppContext } from '../screens';
+
+  const t = translateFor(APP_NAMESPACE);
 
   let { ctx }: { ctx: AppContext } = $props();
 
@@ -17,7 +21,7 @@
   });
 </script>
 
-<SettingsScreen>
+<SettingsScreen title={t('app.nav.settings.tokens')}>
   <SettingsCredentialsScreen
     {credentials}
     pairHref={PATHS.pair}

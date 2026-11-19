@@ -28,6 +28,6 @@
        too near invisible to aim a pointer at. -->
   <ScrollAreaPrimitive.Thumb
     data-slot="scroll-area-thumb"
-    class="relative flex-1 rounded-sm bg-muted-foreground transition-colors hover:bg-foreground"
+    class="relative flex-1 rounded-scrollbar bg-scrollbar-thumb transition-colors hover:bg-scrollbar-thumb-hovered"
   />
 </ScrollAreaPrimitive.Scrollbar>

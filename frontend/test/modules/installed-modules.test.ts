@@ -101,7 +101,9 @@ beforeAll(async () => {
   const { username, password } = account();
   await sheet.goto(`${url}/`, { waitUntil: 'domcontentloaded' });
   await sheet.getByLabel('Username').fill(username);
-  await sheet.getByLabel('Password').fill(password);
+  // Exact: the field's reveal toggle is named Show Password, which a
+  // substring match on the label finds too.
+  await sheet.getByLabel('Password', { exact: true }).fill(password);
   await sheet.getByRole('button', { name: 'Sign in' }).click();
   // The rail is drawn once the session and the module listing have answered.
   await sheet.waitForSelector('[data-slot="rail"]', { timeout: 60_000 });

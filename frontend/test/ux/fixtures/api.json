@@ -7,7 +7,7 @@
   "GET /api/v1/ui": {
     "status": 200,
     "type": "application/json",
-    "body": "{\"enabled\":true,\"title\":\"Prusa Connect\",\"default_language\":\"en\",\"theme\":\"system\",\"skin\":\"default\",\"dashboards\":true,\"diagnostics\":true}\n"
+    "body": "{\"enabled\":true,\"title\":\"Prusa Connect\",\"default_language\":\"en\",\"theme\":\"system\",\"dashboards\":true,\"diagnostics\":true}\n"
   },
   "GET /api/v1/setup": {
     "status": 200,

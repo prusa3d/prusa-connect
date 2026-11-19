@@ -29,20 +29,25 @@ describe('RowActions', () => {
     expect(button.textContent.trim()).toBe('');
   });
 
-  it('stands the trigger and every item on the 44px touch floor', async () => {
+  // Read the computed style and not the bounding rectangle: the runner
+  // renders in a scaled frame, and the rule is what is under test.
+  const heights = async (): Promise<number[]> => {
     await render(RowActionsProbe);
-
-    const button = trigger().element();
-    // Read the computed style and not the bounding rectangle: the runner
-    // renders in a scaled frame, and the rule is what is under test.
-    expect(getComputedStyle(button).height).toBe('44px');
+    const button = parseFloat(getComputedStyle(trigger().element()).height);
 
     await trigger().click();
     await expect.poll(menu).not.toBeNull();
-
     expect(items()).toHaveLength(2);
-    for (const item of items()) {
-      expect(getComputedStyle(item).minHeight).toBe('44px');
+
+    return [
+      button,
+      ...items().map((item) => parseFloat(getComputedStyle(item).height)),
+    ];
+  };
+
+  it('keeps the trigger and every item at least 24px under a mouse', async () => {
+    for (const height of await heights()) {
+      expect(height).toBeGreaterThanOrEqual(24);
     }
   });
 

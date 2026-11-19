@@ -65,21 +65,26 @@ describe('the telemetry glyphs', () => {
     expect(getComputedStyle(painted).fill).toBe(getComputedStyle(svg).color);
   });
 
-  it('is sixteen pixels square, and gives way to a size the caller names', async () => {
-    const small = await draw(SpoolIcon);
-    expect(small.getBoundingClientRect().width).toBeCloseTo(16, 1);
-    expect(small.getBoundingClientRect().height).toBeCloseTo(16, 1);
+  it('is square, and gives way to a size the caller names', async () => {
+    const small = (await draw(SpoolIcon)).getBoundingClientRect();
+    expect(small.height).toBeCloseTo(small.width, 1);
 
     // Nothing merges the two size utilities. The caller's wins because
     // Tailwind emits size-4 before size-8.
     const large = await draw(SpoolIcon, { class: 'size-8' });
-    expect(large.getBoundingClientRect().width).toBeCloseTo(32, 1);
+    const named = document.createElement('div');
+    named.className = 'size-8';
+    document.body.append(named);
+    const width = named.getBoundingClientRect().width;
+    named.remove();
+    expect(large.getBoundingClientRect().width).toBeCloseTo(width, 1);
   });
 
   it('keeps its size beside a reading that fills the row', async () => {
     const svg = await draw(HeatbedIcon);
     const host = svg.parentElement;
     if (host === null) throw new Error('the glyph has no box');
+    const width = svg.getBoundingClientRect().width;
     host.style.display = 'flex';
     host.style.inlineSize = '24px';
 
@@ -87,7 +92,7 @@ describe('the telemetry glyphs', () => {
     reading.style.inlineSize = '200px';
     host.append(reading);
 
-    expect(svg.getBoundingClientRect().width).toBeCloseTo(16, 1);
+    expect(svg.getBoundingClientRect().width).toBeCloseTo(width, 1);
   });
 
   it('takes the attributes its caller sets', async () => {

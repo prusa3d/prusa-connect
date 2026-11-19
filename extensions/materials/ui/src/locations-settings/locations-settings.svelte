@@ -102,8 +102,12 @@
 </script>
 
 <SettingsPane title={t('materials.locations.title')} edged>
-  <div class="flex flex-col gap-4 text-sm">
-    <p class="text-muted-foreground">{t('materials.locations.note')}</p>
+  <div
+    class="flex max-w-3xl flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
+    <p class="text-body text-muted-foreground">
+      {t('materials.locations.note')}
+    </p>
 
     {#if list.mayWrite}
       <form class="flex gap-2" onsubmit={(event) => void add(event)}>
@@ -116,7 +120,7 @@
           oninput={(e: Event) =>
             (adding = (e.currentTarget as HTMLInputElement).value)}
         />
-        <Button type="submit" size="sm" disabled={busy || adding.trim() === ''}>
+        <Button type="submit" size="md" disabled={busy || adding.trim() === ''}>
           {t('materials.locations.add')}
         </Button>
       </form>
@@ -132,7 +136,7 @@
       <RowList data-part="locations">
         {#each locations as location (location.id)}
           <div
-            class="flex items-center gap-3 border-b border-border px-3 py-2 last:border-b-0"
+            class="flex items-center gap-3 border-b border-border px-3 py-2 text-sm last:border-b-0"
             data-location={location.id}
           >
             {#if editing?.id === location.id}

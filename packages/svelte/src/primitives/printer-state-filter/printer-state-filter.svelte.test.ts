@@ -3,6 +3,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { expectNoViolations } from '../../test/axe';
+import Input from '../input/input.svelte';
 import PrinterStateFilter from './printer-state-filter.svelte';
 import type { PrinterFacetDimension, PrinterStateFilterProps } from './types';
 
@@ -139,8 +140,13 @@ describe('PrinterStateFilter', () => {
 
   it('opens a panel of the caller width, on the row it stands in', async () => {
     const { trigger } = await draw({ size: 'sm', width: 300 });
+    const input = await render(Input, {
+      props: { size: 'sm', 'aria-label': 'sm' },
+    });
+    const row = getComputedStyle(input.container.querySelector('input')!);
 
-    expect(getComputedStyle(trigger).height).toBe('28px');
+    expect(getComputedStyle(trigger).height).toBe(row.height);
+    await input.unmount();
 
     const surface = await open(trigger);
     expect(getComputedStyle(surface).width).toBe('300px');

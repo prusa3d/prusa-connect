@@ -37,6 +37,44 @@ export const isPrinterState = (value: string): value is PrinterState =>
 export const printerStateOf = (value: string): PrinterState =>
   isPrinterState(value) ? value : 'UNKNOWN';
 
+/** The state a print's recorded outcome files it under. */
+const STATE_OF_OUTCOME: Readonly<Record<string, PrinterState>> = {
+  finished: 'FINISHED',
+  failed: 'ERROR',
+  cancelled: 'STOPPED',
+};
+
+/** The states a print can end in by itself, which an unknown outcome keeps. */
+const ENDED_STATES: ReadonlySet<PrinterState> = new Set([
+  'FINISHED',
+  'ERROR',
+  'STOPPED',
+]);
+
+/**
+ * The state one print reads under, on every page that lists prints. A print
+ * still running reads the machine's word. An ended one is filed by its
+ * recorded outcome, since the state it was last seen in may be the idle,
+ * ready or printing the printer passed through. With no outcome, `unknown`
+ * (what the core writes when a driver named none) or a word outside the
+ * table, an ended state still says how it ended and anything else is
+ * `UNKNOWN`.
+ */
+export const printStateOf = (print: {
+  state: string;
+  ended: boolean;
+  outcome?: string | undefined;
+}): PrinterState => {
+  const state = printerStateOf(print.state);
+  if (!print.ended) return state;
+  const filed =
+    print.outcome !== undefined &&
+    Object.hasOwn(STATE_OF_OUTCOME, print.outcome)
+      ? STATE_OF_OUTCOME[print.outcome]
+      : undefined;
+  return filed ?? (ENDED_STATES.has(state) ? state : 'UNKNOWN');
+};
+
 /**
  * The catalogue key each state reads. The English line behind `state.MOVING`
  * is "Moving", a deliberate rewording of `MANIPULATING` and not a
@@ -80,20 +118,31 @@ export const PRINTER_STATE_SEVERITY: Record<PrinterState, number> = {
 
 /** The `--state-*` tint a state takes, as src/styles/tokens.css names them. */
 export type PrinterStateTone =
-  'active' | 'done' | 'idle' | 'attention' | 'fault' | 'quiet';
+  | 'active'
+  | 'busy'
+  | 'moving'
+  | 'ready'
+  | 'finished'
+  | 'stopped'
+  | 'paused'
+  | 'idle'
+  | 'attention'
+  | 'fault'
+  | 'quiet'
+  | 'offline';
 
 export const PRINTER_STATE_TONE: Record<PrinterState, PrinterStateTone> = {
   ERROR: 'fault',
   ATTENTION: 'attention',
   PRINTING: 'active',
-  BUSY: 'active',
-  MANIPULATING: 'active',
+  BUSY: 'busy',
+  MANIPULATING: 'moving',
   IDLE: 'idle',
-  READY: 'done',
-  FINISHED: 'done',
-  STOPPED: 'done',
-  PAUSED: 'attention',
-  OFFLINE: 'quiet',
+  READY: 'ready',
+  FINISHED: 'finished',
+  STOPPED: 'stopped',
+  PAUSED: 'paused',
+  OFFLINE: 'offline',
   UNKNOWN: 'quiet',
 };
 

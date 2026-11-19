@@ -23,7 +23,7 @@ Job KPIs, a daily trend, the most printed files, a utilization heatmap and failu
 
 | | |
 |---|---|
-| version | 0.3.3 |
+| version | 0.3.4 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/fleet-stats` |
 | namespace | `com.github.aux.prusa3d.fleet-stats` |

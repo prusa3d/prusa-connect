@@ -674,7 +674,6 @@ func Default() Core {
 			Title:           DefaultTitle,
 			DefaultLanguage: DefaultLanguage,
 			Theme:           DefaultTheme,
-			Skin:            DefaultSkin,
 		},
 		Diagnostics: Diagnostics{SendURL: new(DefaultDiagnosticsSendURL)},
 		Auth: Auth{

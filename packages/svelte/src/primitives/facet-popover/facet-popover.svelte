@@ -22,6 +22,8 @@
 
   import { formatNumber, t } from '../../i18n';
   import {
+    CONTROL_FILL,
+    CONTROL_RING,
     CONTROL_SIZES,
     CONTROL_TRIGGER,
   } from '../control-trigger/control-trigger';
@@ -68,7 +70,14 @@
         type="button"
         data-slot="facet-popover-trigger"
         data-on={on ? true : undefined}
-        class={[CONTROL_TRIGGER, CONTROL_SIZES[size], FACET_TRIGGER, className]}
+        class={[
+          CONTROL_TRIGGER,
+          CONTROL_FILL,
+          CONTROL_RING,
+          CONTROL_SIZES[size],
+          FACET_TRIGGER,
+          className,
+        ]}
       >
         {#if swatches && swatches.length > 0}
           <span class="flex flex-none gap-0.5" aria-hidden="true">
@@ -88,7 +97,7 @@
             <b class="font-semibold">{summary}</b
             >{#if overflow > 0}{` +${formatNumber(overflow)}`}{/if}{/if}
         </span>
-        <ChevronDownIcon class="size-4 flex-none" aria-hidden="true" />
+        <ChevronDownIcon class="size-6 flex-none" aria-hidden="true" />
       </button>
     {/snippet}
   </PopoverTrigger>

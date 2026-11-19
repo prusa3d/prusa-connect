@@ -10,19 +10,18 @@ import {
 
 /**
  * What the page draws while the read is in flight, and after a read that
- * failed. They are the four values `internal/app/config/ui.go` defaults to,
+ * failed. They are the three values `internal/app/config/ui.go` defaults to,
  * so a server that cannot answer and a server nobody configured look alike.
  */
 export const UI_DEFAULTS = {
   title: 'Prusa Connect',
   defaultLanguage: 'en',
   theme: 'system',
-  skin: 'prusa',
 } as const;
 
 /**
  * A value the server left empty is a value the page cannot use: an empty tab
- * name and a skin with no name would both be drawn as nothing.
+ * name would be drawn as nothing.
  */
 const orDefault = (value: string | undefined, fallback: string): string =>
   value === undefined || value.trim() === '' ? fallback : value;
@@ -32,7 +31,7 @@ const isTheme = (value: string): value is UiTheme =>
 
 /**
  * How this deployment wants its page to look: the name in the tab, the
- * language it starts in, the theme and the brand file.
+ * language it starts in and the theme.
  *
  * A shared store, so a class (svelte-5.md). The client comes in through the
  * constructor, which is what lets a test hand it a fake and what lets the
@@ -40,7 +39,7 @@ const isTheme = (value: string): value is UiTheme =>
  *
  * Every getter answers the server's own default rather than `undefined`, so a
  * page drawn before the read lands, and a page whose read failed, both carry
- * four usable values.
+ * three usable values.
  */
 export class AppSettings {
   readonly #client: AppSettingsClient;
@@ -187,11 +186,6 @@ export class AppSettings {
     return this.#settings?.support_url;
   }
 
-  /** The brand file, named without its `.css`. `default` loads no file. */
-  get skin(): string {
-    return orDefault(this.#settings?.skin, UI_DEFAULTS.skin);
-  }
-
   /**
    * True once a read has finished, whether it answered or failed. The page
    * waits on this rather than on the values, so a server that cannot answer
@@ -224,7 +218,7 @@ export class AppSettings {
       this.#settings = await readAppSettings(this.#client);
       this.#error = undefined;
     } catch (thrown) {
-      // A server that cannot answer this still serves a page, so the four
+      // A server that cannot answer this still serves a page, so the three
       // defaults stand and the fault is kept for a log rather than shown.
       this.#settings = undefined;
       this.#error =

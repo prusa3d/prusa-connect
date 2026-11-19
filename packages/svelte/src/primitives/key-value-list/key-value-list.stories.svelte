@@ -34,3 +34,13 @@
 <Story name="Nothing reported" args={{ rows: withGaps }} />
 
 <Story name="Empty" args={{ rows: [] }} />
+
+<Story
+  name="Value hierarchy"
+  args={{
+    rows: rows.map((row) => ({
+      ...row,
+      emphasis: row.id === 'model' ? 'strong' : 'muted',
+    })),
+  }}
+/>

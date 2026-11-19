@@ -10,7 +10,7 @@ enough to build with it. It talks to the core only through
 
 | subpath        | holds                                                                                                                 |
 | -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `./tokens.css` | the theme: every colour in OKLCH, light and dark, the three skins, radii, durations, easings                          |
+| `./tokens.css` | the theme: every colour in OKLCH, light and dark, radii, the type and spacing rhythm, durations, easings              |
 | `./primitives` | the small parts every screen is built from, named under [the primitives](#the-primitives)                             |
 | `./data`       | the stores over the SDK: the fleet, a printer, registrations, accounts, storage, transfers, links, cameras, telemetry |
 | `./slots`      | the ten slots, the registry, the host object and the module loader                                                    |
@@ -20,7 +20,7 @@ enough to build with it. It talks to the core only through
 | `./shell`      | whole screens, and the frame they sit in: header, rail, phone bar, footer and the toggles between them                |
 
 The root export re-exports `./domain`, `./i18n`, `./primitives`, `./data` and
-`./slots`, and carries the theme store and `applySkin` as well. `./router` and
+`./slots`, and carries the theme store as well. `./router` and
 `./shell` are each imported from their own subpath.
 
 ## The primitives
@@ -32,12 +32,10 @@ repository. It is its own project, and a contributor reads it beside the
 Svelte source rather than guessing what a component should look like. A state
 it draws and a Svelte component does not is an unfinished component, and the
 empty, loading and refused states count.
-`classes.fixture.json` beside the components is a copy of the React class
-names, and `classes.test.ts` holds a component to it.
 
 There are 74 of them. `Art`, `GuidedDialog`, `KeyValueList`, `SettingsPane`,
 `StatusCard` and `Stepper` have no React counterpart and compose the ones that
-do, so the class comparison skips those six.
+do.
 
 `GuidedDialog` is the shape every flow with more than one question takes. It
 has a title, "Step n of m", and one question or one wait per step. Below that
@@ -196,26 +194,10 @@ Tailwind does not scan `node_modules`, so without the `@source` line the
 components' utility classes would be missing from your build. The dark theme
 is the `dark` class on an ancestor element.
 
-A skin is an attribute on the root element. `tokens.css` holds all three, so
-there is one stylesheet and no second request: `prusa` is the default and
-carries no attribute, `slicer` and `prusapro` are blocks of overrides under
-`:root[data-skin='slicer']` and `:root[data-skin='prusapro']`, each with a
-second block under `.dark`. The two-attribute selector scores 0-2-0 against
-`.dark`'s 0-1-0, so a skin wins in both themes.
+The tests measure every pair of colours that meets on screen against WCAG AA,
+in the light theme and in the dark one.
 
-`applySkin` writes the name, and it is the only thing an application calls:
-
-```ts
-import { applySkin } from '@prusa/connect-ui';
-
-applySkin('slicer');
-```
-
-A name the theme has no block for falls back to `prusa`. The tests measure
-every pair a skin changes against WCAG AA, in the light theme and in the dark
-one.
-
-The interface family is Atlas Grotesk, with the platform's own faces behind it.
+The interface family is Inter, with the platform's own faces behind it.
 The theme names it in `--font-sans` and ships no file, so an application serves
 the font itself. A reading that changes in place is set with `tabular-nums`,
 which answers with digits of one width.

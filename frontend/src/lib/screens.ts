@@ -72,6 +72,9 @@ import Tags from './screens/tags.svelte';
 
 export interface AppContext {
   fleet: Fleet;
+  /** Address of a preview for a file on the printer. */
+  deviceThumbnail?:
+    ((deviceId: string, path: string) => string | undefined) | undefined;
   /** The states each device kind's adapter declared. */
   deviceStates: DeviceStates;
   /** What each reason a printer can carry an issue means. */

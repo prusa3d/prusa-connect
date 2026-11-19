@@ -167,8 +167,7 @@ test('names the version alone where the server prepares no upgrade', async () =>
     )
     .toBeVisible();
   const version = container.querySelector('[data-part="version"]');
-  expect(version?.tagName).toBe('DIV');
-  expect(version?.hasAttribute('href')).toBe(false);
+  expect(version?.querySelector('a')).toBeNull();
   expect(container.textContent).not.toContain('1.3.0 available');
   expect(container.querySelector('[data-part="backup"]')).toBeNull();
   await expectNoViolations(container);

@@ -318,7 +318,7 @@ worth checking against what was configured.
 | `resources reconciled` | `internal/app/app.go:334` | how many instances the merged document declares |
 | `identity provider ready` | `internal/app/auth.go:96` | issuer, client id, redirect uri, ID token algorithms |
 | `event hub ready` | `internal/app/app.go:496` | the site token and the hub epoch |
-| `the web app` | `internal/app/app.go:501` | whether the app is served, and its title, language, theme and skin |
+| `the web app` | `internal/app/app.go:501` | whether the app is served, and its title, language and theme |
 | `the documentation site` | `internal/app/app.go:505` | whether the site was built beside the binary |
 | `the optional parts` | `internal/app/app.go:510` | whether MQTT, the broker and the metrics are on |
 | `serving` | `internal/app/listen.go:86` | the API address and pasteable URLs for `/docs` and `/api/v1/health` |

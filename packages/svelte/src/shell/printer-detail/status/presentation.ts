@@ -36,11 +36,11 @@ export const PRINTER_STATE_VARIANT: Record<PrinterState, StatusVariant> = {
 };
 
 const number = (
-  telemetry: TelemetrySource,
+  telemetry: TelemetrySource | undefined,
   device: Device,
   path: string,
 ): number | undefined => {
-  const live = telemetry.value(path);
+  const live = telemetry?.value(path);
 
   return typeof live === 'number' && Number.isFinite(live)
     ? live
@@ -48,11 +48,11 @@ const number = (
 };
 
 const text = (
-  telemetry: TelemetrySource,
+  telemetry: TelemetrySource | undefined,
   device: Device,
   path: string,
 ): string | undefined => {
-  const live = telemetry.value(path);
+  const live = telemetry?.value(path);
 
   return typeof live === 'string' && live !== '' ? live : textAt(device, path);
 };
@@ -82,7 +82,7 @@ const emptyToUndefined = (value: string | undefined): string | undefined =>
   value === undefined || value === '' ? undefined : value;
 
 export const jobOf = (
-  telemetry: TelemetrySource,
+  telemetry: TelemetrySource | undefined,
   device: Device,
 ): StatusJob => {
   const progress =
@@ -152,10 +152,14 @@ export const commandControl = (
 export const SPLIT_ROW =
   'flex flex-col @2xl/now:flex-row @2xl/now:items-stretch';
 
-/** The narrow column, and the room after it once the columns stand side by side. */
+/**
+ * The narrow column, and the room after it once the columns stand side by side.
+ * The cap holds it while the wide column needs the room for a file name, and
+ * a wide panel lifts it, so the camera and the drop target grow with the window.
+ */
 export const SPLIT_LEADING =
-  'pb-6 @2xl/now:w-2/5 @2xl/now:max-w-80 @2xl/now:pe-6 @2xl/now:pb-0';
+  'pb-6 @2xl/now:w-1/3 @2xl/now:max-w-80 @5xl/now:max-w-none @2xl/now:pe-panel-padding @2xl/now:pb-0';
 
 /** The rule between the two columns, and the room before the wide one. */
 export const SPLIT_TRAILING =
-  'border-t border-border pt-6 @2xl/now:border-t-0 @2xl/now:border-s @2xl/now:pt-0 @2xl/now:ps-6';
+  'border-t border-border pt-6 @2xl/now:border-t-0 @2xl/now:border-s @2xl/now:pt-0 @2xl/now:ps-panel-padding';

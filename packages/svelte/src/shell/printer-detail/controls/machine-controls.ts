@@ -163,25 +163,71 @@ export type Resolve = (verb: string) => CommandProjection;
 export const stateOf = (device: Device): string | undefined =>
   textAt(device, STATE_PATH);
 
+/** The verbs that move the machine, which run only in `MOTION_STATES`. */
+const MOTION_VERBS: ReadonlySet<string> = new Set([
+  VERBS.disableSteppers,
+  VERBS.home,
+  VERBS.move,
+  VERBS.moveZ,
+  'core.command.z_power_move',
+]);
+
+/**
+ * The states with nothing on the machine. A print that finished or stopped
+ * has left the gantry, so homing and jogging after it are safe.
+ */
+const MOTION_STATES: ReadonlySet<string> = new Set([
+  'IDLE',
+  'READY',
+  'FINISHED',
+  'STOPPED',
+]);
+
 /** The verbs a print holds while it runs. */
 const PRINT_HOLDS: Readonly<Record<string, string>> = {
   [VERBS.beep]: 'printerDetailControls.refused.printing',
   [VERBS.cancelPrinterReady]: 'printerDetailControls.refused.cleared',
-  [VERBS.disableSteppers]: 'printerDetailControls.refused.printing',
-  [VERBS.home]: 'printerDetailControls.refused.printing',
   [VERBS.loadFilament]: 'printerDetailControls.refused.printing',
   [VERBS.meshBedLevelling]: 'printerDetailControls.refused.cleared',
-  [VERBS.move]: 'printerDetailControls.refused.printing',
-  [VERBS.moveZ]: 'printerDetailControls.refused.printing',
+  'core.command.move_e': 'printerDetailControls.refused.printing',
   [VERBS.setIdle]: 'printerDetailControls.refused.cleared',
   [VERBS.setPrinterReady]: 'printerDetailControls.refused.cleared',
   [VERBS.unloadFilament]: 'printerDetailControls.refused.printing',
 };
 
+/**
+ * A projection with the page's own holds applied: the machine moves only
+ * in `MOTION_STATES`, and a running print holds the verbs above. The
+ * coordinate plate, the step pad and the Advanced catalogue all read it, so
+ * they agree on the one page they share.
+ */
+export const withHolds = (
+  verb: string,
+  projection: CommandProjection,
+  state: string | undefined,
+): CommandProjection => {
+  if (projection.kind !== 'available') return projection;
+  const observed = printerStateOf(state ?? 'UNKNOWN');
+  if (MOTION_VERBS.has(verb))
+    return MOTION_STATES.has(observed)
+      ? projection
+      : {
+          kind: 'disabled',
+          reason: { key: 'printerDetailControls.coordinates.idleRequired' },
+        };
+  const held = PRINT_HOLDS[verb];
+  return held !== undefined && observed === 'PRINTING'
+    ? { kind: 'disabled', reason: { key: held } }
+    : projection;
+};
+
+/**
+ * `state` is the wire word the page observes, telemetry first, and
+ * undefined for a printer that is not reporting.
+ */
 export const resolverFor =
-  (device: Device, commands: CommandPort): Resolve =>
+  (device: Device, commands: CommandPort, state: string | undefined): Resolve =>
   (verb) => {
-    const state = stateOf(device);
     const projection = projectCommand(verb, {
       capabilities: device.capabilities,
       transitions: commands.transitions ?? [],
@@ -189,17 +235,8 @@ export const resolverFor =
       locked: commands.locked === true,
       permitted: device.verbs,
     });
-    const held = PRINT_HOLDS[verb];
 
-    if (
-      projection.kind !== 'available' ||
-      held === undefined ||
-      printerStateOf(state ?? 'UNKNOWN') !== 'PRINTING'
-    ) {
-      return projection;
-    }
-
-    return { kind: 'disabled', reason: { key: held } };
+    return withHolds(verb, projection, state);
   };
 
 /** A reading from the live stream first and the device record after it. */

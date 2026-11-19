@@ -13,6 +13,7 @@
     FaultAlert,
     Field,
     Input,
+    PasswordInput,
     SettingsPane,
     SettingsRow,
     Switch,
@@ -85,10 +86,18 @@
     }
   };
 
+  // A manifest names a key, not a title: `event_wakeups` reads "Event wakeups".
+  const titleOf = (key: string): string => {
+    const words = key.replaceAll(/[_-]+/gu, ' ').trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
+
   const labelOf = (option: ResourceOption, stored: boolean): string =>
     option.required === true && option.default === undefined && !stored
-      ? t('extensionDetail.settings.requiredLabel', { name: option.key })
-      : option.key;
+      ? t('extensionDetail.settings.requiredLabel', {
+          name: titleOf(option.key),
+        })
+      : titleOf(option.key);
 
   const MESSAGE = $derived<Record<FieldError, string>>({
     required: t('extensionDetail.settings.error.required'),
@@ -108,17 +117,24 @@
 
 <form onsubmit={save} novalidate data-part="module-settings">
   <SettingsPane
+    class="w-full"
     title={t('extensionDetail.settings.title')}
     message={saved ? t('extensionDetail.settings.saved') : undefined}
   >
-    <div class="flex flex-col gap-4">
+    <div
+      class="flex max-w-3xl flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+    >
       {#each options as option (option.key)}
         {@const control = controlOf(option)}
         {#if control === 'switch'}
-          <SettingsRow label={option.key} description={option.summary}>
+          <SettingsRow
+            layout="switch"
+            label={titleOf(option.key)}
+            description={option.summary}
+          >
             {#snippet control()}
               <Switch
-                aria-label={option.key}
+                aria-label={titleOf(option.key)}
                 checked={draft[option.key] === true}
                 disabled={locked !== undefined}
                 onCheckedChange={(next: boolean) => {
@@ -152,8 +168,12 @@
             description={control === 'secret' && kept.has(option.key)
               ? t('extensionDetail.settings.secretStored')
               : option.summary}
-            control={Input}
+            control={control === 'secret' ? PasswordInput : Input}
             controlProps={{
+              label:
+                control === 'secret'
+                  ? labelOf(option, kept.has(option.key))
+                  : undefined,
               type: control === 'secret' ? 'password' : 'text',
               // A number input reports '' for text that is not a number, which would hide the error.
               inputmode: control === 'number' ? 'decimal' : undefined,
@@ -199,7 +219,7 @@
     <p class="text-sm" data-part="conflict">
       {t('extensionDetail.settings.conflict')}
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         type="button"
         onclick={() => {

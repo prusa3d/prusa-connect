@@ -9,6 +9,10 @@ import type { Progress as ProgressPrimitive } from 'bits-ui';
 export type ProgressTone =
   'primary' | 'muted' | 'success' | 'warning' | 'destructive';
 
+/** The track's height. `sm` is the hairline bar of a printer's card or row. */
+export type ProgressSize = 'sm' | 'md';
+
 export type ProgressProps = ProgressPrimitive.RootProps & {
   tone?: ProgressTone;
+  size?: ProgressSize;
 };

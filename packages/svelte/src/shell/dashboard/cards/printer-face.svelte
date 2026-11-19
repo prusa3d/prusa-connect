@@ -30,6 +30,8 @@
 
   import type { PrinterView } from '../printers';
   import {
+    formatRemainingCompact,
+    jobFallbackOf,
     SEVERITY_LABEL_KEY,
     severityBadgeVariant,
     stateBadgeVariant,
@@ -77,6 +79,9 @@
   const stateLabel = $derived(t(PRINTER_STATE_LABEL_KEY[view.state]));
   const remainingText = $derived(
     view.remaining === undefined ? '' : formatDuration(view.remaining),
+  );
+  const remainingCompact = $derived(
+    view.remaining === undefined ? '' : formatRemainingCompact(view.remaining),
   );
   // When the print ends, as a time of day. The clock moves it, so a wall
   // that stays open for hours keeps a true answer.
@@ -134,7 +139,10 @@
       />
     {/if}
     <div class="flex min-w-0 flex-1 flex-col gap-1">
-      <div class="flex items-center justify-between gap-2">
+      <div
+        data-dense={dense || undefined}
+        class="model-state flex items-center justify-between gap-2"
+      >
         <p class="min-w-0 truncate text-xs text-muted-foreground">
           {view.model === view.name ? '' : view.model}
         </p>
@@ -149,9 +157,12 @@
         {/if}
       </div>
       <p
+        data-dense={dense || undefined}
         class={[
-          'truncate font-bold',
-          dense ? 'text-sm' : 'text-base @xs/face:text-lg',
+          'face-name truncate',
+          dense
+            ? 'text-sm font-semibold'
+            : 'text-base font-bold @xs/face:text-lg',
         ]}
         title={view.name}
       >
@@ -161,13 +172,22 @@
   </div>
 
   {#if shows('job') || shows('progress')}
-    <div class="flex flex-col gap-1">
+    <div
+      class={[
+        'flex flex-col gap-1',
+        dense && 'order-2',
+        dense &&
+          (shows('remaining') && view.remaining !== undefined
+            ? 'mbs-0'
+            : 'mbs-auto'),
+      ]}
+    >
       <div
         class="flex items-baseline justify-between gap-3 font-mono text-xs text-muted-foreground"
       >
         {#if shows('job')}
           <span class="min-w-0 truncate" title={view.jobName}>
-            {view.jobName ?? t('printers.noJob')}
+            {view.jobName ?? jobFallbackOf(view)}
           </span>
         {:else}
           <span></span>
@@ -187,13 +207,35 @@
   {#if shows('remaining') && view.remaining !== undefined}
     <p
       data-part="printer-remaining"
-      class="flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums"
+      class={[
+        'flex items-baseline tabular-nums',
+        dense
+          ? 'order-1 mbs-auto flex-nowrap justify-between gap-2 text-xs'
+          : 'flex-wrap gap-x-2 text-sm',
+      ]}
     >
-      <span class="font-semibold">
-        {t('dashboard.printer.left', { time: remainingText })}
+      <span
+        class={['font-semibold', dense && 'block min-w-0 truncate']}
+        title={t('dashboard.printer.left', { time: remainingText })}
+      >
+        {#if dense}<span class="inline">{remainingCompact}</span>{/if}
+        <span class={[dense && 'hidden']}
+          >{t('dashboard.printer.left', { time: remainingText })}</span
+        >
       </span>
-      <span class="text-xs text-muted-foreground">
-        {t('dashboard.printer.endsAt', { time: endsAt })}
+      <span
+        class={[
+          'text-xs text-muted-foreground',
+          dense && 'block min-w-0 truncate',
+        ]}
+        title={t('dashboard.printer.endsAt', { time: endsAt })}
+      >
+        {#if dense}<span class="inline"
+            >{t('dashboard.printer.endsAtCompact', { time: endsAt })}</span
+          >{/if}
+        <span class={[dense && 'hidden']}
+          >{t('dashboard.printer.endsAt', { time: endsAt })}</span
+        >
       </span>
     </p>
   {/if}
@@ -254,3 +296,22 @@
     </p>
   {/if}
 </a>
+
+<style>
+  @container face (width < 10rem) {
+    .model-state[data-dense] {
+      flex-direction: column;
+      align-items: start;
+      gap: var(--spacing);
+    }
+
+    .face-name[data-dense] {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+</style>

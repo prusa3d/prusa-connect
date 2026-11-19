@@ -10,6 +10,8 @@ export type SignInFailure =
 export interface SignInScreenProps {
   /** The server this browser is signed in to, drawn under the title. */
   host?: string | undefined;
+  /** The configured instance title, when the public settings provide it. */
+  instanceName?: string | undefined;
   /** Why the sign-in is showing, which decides the sentence above the form. */
   ended?: SessionEnd | undefined;
   /** True while a sign-in is in flight. */

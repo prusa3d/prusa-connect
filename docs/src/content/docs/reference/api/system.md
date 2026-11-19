@@ -564,7 +564,7 @@ The server answers `200`:
 
 `GET /api/v1/ui`. How this deployment's web app looks.
 
-Reports the name, the fallback language, the theme and the brand file this server's own page draws with, and whether that page is served here at all. It takes no credential, because the page reads it before it paints and before anybody has signed in. It names no account, no printer and no module. It does say whether a new printer waits for a person's approval, which anybody who can reach the printer port learns anyway.
+Reports the name, the fallback language and the theme this server's own page draws with, and whether that page is served here at all. It takes no credential, because the page reads it before it paints and before anybody has signed in. It names no account, no printer and no module. It does say whether a new printer waits for a person's approval, which anybody who can reach the printer port learns anyway.
 
 - credential: none, the request is sent without a token. The client method is `getUiSettings`
 - request body: none
@@ -593,7 +593,6 @@ The server answers `200`:
   "modules": true,
   "printer_admission": "approval",
   "printer_custom_ca": false,
-  "skin": "default",
   "theme": "system",
   "title": "Prusa Connect",
   "upgrades": true

@@ -99,7 +99,7 @@ const openMenu = async (name: string) => {
 // drawn once whatever the width of the test's window.
 beforeEach(() => {
   localStorage.setItem(
-    'listing.settings-extensions',
+    'listing.settings-extension-modules',
     JSON.stringify({ view: 'rows' }),
   );
 });
@@ -228,7 +228,7 @@ describe('the catalogue on the Extensions room', () => {
     await expect.element(row).toHaveAttribute('data-state', 'available');
     await expect.element(row.getByText('Parts')).toBeVisible();
     await expect.element(row.getByText('Prusa Research')).toBeVisible();
-    await expect.element(row.getByText('0.2.0')).toBeVisible();
+    await expect.element(row.getByText('0.2.0', { exact: true })).toBeVisible();
     await expect.element(row.getByText('Marketplace')).toBeVisible();
     await expect.element(row.getByText('Not installed')).toBeVisible();
     await expect
@@ -269,7 +269,7 @@ describe('the catalogue on the Extensions room', () => {
     await expect.element(row).toHaveAttribute('data-state', 'update');
     await expect.element(row.getByText('Update available')).toBeVisible();
     await expect
-      .element(row.getByRole('button', { name: 'Update to 0.2.0' }))
+      .element(row.getByRole('button', { name: 'Update', exact: true }))
       .toBeVisible();
 
     await openMenu('Parts');
@@ -562,25 +562,29 @@ describe('the catalogue on the Extensions room', () => {
     });
 
     await rowOf(PARTS);
-    await expect.element(page.getByText('Marketplace on')).toBeVisible();
-    await openSettings();
+    const headerSwitch = page.getByRole('switch', {
+      name: 'Marketplace',
+      exact: true,
+    });
+    await expect.element(headerSwitch).toHaveAttribute('aria-checked', 'true');
+    await headerSwitch.click();
 
-    const toggle = page.getByRole('switch', { name: 'Read the marketplace' });
-    await expect.element(toggle).toHaveAttribute('aria-checked', 'true');
-    await toggle.click();
-
-    await expect.element(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect.element(headerSwitch).toHaveAttribute('aria-checked', 'false');
     expect(sent).toEqual([{ enabled: false }]);
     await expect
       .poll(() => document.querySelector(`[data-extension="${PARTS}"]`))
       .toBeNull();
+
+    await openSettings();
+    await expect
+      .element(page.getByRole('switch', { name: 'Read the marketplace' }))
+      .toHaveAttribute('aria-checked', 'false');
     await expect
       .element(page.getByText(/Switched off\. Only the extensions/u))
       .toBeVisible();
     expect(
       page.getByRole('link', { name: 'Browse the marketplace' }).elements(),
     ).toHaveLength(0);
-    await expect.element(page.getByText('Marketplace off')).toBeVisible();
   });
 
   // A person comes here for the modules, so the marketplace settings are
@@ -1022,7 +1026,7 @@ describe('the install confirmation', () => {
     await (
       await rowOf(PARTS)
     )
-      .getByRole('button', { name: 'Update to 0.2.0' })
+      .getByRole('button', { name: 'Update', exact: true })
       .click();
     await expect
       .element(dialog().getByText(/Your earlier decisions stay/u))
@@ -1949,16 +1953,6 @@ describe('the dependencies between extensions', () => {
 describe('the Extensions room re-reading memory', () => {
   const MIB = 1_048_576;
 
-  // The memory column is hidden until a reader picks it.
-  beforeEach(() => {
-    localStorage.setItem(
-      'listing.settings-extensions',
-      JSON.stringify({
-        view: 'rows',
-        fields: ['module', 'author', 'version', 'source', 'state', 'memory'],
-      }),
-    );
-  });
   const withMemory = (used?: number) => ({
     ...instance(),
     runtime: 'service',
@@ -1992,6 +1986,14 @@ describe('the Extensions room re-reading memory', () => {
       });
       const modules = new Modules(client);
       await modules.load();
+      // Memory is a field a reader has to ask for.
+      localStorage.setItem(
+        'listing.settings-extension-modules',
+        JSON.stringify({
+          view: 'rows',
+          fields: ['module', 'version', 'state', 'memory', 'actions'],
+        }),
+      );
       await open(new SlotRegistry(), modules);
 
       await expect.element(page.getByText('Unknown / 128 MiB')).toBeVisible();

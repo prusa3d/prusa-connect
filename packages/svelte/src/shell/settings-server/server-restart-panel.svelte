@@ -10,13 +10,9 @@
     Alert,
     AlertDescription,
     Button,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
     ConfirmDialog,
     FaultAlert,
+    SettingsPane,
   } from '../../primitives';
   import type { ServerRestartPanelProps } from './types';
 
@@ -62,53 +58,61 @@
   </Button>
 {/snippet}
 
-<Card>
-  <CardHeader>
-    <CardTitle
-      ><h2 class="contents">{t('settingsServer.restart.title')}</h2></CardTitle
+{#snippet restartActions()}
+  {#if safeMode}
+    <Button
+      aria-disabled={busy}
+      aria-busy={busy}
+      onclick={() => {
+        if (!busy) onRestart('normal');
+      }}
     >
-    <CardDescription>
+      {t('settingsServer.restart.normal')}
+    </Button>
+  {:else}
+    <ConfirmDialog
+      bind:open={confirming}
+      trigger={safeTrigger}
+      title={t('settingsServer.restart.confirmTitle')}
+      description={t('settingsServer.restart.confirm')}
+      confirmLabel={t('settingsServer.restart.safe')}
+      onConfirm={() => {
+        confirming = false;
+        onRestart('safe');
+      }}
+    />
+  {/if}
+{/snippet}
+
+<SettingsPane
+  class="w-full"
+  title={t('settingsServer.restart.title')}
+  actions={allowed === true && refusal !== 'forbidden'
+    ? restartActions
+    : undefined}
+>
+  <div
+    class="flex flex-col gap-form-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
+    <p class="text-body">
       {safeMode
         ? t('settingsServer.restart.safeOn')
         : t('settingsServer.restart.description')}
-    </CardDescription>
-  </CardHeader>
-  <CardContent class="flex flex-col items-start gap-4">
+    </p>
     {#if allowed === false || refusal === 'forbidden'}
-      <p class="text-sm text-muted-foreground">
+      <p class="text-body text-muted-foreground">
         {t('settingsServer.restart.locked')}
       </p>
     {:else if allowed !== true}
       {#if readFault !== undefined}
-        <p class="text-sm text-muted-foreground">
+        <p class="text-body text-muted-foreground">
           {t('settingsServer.restart.unread')}
         </p>
       {/if}
-    {:else if safeMode}
-      <Button
-        aria-disabled={busy}
-        aria-busy={busy}
-        onclick={() => {
-          if (!busy) onRestart('normal');
-        }}
-      >
-        {t('settingsServer.restart.normal')}
-      </Button>
-    {:else}
-      <p class="text-sm text-muted-foreground">
+    {:else if !safeMode}
+      <p class="text-body text-muted-foreground">
         {t('settingsServer.restart.safeHelp')}
       </p>
-      <ConfirmDialog
-        bind:open={confirming}
-        trigger={safeTrigger}
-        title={t('settingsServer.restart.confirmTitle')}
-        description={t('settingsServer.restart.confirm')}
-        confirmLabel={t('settingsServer.restart.safe')}
-        onConfirm={() => {
-          confirming = false;
-          onRestart('safe');
-        }}
-      />
     {/if}
     {#if progress !== undefined}
       <Alert
@@ -128,5 +132,5 @@
         </Button>
       {/snippet}
     </FaultAlert>
-  </CardContent>
-</Card>
+  </div>
+</SettingsPane>

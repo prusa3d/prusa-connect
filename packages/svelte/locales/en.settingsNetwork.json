@@ -11,7 +11,6 @@
   "settingsNetwork.announcement.off": "Announcing is switched off in the configuration file, so this setting changes nothing until it is switched on.",
   "settingsNetwork.bridged.body": "This server runs in a container on a bridge network, so no other device on your network hears it. Set network_mode: host in compose, or hostNetwork: true in Kubernetes.",
   "settingsNetwork.bridged.title": "The announcement stays inside the container",
-  "settingsNetwork.description": "How slicers and apps on the same network find this server without a typed address.",
   "settingsNetwork.hidden.label": "Hide this server",
   "settingsNetwork.hidden.note": "A hidden server stops announcing itself. Its page and its API still answer at its address, and the sign-in still protects them.",
   "settingsNetwork.loading": "Reading the network setting",

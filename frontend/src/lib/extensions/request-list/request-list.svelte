@@ -8,6 +8,7 @@
 -->
 <script lang="ts">
   import { formatNumber, translateFor } from '@prusa/connect-ui/i18n';
+  import { SettingsRow } from '@prusa/connect-ui/primitives';
 
   import { APP_NAMESPACE } from '../../i18n';
   import type { ModuleRequest } from '../requests';
@@ -17,6 +18,7 @@
     instance,
     label,
     part = 'requests',
+    rows = false,
   }: {
     requests: readonly ModuleRequest[];
     /** The module's manifest name, which names its folder under `module-data` (not its namespace). */
@@ -25,6 +27,8 @@
     label: string;
     /** What a test finds the list by. */
     part?: string;
+    /** Draws each request as a settings row inside a pane, for the extension's own page. */
+    rows?: boolean;
   } = $props();
 
   const t = translateFor(APP_NAMESPACE);
@@ -75,17 +79,59 @@
   };
 
   const lines = $derived(requests.map(lineOf));
+
+  // `read_storage` reads "Read storage".
+  const wordsOf = (permission: string): string => {
+    const words = permission.replaceAll('_', ' ');
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
+
+  // A permission is its own label; any other request is named by its kind
+  // and explained by its line.
+  const rowOf = (
+    request: ModuleRequest,
+    line: string,
+  ): { label: string; description?: string } => {
+    if (request.kind === 'permission') {
+      return { label: wordsOf(request.permission) };
+    }
+    if (request.kind === 'other') return { label: line };
+    return {
+      label: t(`app.settings.extensions.request.kind.${request.kind}`),
+      description: line,
+    };
+  };
 </script>
 
-<div class="flex flex-col gap-1 text-sm" data-part={part}>
-  {#if lines.length === 0}
-    <p>{t('app.settings.extensions.request.none')}</p>
-  {:else}
-    <p>{label}</p>
-    <ul class="list-disc ps-5">
-      {#each lines as line, index (index)}
-        <li>{line}</li>
+{#if rows}
+  <div
+    class="flex flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+    data-part={part}
+  >
+    {#if lines.length === 0}
+      <p class="text-body">{t('app.settings.extensions.request.none')}</p>
+    {:else}
+      {#each requests as request, index (index)}
+        {@const row = rowOf(request, lines[index] ?? '')}
+        <SettingsRow
+          layout="switch"
+          label={row.label}
+          description={row.description}
+        />
       {/each}
-    </ul>
-  {/if}
-</div>
+    {/if}
+  </div>
+{:else}
+  <div class="flex flex-col gap-1 text-sm" data-part={part}>
+    {#if lines.length === 0}
+      <p>{t('app.settings.extensions.request.none')}</p>
+    {:else}
+      <p>{label}</p>
+      <ul class="list-disc ps-5">
+        {#each lines as line, index (index)}
+          <li>{line}</li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
+{/if}

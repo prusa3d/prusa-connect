@@ -18,7 +18,7 @@ export const expectNoViolations = async (element: Element): Promise<void> => {
   // `color-contrast` measures what the browser painted, which under a full
   // suite can be a surface still animating in. `styles/contrast.test.ts`
   // already holds every text pair to WCAG AA at 4.5:1 and every non-text mark
-  // to 1.4.11 at 3:1, in both themes and in the skin, from the declared values
+  // to 1.4.11 at 3:1, in both themes, from the declared values
   // rather than from a paint. So this rule adds no coverage and reports a
   // different answer on a loaded machine.
   const { violations } = await axe.run(element, {

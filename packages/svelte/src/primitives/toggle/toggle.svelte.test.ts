@@ -56,8 +56,8 @@ describe('Toggle', () => {
     await expect.element(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 
-  // The compound `disabled:data-[state=on]:*` selectors. A plain
-  // `disabled:bg-disabled` ties with `data-[state=on]:bg-selected` on
+  // The compound `disabled:state-on:*` selectors. A plain
+  // `disabled:bg-disabled` ties with `state-on:bg-selected` on
   // specificity and loses, and a dead control keeps the brand fill.
   it('drops the pressed fill when a pressed toggle is disabled', async () => {
     const live = await render(Toggle, {

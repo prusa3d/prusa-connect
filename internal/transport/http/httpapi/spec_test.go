@@ -34,7 +34,7 @@ const committedSpecPath = "openapi.json"
 //     nobody has defined
 //   - the app settings are what this server's own page reads before it paints
 //     and before anybody has signed in. They name no account, no printer and no
-//     module: a title, a language, a theme and a brand file
+//     module: a title, a language and a theme
 //   - the vocabulary operations publish closed sets that are identical in every
 //     deployment of a build and name no principal, grant or instance. A client
 //     branching on an error code and an author writing a plugin both need them

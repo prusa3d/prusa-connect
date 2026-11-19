@@ -29,7 +29,7 @@
   <ul class="flex flex-col gap-3">
     {#each joined as printer (printer.deviceId)}
       <li
-        class="@container/joined rounded-sm border border-border bg-success-surface p-4"
+        class="@container/joined rounded-md border border-border bg-success-surface p-4"
         data-part="joined"
         data-device={printer.deviceId}
       >

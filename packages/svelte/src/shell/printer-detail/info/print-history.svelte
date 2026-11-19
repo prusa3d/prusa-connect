@@ -3,7 +3,7 @@
   import FileCode2Icon from '@lucide/svelte/icons/file-code-2';
   import InboxIcon from '@lucide/svelte/icons/inbox';
 
-  import { PRINTER_STATE_LABEL_KEY, printerStateOf } from '../../../domain';
+  import { PRINTER_STATE_LABEL_KEY, printStateOf } from '../../../domain';
   import {
     describeFault,
     formatDateTime,
@@ -56,7 +56,12 @@
   });
   const nothing = $derived(history.jobsLoaded && rows.length === 0);
 
-  const stateOf = (job: PrintRow) => printerStateOf(job.state);
+  const stateOf = (job: PrintRow) =>
+    printStateOf({
+      state: job.state,
+      ended: job.ended !== undefined,
+      outcome: job.outcome,
+    });
 
   // Absent while the print runs.
   const spanOf = (job: PrintRow): string | undefined => {
@@ -70,7 +75,11 @@
 
 {#snippet row(job: PrintRow)}
   {#snippet state()}
-    <Badge variant={stateBadgeVariant(stateOf(job))}>
+    <Badge
+      variant={stateBadgeVariant(stateOf(job))}
+      mono={false}
+      class="font-mono"
+    >
       {t(PRINTER_STATE_LABEL_KEY[stateOf(job)])}
     </Badge>
   {/snippet}
@@ -109,7 +118,7 @@
   />
 {/snippet}
 
-<Card>
+<Card radius="md">
   <CardHeader>
     <CardTitle
       ><h2 class="contents">

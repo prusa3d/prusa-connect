@@ -6,6 +6,7 @@
   header overrides the `col` scope a column header takes.
 -->
 <script lang="ts">
+  import { Checkbox } from '../primitives/checkbox';
   import TableBody from '../primitives/table/table-body.svelte';
   import TableCaption from '../primitives/table/table-caption.svelte';
   import TableCell from '../primitives/table/table-cell.svelte';
@@ -23,15 +24,23 @@
     total: string;
     /** The row header of the row drawn as selected. */
     selected?: string;
+    /** The label of a tick box drawn as a narrow first column, as a listing's select-all. */
+    selectAll?: string;
   }
 
-  let { caption, columns, rows, total, selected }: Props = $props();
+  let { caption, columns, rows, total, selected, selectAll }: Props = $props();
+  let ticked = $state(false);
 </script>
 
 <Table>
   <TableCaption>{caption}</TableCaption>
   <TableHeader>
     <TableRow>
+      {#if selectAll}
+        <TableHead class="w-8">
+          <Checkbox bind:checked={ticked} aria-label={selectAll} />
+        </TableHead>
+      {/if}
       {#each columns as column (column)}
         <TableHead>{column}</TableHead>
       {/each}
@@ -40,6 +49,9 @@
   <TableBody>
     {#each rows as row (row[0])}
       <TableRow data-state={row[0] === selected ? 'selected' : undefined}>
+        {#if selectAll}
+          <TableCell></TableCell>
+        {/if}
         <TableHead scope="row">{row[0]}</TableHead>
         {#each row.slice(1) as cell, index (columns[index + 1])}
           <TableCell>{cell}</TableCell>
@@ -49,7 +61,9 @@
   </TableBody>
   <TableFooter>
     <TableRow>
-      <TableCell colspan={columns.length}>{total}</TableCell>
+      <TableCell colspan={columns.length + (selectAll ? 1 : 0)}
+        >{total}</TableCell
+      >
     </TableRow>
   </TableFooter>
 </Table>

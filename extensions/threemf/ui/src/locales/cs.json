@@ -155,7 +155,7 @@
   "projectView.state.printable": "Tiskne se",
   "projectView.state.unknown": "Podložka neznámá",
   "projectView.summary.noPrinter": "Soubor neuvádí tiskárnu",
-  "projectView.summary.savedBy": "Uložil",
+  "projectView.summary.savedBy": "Uloženo v",
   "projectView.supports.build_plate_only": "Jen od podložky",
   "projectView.supports.enforcers_only": "Jen vynucené",
   "projectView.supports.everywhere": "Všude",

@@ -138,3 +138,20 @@
 <Story name="Sortable Aligned To The End" asChild>
   {@render sortableTable('ascending', 'end')}
 </Story>
+
+<Story name="Roomy Cells" asChild>
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Name</TableHead>
+        <TableHead>Status</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      <TableRow>
+        <TableCell roomy class="font-mono">benchy.3mf</TableCell>
+        <TableCell roomy>Printing</TableCell>
+      </TableRow>
+    </TableBody>
+  </Table>
+</Story>

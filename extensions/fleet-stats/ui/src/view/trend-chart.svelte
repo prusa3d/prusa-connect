@@ -35,6 +35,7 @@
   {series}
   {xDomain}
   unit={unitOf(metric)}
+  zeroBaseline
   minStep={metric === 'hours' ? 0.5 : 1}
   label={t('fleet-stats.trend.label', {
     metric: t(`fleet-stats.trend.metric.${metric}`),

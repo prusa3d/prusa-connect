@@ -42,6 +42,8 @@
     'settingsDiagnostics.part.browser',
   ];
 
+  const BROWSER_PART = 'settingsDiagnostics.part.browser';
+
   let modules = $state(false);
   // On by default: an extension that offers files was installed to collect
   // the evidence a report needs, and the person reads the zip before sending.
@@ -86,10 +88,22 @@
   title={t('settingsDiagnostics.title')}
   description={t('settingsDiagnostics.intro')}
 >
-  <div class="flex flex-col gap-4 pb-6">
+  <div
+    class="box-content flex max-w-3xl flex-col gap-section-gap p-panel-padding-mobile @lg/pane:p-panel-padding"
+  >
     <ul class="flex list-disc flex-col gap-1 pl-5 text-sm">
       {#each PARTS as key (key)}
-        <li>{t(key)}</li>
+        <li>
+          {t(key)}
+          {#if key === BROWSER_PART}
+            <span class="ms-1 inline-block align-middle">
+              <CopyButton
+                value={onCopy}
+                label={t('settingsDiagnostics.copy')}
+              />
+            </span>
+          {/if}
+        </li>
       {/each}
     </ul>
 
@@ -124,6 +138,10 @@
         </div>
       </div>
     {/if}
+
+    <p class="text-sm text-muted-foreground" data-part="download-explanation">
+      {t('settingsDiagnostics.downloadHelp')}
+    </p>
 
     <div class="flex items-start gap-2">
       <Checkbox id={consentId} bind:checked={consent} class="mt-0.5" />
@@ -163,35 +181,34 @@
 
     <FaultAlert {fault} />
 
-    <div class="flex flex-wrap items-center gap-2">
-      <Button
-        disabled={busy || !consent}
-        aria-busy={busy}
-        onclick={() => {
-          void run(() => onDownload(choice));
-        }}
-      >
-        {t('settingsDiagnostics.download')}
-      </Button>
-      {#if onSend}
-        <Button
-          variant="secondary"
-          disabled={busy || !consent}
-          aria-busy={busy}
-          onclick={() => {
-            // Called in the click itself, so the caller can open the portal's
-            // tab before the first await and no popup blocker stops it.
-            void run(() => onSend(choice, intent));
-          }}
-        >
-          {t('settingsDiagnostics.send')}
-        </Button>
-      {/if}
-      <CopyButton value={onCopy} label={t('settingsDiagnostics.copy')} />
-    </div>
-
     <p class="text-xs text-muted-foreground">
       {t('settingsDiagnostics.hint')}
     </p>
   </div>
+
+  {#snippet actions()}
+    {#if onSend}
+      <Button
+        variant="secondary"
+        disabled={busy || !consent}
+        aria-busy={busy}
+        onclick={() => {
+          // Called in the click itself, so the caller can open the portal's
+          // tab before the first await and no popup blocker stops it.
+          void run(() => onSend(choice, intent));
+        }}
+      >
+        {t('settingsDiagnostics.send')}
+      </Button>
+    {/if}
+    <Button
+      disabled={busy || !consent}
+      aria-busy={busy}
+      onclick={() => {
+        void run(() => onDownload(choice));
+      }}
+    >
+      {t('settingsDiagnostics.download')}
+    </Button>
+  {/snippet}
 </SettingsPane>

@@ -2,17 +2,23 @@
      which arm of the primitive's union is rendered, because bits-ui takes the
      selection as a string for one option and an array for several. -->
 <script lang="ts">
-  import type { ToggleSize, ToggleVariant } from '../primitives/toggle';
+  import type {
+    ToggleSize,
+    ToggleTone,
+    ToggleVariant,
+  } from '../primitives/toggle';
   import { ToggleGroup, ToggleGroupItem } from '../primitives/toggle-group';
 
   let {
     type = 'single',
     variant = 'default',
+    tone = 'default',
     size = 'md',
     disabled,
   }: {
     type?: 'single' | 'multiple';
     variant?: ToggleVariant;
+    tone?: ToggleTone;
     size?: ToggleSize;
     /** The one option that is dead, by value. */
     disabled?: string;
@@ -27,6 +33,7 @@
     value="left"
     aria-label="Text alignment"
     {variant}
+    {tone}
     {size}
   >
     {#each options as option (option)}
@@ -41,6 +48,7 @@
     value={['left']}
     aria-label="Text formatting"
     {variant}
+    {tone}
     {size}
   >
     {#each options as option (option)}

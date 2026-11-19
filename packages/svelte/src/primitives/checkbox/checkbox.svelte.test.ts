@@ -53,7 +53,7 @@ describe('Checkbox', () => {
   });
 
   // Read from the paint and not from the class string. `disabled:*` and
-  // `data-[state=checked]:*` tie on specificity, and the disabled colour can
+  // `state-checked:*` tie on specificity, and the disabled colour can
   // lose a tie without any class going missing.
   it('paints a disabled ticked box away from the live colour', async () => {
     const live = await render(Checkbox, {
@@ -70,6 +70,26 @@ describe('Checkbox', () => {
     expect(
       getComputedStyle(page.getByRole('checkbox').element()).backgroundColor,
     ).not.toBe(painted);
+  });
+
+  // The disabled fill is the surface's own colour, so the border is what
+  // shows where the box is.
+  it('outlines a disabled ticked box as it does a disabled empty one', async () => {
+    const empty = await render(Checkbox, {
+      props: { disabled: true, 'aria-label': label },
+    });
+    const outline = getComputedStyle(
+      page.getByRole('checkbox').element(),
+    ).borderTopColor;
+    await empty.unmount();
+
+    await render(Checkbox, {
+      props: { checked: true, disabled: true, 'aria-label': label },
+    });
+    expect(outline).not.toBe('rgba(0, 0, 0, 0)');
+    expect(
+      getComputedStyle(page.getByRole('checkbox').element()).borderTopColor,
+    ).toBe(outline);
   });
 
   it('draws the tick only once the box is ticked', async () => {

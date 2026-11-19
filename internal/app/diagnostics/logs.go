@@ -48,7 +48,6 @@ var keptKeys = map[string]bool{
 	"operation":                   true,
 	"printer":                     true,
 	"theme":                       true,
-	"skin":                        true,
 	"language":                    true,
 	"blocked":                     true,
 	"instances":                   true,

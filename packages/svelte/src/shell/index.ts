@@ -215,6 +215,7 @@ export {
   type FolderSharing,
   type StoragePlace,
   type StorageRow,
+  type StorageRowFold,
   StorageScreen,
 } from './storage';
 export { ThemeToggle } from './theme-toggle';
@@ -224,3 +225,11 @@ export {
   type SignInScreenProps,
 } from './sign-in';
 export { UserMenu, type UserMenuProps } from './user-menu';
+
+export { default as FilamentColorWheel } from './printer-detail/filament-color-wheel.svelte';
+
+export { default as FilamentPosition } from './printer-detail/filament-position.svelte';
+export {
+  FILAMENT_COLORS,
+  type FilamentColor,
+} from './printers/filament-colors';

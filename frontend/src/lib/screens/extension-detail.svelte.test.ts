@@ -138,7 +138,7 @@ describe('the page of one extension', () => {
       .element(page.getByText('Blocked by a constraint'))
       .toBeVisible();
     await expect
-      .element(page.getByText('Required by these installed extensions:'))
+      .element(page.getByText('Required by these installed extensions'))
       .toBeVisible();
     await expect
       .element(page.getByRole('button', { name: 'Remove' }))
@@ -272,7 +272,7 @@ describe('the page of one extension', () => {
     await ctx.settings.read();
 
     await expect
-      .element(page.getByRole('tabpanel').getByText('shelf'))
+      .element(page.getByRole('tabpanel').getByText('Shelf'))
       .toBeVisible();
     expect(
       document
@@ -312,9 +312,9 @@ describe('the page of one extension', () => {
     });
 
     await expect
-      .element(page.getByText('What the install granted:'))
+      .element(page.getByText('What the install granted.'))
       .toBeVisible();
-    await expect.element(page.getByText(/observe/u)).toBeVisible();
+    await expect.element(page.getByText(/observe/iu)).toBeVisible();
   });
 
   it('says so when no such extension is installed', async () => {
@@ -416,7 +416,7 @@ describe('the page of one extension', () => {
     ).toBe(false);
     expect(ctx.moduleCatalogue.writeConflict).toBe(true);
 
-    await expect.element(page.getByLabelText('shelf_size')).toBeVisible();
+    await expect.element(page.getByLabelText('Shelf size')).toBeVisible();
     expect(
       page.getByText(/This extension changed meanwhile/u).elements(),
     ).toHaveLength(0);
@@ -456,7 +456,7 @@ describe('the page of one extension', () => {
       props: { registry: new SlotRegistry(), screen: ExtensionDetail, ctx },
     });
 
-    await page.getByLabelText('shelf_size').fill('9');
+    await page.getByLabelText('Shelf size').fill('9');
     items = [{ ...withOptions(2), config: { shelf_size: 10 } }];
     await modules.load();
     await page.getByRole('button', { name: 'Save' }).click();
@@ -466,7 +466,7 @@ describe('the page of one extension', () => {
     await expect
       .element(page.getByText(/This extension changed meanwhile/u))
       .toBeVisible();
-    await expect.element(page.getByLabelText('shelf_size')).toHaveValue('9');
+    await expect.element(page.getByLabelText('Shelf size')).toHaveValue('9');
   });
 
   describe('where it shows', () => {

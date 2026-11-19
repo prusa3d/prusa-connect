@@ -137,13 +137,13 @@
   ondragleave={dragLeave}
   ondrop={drop}
   class={[
-    'rounded-sm border border-dashed border-border transition-colors',
+    'rounded-md border border-dashed border-border transition-colors',
     compact
       ? 'flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2'
       : 'flex flex-col items-center gap-4 p-6 text-center',
-    'data-[state=dragging-over]:border-primary data-[state=dragging-over]:bg-accent',
-    'data-[state=rejected]:border-destructive',
-    'data-[state=disabled]:border-disabled-foreground',
+    'state-dragging-over:border-primary state-dragging-over:bg-accent',
+    'state-rejected:border-destructive',
+    'state-disabled:border-disabled-foreground',
     className,
   ]}
 >
@@ -178,6 +178,7 @@
     <p class="text-xs text-muted-foreground">{acceptedLine}</p>
   {/if}
   {#if refused.length > 0}
+    <!-- eslint-disable-next-line no-restricted-syntax -- the dropzone announces the files it refused in place; its test queries them by role -->
     <p role="alert" class="text-sm text-destructive-text">{refusedLine}</p>
   {/if}
 </div>

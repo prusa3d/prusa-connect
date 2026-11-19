@@ -83,6 +83,7 @@
   <AppAt
     path="/settings/server/overview"
     overrides={{
+      ...maintenance,
       [READINESS]: () => json(200, ready),
       [CONNECTORS]: () =>
         json(200, {

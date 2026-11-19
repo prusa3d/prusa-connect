@@ -24,7 +24,7 @@
       <span class="truncate" title={job.name}
         >{job.name === '' ? t('fleet-stats.files.unnamed') : job.name}</span
       >
-      <span class="truncate text-xs text-muted-foreground">
+      <span class="text-xs text-muted-foreground">
         {printerName === undefined
           ? t('fleet-stats.section.recentLine', {
               outcome: t(`fleet-stats.section.outcome.${job.outcome}`),

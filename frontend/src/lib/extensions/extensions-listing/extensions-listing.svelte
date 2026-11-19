@@ -14,17 +14,16 @@
   width, in the table and in the stacked rows alike.
 
   The words of a row's switch, such as what the module does now and why the
-  switch is locked, are drawn in the row's body and not beside the switch.
-  There they wrap, so a long reason never pushes the row wider than the page.
-  When the table is narrow the columns give way from the least read: memory,
-  then the source, then the author, then the status, which the act at the end
-  of the row already says. The name, the release and the act always stay.
+  switch is locked, sit beside the switch when the state column holds it, and
+  in the row's body otherwise. Either way they wrap, so a long reason never
+  pushes the row wider than the page.
 
   A row names its module in `data-extension` and never in `data-module`. An
   installed module's styles apply under any `[data-module]`, so that name on
   a row would let them restyle the host's own row.
 -->
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import BadgeCheckIcon from '@lucide/svelte/icons/badge-check';
   import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
   import PackageIcon from '@lucide/svelte/icons/package';
@@ -38,6 +37,8 @@
     DataRow,
     type DataRowValue,
     RowList,
+    SortableTableHead,
+    type ListingState,
     Table,
     TableBody,
     TableCaption,
@@ -52,6 +53,7 @@
   import { ExtensionActions } from '../extension-actions';
   import { ModuleMemory } from '../module-memory';
   import { failuresText, usageText } from '../memory';
+  import { ExtensionSwitch } from '../extension-switch';
   import type { AskingAct } from '../extension-dialog';
   import { extensionDetailHref } from '../../routes';
   import { type ExtensionRow, SOURCE_KEY } from '../rows';
@@ -66,7 +68,9 @@
     go,
     ask,
     highlighted,
+    listing,
   }: {
+    listing?: ListingState<ExtensionRow> | undefined;
     rows: readonly ExtensionRow[];
     /** `table` or `rows`, as the toolbar's view switch holds it. */
     view: string;
@@ -85,12 +89,6 @@
     available: 'app.settings.extensions.offer.state.available',
     installed: 'app.settings.extensions.offer.state.installed',
     update: 'app.settings.extensions.offer.state.update',
-  } as const;
-
-  const STATE_VARIANT = {
-    available: 'outline',
-    installed: 'success',
-    update: 'warning',
   } as const;
 
   const TRUST_KEY: Readonly<Record<string, string>> = {
@@ -123,14 +121,10 @@
     return key === undefined ? undefined : t(key);
   };
 
-  // The installed release is named only when it is not the one on offer:
-  // the same number twice says nothing.
-  const installedOther = (row: ExtensionRow): string | undefined =>
-    row.installedVersion !== undefined &&
-    row.installedVersion !== '' &&
-    row.installedVersion !== row.version
-      ? row.installedVersion
-      : undefined;
+  const installedVersion = (row: ExtensionRow): string | undefined =>
+    [row.installedVersion, row.instance?.module?.version].find(
+      (value) => value !== undefined && value !== '',
+    );
 
   // Why an installed module is not running, such as a record backend it
   // needs and the server does not run.
@@ -161,27 +155,59 @@
     row.instance !== undefined &&
     ['running', 'degraded', 'starting'].includes(observedOf(row.instance));
 
-  const secondaries = (row: ExtensionRow): DataRowValue[] => {
+  // The version alone: the state sits beside it as its own badge, so the
+  // word "Installed" is not said twice.
+  const bareVersion = (row: ExtensionRow): string => {
+    const shown =
+      row.state === 'available' ? row.version : installedVersion(row);
+    if (shown === undefined || shown === '')
+      return t('app.settings.extensions.version.unknown');
+
+    return row.state === 'update' ? `${shown} → ${row.version}` : shown;
+  };
+
+  const secondaries = (
+    row: ExtensionRow,
+    stateBadge: Snippet,
+  ): DataRowValue[] => {
     const notes = notesOf(row);
     const memory = shows('memory') ? memoryOf(row) : undefined;
 
     return [
       row.channel === 'beta' ? t('app.settings.extensions.beta') : undefined,
       shows('author') && row.author !== '' ? row.author : undefined,
-      shows('version') && row.version !== '' ? row.version : undefined,
+      shows('version') ? bareVersion(row) : undefined,
       shows('source') ? t(SOURCE_KEY[row.source]) : undefined,
-      shows('state') ? t(STATE_KEY[row.state]) : undefined,
+      shows('state') ? stateBadge : undefined,
       memory === undefined ? undefined : usageText(memory, t, runsOf(row)),
       memory === undefined ? undefined : failuresText(memory, t),
       notes.observed,
       notes.locked,
       whyNotRunning(row)?.title,
+      row.summary === '' ? undefined : row.summary,
     ];
   };
 </script>
 
+{#snippet version(row: ExtensionRow)}
+  <span class="flex min-w-0 flex-col gap-0.5 tabular-nums">
+    <span
+      class="font-mono text-sm break-all whitespace-normal"
+      data-part="version"
+    >
+      {(installedVersion(row) ?? row.version) ||
+        t('app.settings.extensions.version.unknown')}
+      {#if row.state === 'update'}
+        <span class="text-muted-foreground"> →&nbsp;</span><strong
+          >{row.version}</strong
+        >
+      {/if}
+    </span>
+  </span>
+{/snippet}
+
 {#snippet sourceBadge(row: ExtensionRow)}
-  <Badge variant="outline">
+  <Badge variant="outline" size="plain">
     {#if row.source === 'marketplace'}
       <StoreIcon aria-hidden="true" />
     {:else if row.source === 'local'}
@@ -199,12 +225,6 @@
       {t('app.settings.extensions.beta')}
     </Badge>
   {/if}
-{/snippet}
-
-{#snippet stateBadge(row: ExtensionRow)}
-  <Badge variant={STATE_VARIANT[row.state]} data-part="state">
-    {t(STATE_KEY[row.state])}
-  </Badge>
 {/snippet}
 
 {#snippet trustBadge(row: ExtensionRow)}
@@ -246,8 +266,29 @@
   {/if}
 {/snippet}
 
+{#snippet heading(label: string, field: string, className?: string)}
+  {#if listing}
+    {@const order =
+      listing.sort?.field === field ? listing.sort.order : undefined}
+    <SortableTableHead
+      {label}
+      class={className}
+      direction={order &&
+        ({ asc: 'ascending', desc: 'descending' } as const)[order]}
+      onSort={(next = order === 'asc' ? 'desc' : 'asc') => {
+        listing.setSort(field, next);
+        listing.setPage(0);
+      }}
+    />
+  {:else}
+    <TableHead class={className}>{label}</TableHead>
+  {/if}
+{/snippet}
+
 {#snippet table()}
-  <Table>
+  <Table
+    class="[&_td:last-child>div]:min-w-max [&_td:last-child>div]:flex-nowrap"
+  >
     <TableCaption class="sr-only">
       {catalogue.modulesOn
         ? t('app.settings.extensions.list.caption')
@@ -255,40 +296,54 @@
     </TableCaption>
     <TableHeader>
       <TableRow>
-        <TableHead>{t('app.settings.extensions.column.module')}</TableHead>
+        {@render heading(
+          t('app.settings.extensions.column.module'),
+          'title',
+          'w-1/4',
+        )}
         {#if shows('author')}
-          <TableHead class="hidden @5xl/extensions:table-cell">
-            {t('app.settings.extensions.column.author')}
-          </TableHead>
+          {@render heading(
+            t('app.settings.extensions.column.author'),
+            'author',
+            'table-cell w-1/4',
+          )}
         {/if}
         {#if shows('version')}
-          <TableHead>{t('app.settings.extensions.column.version')}</TableHead>
+          {@render heading(
+            t('app.settings.extensions.column.version'),
+            'version',
+            'w-1/8',
+          )}
         {/if}
         {#if shows('source')}
-          <TableHead class="hidden @6xl/extensions:table-cell">
-            {t('app.settings.extensions.column.source')}
-          </TableHead>
+          {@render heading(
+            t('app.settings.extensions.column.source'),
+            'source',
+            'table-cell w-1/8',
+          )}
         {/if}
         {#if shows('state')}
-          <TableHead class="hidden @4xl/extensions:table-cell">
-            {t('app.settings.extensions.column.state')}
-          </TableHead>
+          {@render heading(
+            t('app.settings.extensions.column.state'),
+            'state',
+            'w-1/8',
+          )}
         {/if}
         {#if shows('memory')}
-          <TableHead class="hidden @7xl/extensions:table-cell">
+          <TableHead class="w-1/8">
             {t('app.settings.extensions.column.memory')}
           </TableHead>
         {/if}
-        <TableHead class="sr-only">
+        <TableHead class="sr-only w-1/8">
           {t('app.settings.extensions.column.actions')}
         </TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
       {#each rows as row (row.key)}
-        {@const other = installedOther(row)}
         {@const why = whyNotRunning(row)}
         {@const notes = notesOf(row)}
+        {@const notesInStatus = shows('state') && row.instance !== undefined}
         <TableRow
           data-extension={row.module}
           data-state={row.state}
@@ -298,30 +353,33 @@
         >
           <TableCell class="max-w-md">
             <!-- A table cell keeps to one line, and white-space is inherited,
-                 so the content says it may wrap: the summary takes two. -->
+                 so the content says it may wrap. The summary keeps to one line. -->
             <span class="flex min-w-0 flex-col gap-0.5 whitespace-normal">
               <span class="flex flex-wrap items-center gap-2">
                 {#if detailHrefOf(row) !== undefined}
                   <a
                     href={detailHrefOf(row)}
-                    class="rounded-sm font-medium underline-offset-4 hover:underline focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+                    class="rounded-sm text-sm font-medium break-words underline-offset-4 hover:underline focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
                     data-part="detail-link"
                   >
                     {row.title}
                   </a>
                 {:else}
-                  <span class="font-medium">{row.title}</span>
+                  <span
+                    class="text-sm font-medium break-words"
+                    data-part="module-title">{row.title}</span
+                  >
                 {/if}
                 {@render trustBadge(row)}
                 {@render betaBadge(row)}
                 {@render marketplaceLink(row)}
               </span>
               {#if row.summary !== ''}
-                <span class="line-clamp-2 text-xs text-muted-foreground">
+                <span class="line-clamp-1 text-xs text-muted-foreground">
                   {row.summary}
                 </span>
               {/if}
-              {#if notes.observed !== undefined || notes.locked !== undefined}
+              {#if !notesInStatus && (notes.observed !== undefined || notes.locked !== undefined)}
                 <span
                   class="flex flex-wrap gap-x-2 text-xs text-muted-foreground"
                   data-part="switch-notes"
@@ -350,46 +408,46 @@
             </span>
           </TableCell>
           {#if shows('author')}
-            <TableCell class="hidden @5xl/extensions:table-cell">
+            <TableCell class="table-cell">
               {#if row.author !== ''}<span>{row.author}</span>{/if}
             </TableCell>
           {/if}
           {#if shows('version')}
             <TableCell class="tabular-nums">
-              <span class="flex flex-col">
-                <span class="font-mono text-sm" data-part="version">
-                  {row.version}
-                </span>
-                {#if other !== undefined}
-                  <span
-                    class="font-mono text-xs text-muted-foreground"
-                    data-part="installed-version"
-                  >
-                    {t('app.settings.extensions.version.installed', {
-                      version: other,
-                    })}
-                  </span>
-                {/if}
-              </span>
+              {@render version(row)}
             </TableCell>
           {/if}
           {#if shows('source')}
-            <TableCell class="hidden @6xl/extensions:table-cell">
+            <TableCell class="table-cell">
               {@render sourceBadge(row)}
             </TableCell>
           {/if}
           {#if shows('state')}
-            <TableCell class="hidden @4xl/extensions:table-cell">
-              {@render stateBadge(row)}
+            <TableCell
+              class="[&_[data-part=extension-switch]:not(:has([data-part=locked]))]:min-w-max [&_[data-part=extension-switch]:not(:has([data-part=locked]))]:flex-nowrap [&_[data-part=locked]]:whitespace-normal"
+            >
+              {#if row.instance !== undefined}<ExtensionSwitch
+                  {row}
+                  {catalogue}
+                  {ask}
+                  notes={notesInStatus}
+                />{:else}<span class="text-muted-foreground">—</span>{/if}
             </TableCell>
           {/if}
           {#if shows('memory')}
-            <TableCell class="hidden @7xl/extensions:table-cell">
+            <TableCell class="table-cell">
               <ModuleMemory memory={memoryOf(row)} running={runsOf(row)} />
             </TableCell>
           {/if}
           <TableCell class="text-right">
-            <ExtensionActions {row} {catalogue} {go} {ask} notes={false} />
+            <ExtensionActions
+              {row}
+              {catalogue}
+              {go}
+              {ask}
+              notes={false}
+              showSwitch={!shows('state') || row.instance === undefined}
+            />
           </TableCell>
         </TableRow>
       {/each}
@@ -400,6 +458,11 @@
 {#snippet stacked()}
   <RowList>
     {#each rows as row (row.key)}
+      {#snippet stateBadge()}
+        <Badge variant={row.state === 'update' ? 'warning' : 'outline'}>
+          {t(STATE_KEY[row.state])}
+        </Badge>
+      {/snippet}
       {#snippet rowTrust()}
         <span class="relative z-10 inline-flex items-center gap-2">
           {@render trustBadge(row)}
@@ -412,7 +475,7 @@
         wrapValues
         secondaryValues={[
           (trustOf(row) !== undefined || Boolean(row.pageUrl)) && rowTrust,
-          ...secondaries(row),
+          ...secondaries(row, stateBadge),
         ]}
         data-extension={row.module}
         data-state={row.state}

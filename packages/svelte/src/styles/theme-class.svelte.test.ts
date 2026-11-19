@@ -5,9 +5,10 @@
 // real document element.
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyTheme } from './theme.svelte';
+import { applyTheme, REFERENCE_COLOR_MODE_KEY } from './theme.svelte';
 
 afterEach(() => {
+  localStorage.removeItem(REFERENCE_COLOR_MODE_KEY);
   document.documentElement.classList.remove('dark');
 });
 
@@ -31,5 +32,13 @@ describe('the class the dark variant matches', () => {
     applyTheme(true);
 
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('hands the side to the API reference page', () => {
+    applyTheme(true);
+    expect(localStorage.getItem(REFERENCE_COLOR_MODE_KEY)).toBe('dark');
+
+    applyTheme(false);
+    expect(localStorage.getItem(REFERENCE_COLOR_MODE_KEY)).toBe('light');
   });
 });

@@ -208,7 +208,7 @@
           class="grid grid-cols-1 gap-x-10 gap-y-0 @3xl/settings:grid-cols-2"
         >
           {#each halves(setup.rows) as half, at (at)}
-            <KeyValueList rows={half} />
+            <KeyValueList rows={half} labelWidth="14rem" />
           {/each}
         </div>
         {#if setup.filaments.length > 0}

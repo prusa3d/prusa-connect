@@ -101,3 +101,25 @@
     <Card tone="critical"><CardContent>Critical</CardContent></Card>
   </div>
 </Story>
+
+<!-- `compact` with 8px between the parts, as a printer card draws. -->
+<Story name="Snug" asChild>
+  <Card class="w-80" density="snug">
+    <CardHeader><CardTitle>Original Prusa MK4S</CardTitle></CardHeader>
+    <CardContent>Ready to print</CardContent>
+  </Card>
+</Story>
+
+<!-- A card standing inside a panel: a fill and no border. -->
+<Story name="Surface" asChild>
+  <Card class="w-80" tone="surface">
+    <CardContent>PrusaConnect: 3 printers</CardContent>
+  </Card>
+</Story>
+
+<!-- A page's own panel: the content carries the block padding. -->
+<Story name="Panel" asChild>
+  <Card class="w-80" density="panel" radius="md">
+    <CardContent class="py-6">Ready to print</CardContent>
+  </Card>
+</Story>

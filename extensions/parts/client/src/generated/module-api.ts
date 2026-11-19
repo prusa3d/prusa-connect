@@ -314,6 +314,8 @@ export interface components {
             size: number;
             /** @description The digest the storage took, and absent where it keeps none. */
             sha256?: string;
+            /** @description Whether the storage reported a picture inside the file when the version was written. false means it has none, and absent means the storage did not say. */
+            thumbnail?: boolean;
         };
         /** @description One state of a part: the files it was at, and a note on what changed. The files of a version do not change. */
         Version: {

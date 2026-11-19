@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { deviceThumbnailUrlOf } from '@prusa/connect-ui/data';
   import { translateFor } from '@prusa/connect-ui/i18n';
   import { type JobRow, JobsScreen } from '@prusa/connect-ui/shell';
 
-  import { client } from '../client';
   import { APP_NAMESPACE } from '../i18n';
   import { PATHS, printedHref } from '../routes';
   import type { AppContext } from '../screens';
@@ -41,11 +39,18 @@
   const transitions = $derived(
     ctx.deviceStates.transitionsOf(fleet.devices.map((device) => device.kind)),
   );
+
+  const observeOnly = $derived(
+    new Set(
+      fleet.devices
+        .filter((device) => device.actions?.includes('operate') === false)
+        .map((device) => device.id),
+    ),
+  );
 </script>
 
-<div class="flex flex-col gap-3">
+{#snippet notice()}
   {#if printerName !== undefined}
-    <!-- The line sits above the screen, which has no place for it. -->
     <p class="text-sm text-muted-foreground">
       {t('app.jobs.printer', { name: printerName })}
       <a
@@ -56,20 +61,23 @@
       </a>
     </p>
   {:else if jobs.cut}
-    <!-- The line sits above the screen, which has no place for it. -->
     <p class="text-sm text-muted-foreground">
       {t('app.jobs.cut', { shown: jobs.shown })}
     </p>
   {/if}
-  <JobsScreen
-    {jobs}
-    devices={fleet.devices}
-    {transitions}
-    onPrint={ctx.print}
-    onPrinted={(printers: readonly string[]) => {
-      ctx.go(printedHref(printers));
-    }}
-    thumbnailFor={(row: JobRow) =>
-      deviceThumbnailUrlOf(client, row.printerId, row.path)}
-  />
-</div>
+{/snippet}
+
+<JobsScreen
+  {notice}
+  {jobs}
+  devices={fleet.devices}
+  {transitions}
+  onPrint={ctx.print}
+  onPrinted={(printers: readonly string[]) => {
+    ctx.go(printedHref(printers));
+  }}
+  thumbnailFor={(row: JobRow) =>
+    row.path && !observeOnly.has(row.printerId)
+      ? ctx.deviceThumbnail?.(row.printerId, row.path)
+      : undefined}
+/>

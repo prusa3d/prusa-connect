@@ -55,34 +55,15 @@ afterEach(() => {
 });
 
 describe('Card', () => {
-  // A 320px screen spends a third of its width on air at 24px a side, so the
-  // narrow card takes 16px instead.
-  it('pads by 16px until the card clears 24rem', async () => {
-    const card = await drawIn('320px');
+  // Header, body and footer share one inset, so their edges line up at both
+  // steps of the padding.
+  it.each(['320px', '480px'])('pads every part alike at %s', async (width) => {
+    const card = await drawIn(width);
+    const inset = (name: string): string =>
+      getComputedStyle(slot(card, name)).paddingLeft;
 
-    expect(getComputedStyle(slot(card, 'card-content')).paddingLeft).toBe(
-      '16px',
-    );
-    expect(getComputedStyle(slot(card, 'card-header')).paddingLeft).toBe(
-      '16px',
-    );
-    expect(getComputedStyle(slot(card, 'card-footer')).paddingLeft).toBe(
-      '16px',
-    );
-  });
-
-  it('pads by 24px once the card clears 24rem', async () => {
-    const card = await drawIn('480px');
-
-    expect(getComputedStyle(slot(card, 'card-content')).paddingLeft).toBe(
-      '24px',
-    );
-    expect(getComputedStyle(slot(card, 'card-header')).paddingLeft).toBe(
-      '24px',
-    );
-    expect(getComputedStyle(slot(card, 'card-footer')).paddingLeft).toBe(
-      '24px',
-    );
+    expect(inset('card-header')).toBe(inset('card-content'));
+    expect(inset('card-footer')).toBe(inset('card-content'));
   });
 
   // The step keys off the card and not the viewport, so a narrow card on a
@@ -91,9 +72,10 @@ describe('Card', () => {
     const narrow = await drawIn('320px');
     const wide = await drawIn('480px');
 
-    expect(getComputedStyle(slot(narrow, 'card-content')).paddingLeft).not.toBe(
-      getComputedStyle(slot(wide, 'card-content')).paddingLeft,
-    );
+    const inset = (card: Element): number =>
+      parseFloat(getComputedStyle(slot(card, 'card-content')).paddingLeft);
+
+    expect(inset(narrow)).toBeLessThan(inset(wide));
   });
 
   // A two-column split in a narrow header left the title a 40px column and
@@ -117,8 +99,12 @@ describe('Card', () => {
     expect(action.left).toBeGreaterThan(title.right);
     expect(action.top).toBeCloseTo(title.top, 0);
     // The action ends at the header's right edge, not beside the title.
-    const header = slot(card, 'card-header').getBoundingClientRect();
-    expect(action.right).toBeCloseTo(header.right - 24, 0);
+    const header = slot(card, 'card-header');
+    expect(action.right).toBeCloseTo(
+      header.getBoundingClientRect().right -
+        parseFloat(getComputedStyle(header).paddingRight),
+      0,
+    );
   });
 
   // The card carries no role of its own. A caller that makes it a landmark

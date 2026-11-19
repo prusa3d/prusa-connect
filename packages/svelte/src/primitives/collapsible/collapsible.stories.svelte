@@ -18,7 +18,7 @@
     <CollapsibleTrigger>
       <span>Advanced settings</span>
       <ChevronDownIcon
-        class="size-4 transition-transform group-data-[state=open]/collapsible-trigger:rotate-180"
+        class="size-4 transition-transform group-state-open/collapsible-trigger:rotate-180"
       />
     </CollapsibleTrigger>
     <CollapsibleContent class="pt-2 text-sm text-muted-foreground">
@@ -32,6 +32,15 @@
 <Story name="Row" asChild>
   <Collapsible class="w-72">
     <CollapsibleTrigger variant="row">Advanced settings</CollapsibleTrigger>
+    <CollapsibleContent class="pt-2 text-sm text-muted-foreground">
+      Configure bed mesh calibration.
+    </CollapsibleContent>
+  </Collapsible>
+</Story>
+
+<Story name="Filled" asChild>
+  <Collapsible class="w-72">
+    <CollapsibleTrigger variant="filled">Advanced settings</CollapsibleTrigger>
     <CollapsibleContent class="pt-2 text-sm text-muted-foreground">
       Configure bed mesh calibration.
     </CollapsibleContent>

@@ -15,6 +15,13 @@ export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 /** The one `localStorage` key the preference lives under. */
 export const THEME_STORAGE_KEY = 'theme';
 
+/**
+ * The key the API reference page (`/docs`, drawn by Scalar on this origin)
+ * keeps its colour mode under. The page reads it when it opens, so writing it
+ * with the theme makes the reference follow the app.
+ */
+export const REFERENCE_COLOR_MODE_KEY = 'colorMode';
+
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 export type ThemeStorage = RememberedStorage;
@@ -118,4 +125,9 @@ export const applyTheme = (dark: boolean): void => {
   // Under SSR there is no document.
   if (typeof document === 'undefined') return;
   document.documentElement.classList.toggle('dark', dark);
+  writeRemembered(
+    browserStorage(),
+    REFERENCE_COLOR_MODE_KEY,
+    dark ? 'dark' : 'light',
+  );
 };

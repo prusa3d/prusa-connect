@@ -15,17 +15,30 @@
   let {
     rows,
     shows,
+    sortField,
+    sortOrder,
+    onSort,
   }: {
     rows: readonly PrinterRow[];
+    sortField?: string | undefined;
+    sortOrder?: 'asc' | 'desc' | undefined;
+    onSort?:
+      | Partial<
+          Record<
+            'name' | 'state',
+            ((order: 'asc' | 'desc') => void) | undefined
+          >
+        >
+      | undefined;
     shows: (field: PrinterFieldId) => boolean;
   } = $props();
 </script>
 
 <div class="@container/printer-listing">
-  <div class="hidden @[72rem]/printer-listing:block">
-    <PrintersTable {rows} {shows} />
+  <div class="hidden @4xl/printer-listing:block">
+    <PrintersTable {rows} {shows} {sortField} {sortOrder} {onSort} />
   </div>
-  <div class="@[72rem]/printer-listing:hidden">
+  <div class="@4xl/printer-listing:hidden">
     <PrintersRows {rows} {shows} />
   </div>
 </div>

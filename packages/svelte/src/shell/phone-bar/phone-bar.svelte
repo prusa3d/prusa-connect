@@ -1,11 +1,17 @@
 <script lang="ts">
+  import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
   import MenuIcon from '@lucide/svelte/icons/menu';
   import XIcon from '@lucide/svelte/icons/x';
+
+  import { SvelteSet } from 'svelte/reactivity';
 
   import { t } from '../../i18n';
   import {
     Button,
-    Logo,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+    ConnectLogo,
     Sheet,
     SheetClose,
     SheetContent,
@@ -14,8 +20,12 @@
     SheetTrigger,
   } from '../../primitives';
   import { ConnectionStatus } from '../connection-status';
-  import { productSubtitle } from '../product-subtitle';
-  import { isCurrentRow, type RailNavItem, sectionEntries } from '../rail';
+  import {
+    isCurrent,
+    isCurrentRow,
+    type RailNavItem,
+    sectionEntries,
+  } from '../rail';
   import { ThemeToggle } from '../theme-toggle';
   import { UserMenu } from '../user-menu';
   import type { PhoneBarProps } from './types';
@@ -33,10 +43,7 @@
   }: PhoneBarProps = $props();
 
   let open = $state(false);
-
-  const settingsRows = $derived(
-    settings === undefined ? [] : sectionEntries(settings),
-  );
+  const expandedSections = new SvelteSet<string>();
 
   // `--app-phone-bar-height` is set at runtime by a ResizeObserver, so it
   // cannot be a design token; that forces these two arbitrary values.
@@ -48,28 +55,70 @@
     'inset-x-0 top-0 bottom-[var(--app-phone-bar-height)]';
 </script>
 
-{#snippet row(item: RailNavItem)}
+{#snippet label(item: RailNavItem)}
   {@const Icon = item.icon}
+  <span class="flex min-w-0 items-center gap-2.5">
+    {#if Icon}
+      <Icon aria-hidden="true" class="size-6 shrink-0" />
+    {/if}
+    <span class="truncate">{item.label}</span>
+  </span>
+{/snippet}
+
+{#snippet row(item: RailNavItem, group = false)}
   {@const current = isCurrentRow(item, currentPath)}
   <li>
-    <a
-      href={item.href}
-      aria-current={current ? 'page' : undefined}
-      onclick={() => {
-        open = false;
-      }}
-      class={[
-        'flex min-h-touch-target items-center gap-2.5 rounded-sm border px-2.5 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset',
-        current
-          ? 'border-selected bg-selected text-selected-foreground'
-          : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
-      ]}
-    >
-      {#if Icon}
-        <Icon aria-hidden="true" />
-      {/if}
-      {item.label}
-    </a>
+    {#if group && item.children?.length}
+      {@const holdsCurrent =
+        isCurrent(item.href, currentPath) ||
+        item.children.some((child) => isCurrent(child.href, currentPath))}
+      <Collapsible
+        open={expandedSections.has(item.id)}
+        onOpenChange={(value) => {
+          if (value) expandedSections.add(item.id);
+          else expandedSections.delete(item.id);
+        }}
+      >
+        <CollapsibleTrigger
+          data-current={holdsCurrent ? '' : undefined}
+          class="min-h-touch-target gap-2.5 rounded-sm border border-transparent px-2.5 py-1.5 text-start hover:bg-accent not-aria-expanded:data-current:border-selected not-aria-expanded:data-current:bg-selected not-aria-expanded:data-current:text-selected-foreground"
+        >
+          {@render label(item)}
+          <ChevronRightIcon
+            aria-hidden="true"
+            class="size-4 shrink-0 rotate-0 transition-transform group-aria-expanded/collapsible-trigger:rotate-90 motion-reduce:transition-none"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul
+            class={[
+              'ms-5 mt-1 flex flex-col gap-1 border-border ps-2',
+              item === settings ? 'border-s-0' : 'border-s',
+            ]}
+          >
+            {#each sectionEntries(item) as child (child.id)}
+              {@render row(child)}
+            {/each}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
+    {:else}
+      <a
+        href={item.href}
+        onclick={() => {
+          open = false;
+        }}
+        aria-current={current ? 'page' : undefined}
+        class={[
+          'flex min-h-touch-target items-center gap-2.5 rounded-sm border px-2.5 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset',
+          current
+            ? 'border-selected bg-selected text-selected-foreground'
+            : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
+        ]}
+      >
+        {@render label(item)}
+      </a>
+    {/if}
   </li>
 {/snippet}
 
@@ -82,7 +131,7 @@
     class="relative flex w-fit min-w-0 items-center self-center px-2"
     title={connection === 'offline' ? t('shell.offlineDetail') : undefined}
   >
-    <Logo size="sm" subtitle={productSubtitle(productName)} />
+    <ConnectLogo size="sm" label={productName} />
     {#if connection === 'offline'}
       <ConnectionStatus
         state="offline"
@@ -92,7 +141,12 @@
     {/if}
   </span>
 
-  <Sheet bind:open>
+  <Sheet
+    bind:open
+    onOpenChange={(value) => {
+      if (value) expandedSections.clear();
+    }}
+  >
     {#if open}
       <!-- SheetClose, not the trigger again: bits-ui's trigger only opens. -->
       <SheetClose>
@@ -158,37 +212,10 @@
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <ul class="flex flex-col gap-1 p-4">
             {#each items as item (item.id)}
-              {#if (item.children?.length ?? 0) > 0}
-                <!-- The rail draws a group's entries one step in under its
-                     row, and the sheet keeps that shape so a module's pages
-                     do not read as the core's own. -->
-                <li>
-                  <p
-                    class="px-2.5 pt-2 pb-1 text-xs font-medium text-muted-foreground"
-                  >
-                    {item.label}
-                  </p>
-                  <ul
-                    class="ms-5 flex flex-col gap-1 border-s border-border ps-1"
-                  >
-                    {#each sectionEntries(item) as entry (entry.id)}
-                      {@render row(entry)}
-                    {/each}
-                  </ul>
-                </li>
-              {:else}
-                {@render row(item)}
-              {/if}
+              {@render row(item, true)}
             {/each}
             {#if settings !== undefined}
-              <li
-                class="mt-3 border-t border-border px-2.5 pt-4 pb-1 text-xs font-medium text-muted-foreground"
-              >
-                {settings.label}
-              </li>
-              {#each settingsRows as item (item.id)}
-                {@render row(item)}
-              {/each}
+              {@render row(settings, true)}
             {/if}
           </ul>
         </div>

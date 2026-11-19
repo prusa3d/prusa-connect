@@ -30,7 +30,7 @@ Keeps the log lines and metrics your Prusa printers send, for a day, and adds th
 
 | | |
 |---|---|
-| version | 0.1.9 |
+| version | 0.1.10 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/buddy-debug-logs` |
 | namespace | `com.github.aux.prusa3d.buddy-debug-logs` |

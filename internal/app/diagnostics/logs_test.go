@@ -159,7 +159,6 @@ func TestServerKeysThatNameNothingAreKept(t *testing.T) {
 		slog.String("printer", "d1"),
 		slog.String("printer_name", "Bob's MK4"),
 		slog.String("theme", "dark"),
-		slog.String("skin", "prusa"),
 		slog.String("language", "cs"),
 		slog.Any("blocked", []string{"camera:front"}),
 		slog.Any("instances", []string{"camera:front=serving/required"}),
@@ -169,7 +168,6 @@ func TestServerKeysThatNameNothingAreKept(t *testing.T) {
 	require.Equal(t, "d1", attrs["printer"])
 	require.Equal(t, s.Hash("Bob's MK4"), attrs["printer_name"])
 	require.Equal(t, "dark", attrs["theme"])
-	require.Equal(t, "prusa", attrs["skin"])
 	require.Equal(t, "cs", attrs["language"])
 	require.Equal(t, "[camera:front]", attrs["blocked"])
 	require.Equal(t, "[camera:front=serving/required]", attrs["instances"])

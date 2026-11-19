@@ -1,7 +1,7 @@
 // What the page is told about how it should look, and what it draws when the
-// server cannot say. The four values decide the browser tab, the first theme,
-// the first language and the brand colour, so a wrong fallback is a page a
-// person watches change under them.
+// server cannot say. The three values decide the browser tab, the first theme
+// and the first language, so a wrong fallback is a page a person watches
+// change under them.
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
 
@@ -9,7 +9,7 @@ import { AppSettings, UI_DEFAULTS } from './app-settings.svelte';
 import type { AppSettingsClient, UiSettings } from './services/app-settings';
 import { StubApiError } from './stubs';
 
-/** A server that answers the four keys, counting how often it was asked. */
+/** A server that answers the three keys, counting how often it was asked. */
 const stubUi = (
   answer: Partial<UiSettings>,
 ): { client: AppSettingsClient; readonly calls: number } => {
@@ -25,7 +25,6 @@ const stubUi = (
           title: 'Prusa Connect',
           default_language: 'en',
           theme: 'system',
-          skin: 'prusa',
           dashboards: true,
           printer_custom_ca: false,
           printer_admission: 'approval',
@@ -48,14 +47,13 @@ const refusing = (): AppSettingsClient => ({
 });
 
 describe('before the server has answered', () => {
-  it('draws the same four values a server nobody configured serves', () => {
+  it('draws the same three values a server nobody configured serves', () => {
     const settings = new AppSettings(stubUi({}).client);
 
     expect(settings.asked).toBe(false);
     expect(settings.title).toBe(UI_DEFAULTS.title);
     expect(settings.defaultLanguage).toBe(UI_DEFAULTS.defaultLanguage);
     expect(settings.theme).toBe(UI_DEFAULTS.theme);
-    expect(settings.skin).toBe(UI_DEFAULTS.skin);
   });
 });
 
@@ -112,12 +110,11 @@ describe('how a new printer joins', () => {
 });
 
 describe('what the server said', () => {
-  it('reaches all four getters', async () => {
+  it('reaches all three getters', async () => {
     const stub = stubUi({
       title: 'Workshop floor',
       default_language: 'cs',
       theme: 'dark',
-      skin: 'slicer',
     });
     const settings = new AppSettings(stub.client);
 
@@ -129,17 +126,34 @@ describe('what the server said', () => {
     expect(settings.title).toBe('Workshop floor');
     expect(settings.defaultLanguage).toBe('cs');
     expect(settings.theme).toBe('dark');
-    expect(settings.skin).toBe('slicer');
+  });
+
+  // A server of an older build still names the brand file it was configured
+  // with. The page has one appearance and reads past it.
+  it('reads an answer that still carries skin', async () => {
+    const older = {
+      title: 'Workshop floor',
+      theme: 'dark',
+      skin: 'slicer',
+    } as const;
+    const settings = new AppSettings(stubUi(older).client);
+
+    await settings.read();
+    flushSync();
+
+    expect(settings.error).toBeUndefined();
+    expect(settings.title).toBe('Workshop floor');
+    expect(settings.theme).toBe('dark');
+    expect(settings).not.toHaveProperty('skin');
   });
 
   it('keeps the default for a key it left empty', async () => {
-    const settings = new AppSettings(stubUi({ title: '   ', skin: '' }).client);
+    const settings = new AppSettings(stubUi({ title: '   ' }).client);
 
     await settings.read();
     flushSync();
 
     expect(settings.title).toBe(UI_DEFAULTS.title);
-    expect(settings.skin).toBe(UI_DEFAULTS.skin);
   });
 
   // The server refuses a fourth theme at startup, so this is a server of
@@ -189,7 +203,6 @@ describe('a server that cannot answer', () => {
     expect(settings.title).toBe(UI_DEFAULTS.title);
     expect(settings.defaultLanguage).toBe(UI_DEFAULTS.defaultLanguage);
     expect(settings.theme).toBe(UI_DEFAULTS.theme);
-    expect(settings.skin).toBe(UI_DEFAULTS.skin);
   });
 
   it('says whether the server keeps dashboards, and assumes it does until it answers', async () => {

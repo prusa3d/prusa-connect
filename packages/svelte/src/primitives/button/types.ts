@@ -10,11 +10,18 @@ import type { ClassValue, HTMLButtonAttributes } from 'svelte/elements';
 export type ButtonVariant =
   'default' | 'secondary' | 'ghost' | 'destructive' | 'link';
 
-/** The three sizes that hold text. */
-export type ButtonTextSize = 'sm' | 'md' | 'lg';
+/** Text sizes. Compact gives more room than the small size. */
+export type ButtonTextSize =
+  'sm' | 'control' | 'compact' | 'md' | 'field' | 'lg';
 
-/** A square size for each text size. A square button holds one glyph. */
-export type ButtonIconSize = 'icon-sm' | 'icon-md' | 'icon-lg';
+/** The corner. `full` is a round button, such as an avatar that is pressed. */
+export type ButtonRadius = 'sm' | 'full';
+
+/**
+ * A square size for each text size. A square button holds one glyph, or a
+ * person's picture at `avatar`.
+ */
+export type ButtonIconSize = 'icon-sm' | 'icon-md' | 'icon-lg' | 'avatar';
 
 /**
  * The size of a `link` button that carries an icon: it lays out as a flex row
@@ -29,6 +36,7 @@ interface ButtonBaseProps extends Omit<
   'class' | 'children'
 > {
   variant?: ButtonVariant;
+  radius?: ButtonRadius;
   class?: ClassValue | undefined;
   children?: Snippet;
   /**

@@ -8,6 +8,7 @@
     ref = $bindable(null),
     class: className,
     variant = 'default',
+    tone = 'default',
     size = 'md',
     value = $bindable(),
     onValueChange,
@@ -19,7 +20,7 @@
     rest as unknown as ToggleGroupPrimitive.RootProps & { type: 'single' },
   );
 
-  setGroupLook(() => ({ variant, size }));
+  setGroupLook(() => ({ variant, tone, size }));
 
   // A group that picks one option behaves like radios: clicking the picked
   // item would clear it, so the clear is dropped and the pick restored.
@@ -43,6 +44,7 @@
   bind:ref
   data-slot="toggle-group"
   data-variant={variant}
+  data-tone={tone}
   data-size={size}
   class={[
     // Every item is `shrink-0`, because a segmented control whose labels are

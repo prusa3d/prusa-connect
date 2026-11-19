@@ -98,7 +98,11 @@
   );
 </script>
 
-<TilePanel {title} {fallback}>
+<TilePanel
+  {title}
+  {fallback}
+  class="printer-list-panel @container/printer-list"
+>
   {#snippet trailing()}
     {#if printers.loaded}
       <Badge variant="secondary" class="tabular-nums">{views.length}</Badge>
@@ -115,14 +119,14 @@
     {:else if settings.size === 'row'}
       <ul
         data-part="printer-rows"
-        class="scroller -me-1 min-h-0 flex-1 divide-y divide-border overflow-y-auto pe-1"
+        class="scroller me-0 min-h-0 flex-1 divide-y divide-border overflow-y-auto pe-0"
         {@attach countBelow}
       >
         {#each views as view (view.id)}
           <li>
             <a
               href={view.detailHref}
-              class="grid grid-cols-3 items-center gap-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              class="grid grid-cols-3 items-center gap-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring @max-md/printer-list:grid-cols-1 @max-md/printer-list:gap-1 @max-md/printer-list:py-3"
             >
               <span class="min-w-0 truncate font-medium">{view.name}</span>
               <span class="flex min-w-0 items-center gap-2">
@@ -141,7 +145,10 @@
                     {formatDuration(view.remaining)}
                   </span>
                 {/if}
-                <Badge variant={stateBadgeVariant(view.state)} class="shrink-0">
+                <Badge
+                  variant={stateBadgeVariant(view.state)}
+                  class="shrink-0 font-mono leading-none tracking-wide uppercase"
+                >
                   {t(PRINTER_STATE_LABEL_KEY[view.state])}
                 </Badge>
               </span>
@@ -152,13 +159,22 @@
     {:else}
       <ul
         data-part="printer-cards"
-        class="printer-cards scroller -me-1 min-h-0 flex-1 overflow-y-auto pe-1"
+        class="printer-cards scroller me-0 min-h-0 flex-1 overflow-y-auto pe-0"
         {@attach countBelow}
       >
         {#each views as view (view.id)}
           <li>
-            <Card tone={cardToneOf(view.tier)} density="tight">
-              <CardContent class="px-3">
+            <Card
+              tone={cardToneOf(view.tier)}
+              density="tight"
+              class={[
+                'h-full',
+                view.tier !== 'critical' &&
+                  view.tier !== 'attention' &&
+                  'dark:border-border/60',
+              ]}
+            >
+              <CardContent class="dashboard-printer-content flex-1">
                 <PrinterFace
                   {view}
                   fields={settings.fields}
@@ -183,21 +199,42 @@
 </TilePanel>
 
 <style>
+  :global(.printer-list-panel) > :global(:first-child) {
+    margin-block-end: max(
+      0px,
+      calc(var(--spacing-dashboard-heading-gap) - var(--spacing) * 2)
+    );
+  }
+
   /* The wall view leaves no one to scroll. */
   :global([data-part='kiosk']) .scroller {
     overflow-y: hidden;
   }
 
-  /* As many columns as fit at the width one printer reads well at. The
-     width is the theme's spacing step, so it follows the density the page
-     is drawn at. */
+  /* As many columns as fit at the width one printer reads well at, four at
+     most; narrower panels keep the readable minimum. */
   .printer-cards {
     display: grid;
     grid-template-columns: repeat(
       auto-fill,
-      minmax(min(100%, calc(var(--spacing) * 56)), 1fr)
+      minmax(
+        min(
+          100%,
+          max(
+            var(--spacing-printer-card-min),
+            calc((100% - var(--spacing) * 9) / 4)
+          )
+        ),
+        1fr
+      )
     );
     align-content: start;
-    gap: calc(var(--spacing) * 2);
+    gap: calc(var(--spacing) * 3);
+  }
+  .printer-cards :global([data-slot='card']) {
+    padding-block: 0;
+  }
+  .printer-cards :global(.dashboard-printer-content) {
+    padding: var(--spacing-printer-card-padding);
   }
 </style>

@@ -84,7 +84,8 @@
         aria-hidden="true"
         value={progress}
         tone={PRINTER_STATE_PROGRESS_TONE[row.state]}
-        class="h-1 rounded-none"
+        size="sm"
+        class="rounded-none"
       />
     {/if}
   </div>

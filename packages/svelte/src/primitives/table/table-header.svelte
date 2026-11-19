@@ -7,7 +7,10 @@
 
 <thead
   data-slot="table-header"
-  class={['[&_tr]:border-b [&_tr]:border-border', className]}
+  class={[
+    '[&_tr]:border-b [&_tr]:border-border [&_tr:hover]:bg-transparent',
+    className,
+  ]}
   {...rest}
 >
   {@render children?.()}

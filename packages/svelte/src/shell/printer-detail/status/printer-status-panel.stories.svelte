@@ -1,5 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
+  import { userEvent, within } from 'storybook/test';
 
   import { capabilityFor, LIFECYCLE_VERBS, type Device } from '../../../domain';
   import { fakeDevice } from '../../../test/fakes';
@@ -251,6 +252,27 @@
   />
 </Story>
 
+<!-- Open camera stream enlarges the camera in a dialog, on its live view. -->
+<Story
+  name="Camera enlarged"
+  asChild
+  play={async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', {
+        name: 'Open camera stream on MK4S #1042',
+      }),
+    );
+  }}
+>
+  <PrinterStatusPanel
+    device={printing('PRINTING')}
+    {telemetry}
+    {commands}
+    now={NOW}
+    camera={LIVE_FEED}
+  />
+</Story>
+
 <!-- A long file name at phone width gives up its middle, and Pause and Stop
      move to a line of their own below it. -->
 <Story name="Long file name at phone width" asChild>
@@ -288,6 +310,17 @@
         },
       ],
     })}
+    {telemetry}
+    {commands}
+    now={NOW}
+    camera={FEED}
+  />
+</Story>
+
+<!-- Waiting for hands with no print on record: the camera takes the card. -->
+<Story name="Attention between prints" asChild>
+  <PrinterStatusPanel
+    device={printer('ATTENTION')}
     {telemetry}
     {commands}
     now={NOW}
@@ -408,6 +441,28 @@
     {commands}
     now={NOW}
     camera={FEED}
+  />
+</Story>
+
+<Story name="Error without reason" asChild>
+  <PrinterStatusPanel
+    device={printer('ERROR')}
+    {telemetry}
+    {commands}
+    problemHref="#/printers/p0/history"
+  />
+</Story>
+
+<!-- A camera whose still does not load says it has no picture yet. -->
+<Story name="Camera with no picture" asChild>
+  <PrinterStatusPanel
+    device={printing('PRINTING')}
+    {telemetry}
+    {commands}
+    camera={{
+      camera: BED_CAM,
+      pictures: { still: 'data:image/gif;base64,broken' },
+    }}
   />
 </Story>
 
@@ -631,5 +686,32 @@
     {history}
     historyHref={HISTORY_HREF}
     onUpload={receive}
+  />
+</Story>
+
+<Story name="Print Details Unavailable" asChild>
+  <PrinterStatusPanel
+    device={{ ...fakeDevice('missing'), state: { '/state': 'PRINTING' } }}
+    {telemetry}
+    {commands}
+  />
+</Story>
+<Story name="Print Name Unavailable" asChild>
+  <PrinterStatusPanel
+    device={printing('PRINTING', {
+      ...JOB,
+      display_name: '',
+      path: '',
+      time_remaining_ms: 0,
+    })}
+    {telemetry}
+    {commands}
+  />
+</Story>
+<Story name="Busy Without Print" asChild>
+  <PrinterStatusPanel
+    device={{ ...fakeDevice('busy'), state: { '/state': 'BUSY' } }}
+    {telemetry}
+    {commands}
   />
 </Story>

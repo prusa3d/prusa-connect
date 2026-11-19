@@ -18,7 +18,7 @@
 <span
   data-slot="breadcrumb-page"
   aria-current="page"
-  class={['min-w-0 truncate text-foreground', className]}
+  class={['min-w-0 truncate font-semibold text-foreground', className]}
   {...rest}
 >
   {@render children?.()}

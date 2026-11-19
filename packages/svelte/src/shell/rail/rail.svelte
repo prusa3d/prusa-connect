@@ -38,6 +38,7 @@
   }: RailProps = $props();
 
   const ungrouped = $derived(items.filter((item) => item.group === undefined));
+  const rowIcon = 'size-icon-min shrink-0';
 
   const grouped = $derived(
     groups
@@ -69,10 +70,10 @@
     ),
   );
 
-  // A group holding the open page opens itself, so arriving at a section —
-  // by a link, a reload or the group's own row — shows where in the group
-  // the reader is. The chevron still closes it; only a move to another
-  // section opens it again.
+  // A group holding the open page opens itself, so arriving at a section by
+  // a link or a reload shows where in the group the reader is. The group's
+  // row only folds and never navigates; it closes the group, and only a move
+  // to another section opens it again.
   $effect(() => {
     for (const item of sectioned) {
       const holds =
@@ -84,8 +85,9 @@
     }
   });
 
-  const rowClass = (current: boolean) => [
-    'flex min-h-9 items-center gap-2.5 rounded-sm border px-2.5 py-1.5 text-sm font-medium tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+  const rowClass = (current: boolean, nested = false) => [
+    'flex min-h-9 items-center gap-2.5 rounded-sm border px-2.5 py-1.5 text-sm tracking-normal transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none',
+    nested && !current ? 'font-normal' : 'font-medium',
     collapsed && 'justify-center px-0',
     current
       ? 'border-selected bg-selected text-selected-foreground hover:border-selected-hovered hover:bg-selected-hovered'
@@ -107,11 +109,15 @@
   <a
     {...props}
     href={item.href}
+    data-part="rail-link"
     aria-current={current ? 'page' : undefined}
-    class={[...rowClass(current), item.nested && !collapsed && 'ps-7']}
+    class={[
+      ...rowClass(current, item.nested),
+      item.nested && !collapsed && 'ps-7',
+    ]}
   >
     {#if Icon}
-      <Icon aria-hidden="true" class="size-4.5 shrink-0" />
+      <Icon aria-hidden="true" class={rowIcon} />
     {/if}
     <span class={collapsed ? 'sr-only' : 'truncate'}>{item.label}</span>
   </a>
@@ -144,7 +150,7 @@
                 ]}
               >
                 {#if Icon}
-                  <Icon aria-hidden="true" class="size-4.5 shrink-0" />
+                  <Icon aria-hidden="true" class={rowIcon} />
                 {/if}
                 <span class="sr-only">{item.label}</span>
               </button>
@@ -160,8 +166,9 @@
         {@const EntryIcon = entry.icon}
         {@const current = isCurrentRow(entry, currentPath)}
         <DropdownMenuItem
+          data-current={current || undefined}
           class={current
-            ? 'bg-selected text-selected-foreground focus:bg-selected-hovered! focus:text-selected-foreground!'
+            ? 'bg-selected text-selected-foreground data-current:focus:bg-selected-hovered data-current:focus:text-selected-foreground'
             : undefined}
         >
           {#snippet child({ props })}
@@ -182,38 +189,43 @@
   </DropdownMenu>
 {/snippet}
 
-{#snippet row(item: RailNavItem)}
+<!-- `leaf` draws the item's own entry among its sections as a link: the item
+     itself is the toggle above them. -->
+{#snippet row(item: RailNavItem, leaf = false)}
   {@const current = isCurrentRow(item, currentPath)}
-  {@const hasChildren = !collapsed && (item.children?.length ?? 0) > 0}
+  {@const hasChildren = !leaf && !collapsed && (item.children?.length ?? 0) > 0}
   {@const open = hasChildren && openSections.has(item.id)}
   {@const sectionsId = `${item.id}-sections`}
+  {@const isSettings = item.id === settings?.id}
   <Tooltip disabled={!collapsed || openMenus.size > 0}>
     <TooltipTrigger>
       {#snippet child({ props }: { props: Record<string, unknown> })}
         {#if hasChildren}
-          <div class="flex items-center gap-0.5">
-            <span class="min-w-0 flex-1">
-              {@render navLink(item, current, props)}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="shrink-0"
-              aria-expanded={open}
-              aria-controls={sectionsId}
-              label={t(open ? 'shell.sections.hide' : 'shell.sections.show', {
-                label: item.label,
-              })}
-              onclick={() => {
-                toggleSection(item.id);
-              }}
-            >
-              <ChevronRightIcon
-                aria-hidden="true"
-                class={['size-4 transition-transform', open && 'rotate-90']}
-              />
-            </Button>
-          </div>
+          {@const Icon = item.icon}
+          <Button
+            {...props}
+            data-part="section-toggle"
+            data-current={current || undefined}
+            variant="ghost"
+            type="button"
+            class={[
+              ...rowClass(current),
+              'mb-1 h-auto w-full justify-start text-start',
+            ]}
+            aria-expanded={open}
+            aria-controls={sectionsId}
+            onclick={() => toggleSection(item.id)}
+          >
+            {#if Icon}<Icon aria-hidden="true" class={rowIcon} />{/if}
+            <span class="truncate">{item.label}</span>
+            <ChevronRightIcon
+              aria-hidden="true"
+              class={[
+                'ms-auto size-4 shrink-0 opacity-60 transition-transform',
+                open && 'rotate-90',
+              ]}
+            />
+          </Button>
         {:else}
           {@render navLink(item, current, props)}
         {/if}
@@ -224,10 +236,11 @@
   {#if open}
     <div
       id={sectionsId}
-      class="ms-5 flex flex-col gap-0.5 border-s border-border"
+      class="ms-5 flex flex-col gap-1.5 border-s-0 border-border"
+      data-settings-sections={isSettings || undefined}
     >
-      {#each item.children ?? [] as child (child.id)}
-        {@render row(child)}
+      {#each sectionEntries(item) as entry (entry.id)}
+        {@render row(entry, entry === item)}
       {/each}
     </div>
   {/if}
@@ -245,37 +258,44 @@
   <!-- The rail shares the top bar's surface. -->
   <div
     data-slot="rail"
+    data-collapsed={collapsed || undefined}
     class={[
-      'flex h-full flex-col gap-1 border-e border-border bg-muted p-2',
-      collapsed ? 'w-15' : 'w-54',
+      'flex h-full min-h-0 flex-col gap-2 border-e border-border bg-muted p-2 not-dark:border-panel-outline not-dark:bg-shell-chrome',
+      collapsed ? 'w-15' : 'w-64 pt-6',
     ]}
   >
-    {#each ungrouped as item (item.id)}
-      {@render topRow(item)}
-    {/each}
-
-    {#each grouped as run (run.group.id)}
-      <p
-        class={[
-          'mt-3 px-2 text-xs font-medium text-muted-foreground uppercase',
-          collapsed && 'sr-only',
-        ]}
-      >
-        {run.group.label}
-      </p>
-      {#each run.items as item (item.id)}
+    <div
+      data-slot="rail-scroll"
+      class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto [&>*]:shrink-0"
+    >
+      {#each ungrouped as item (item.id)}
         {@render topRow(item)}
       {/each}
-    {/each}
 
-    {#if settings}
-      <Separator decorative={false} class="my-1.5" />
-      {@render topRow(settings)}
-    {/if}
+      {#each grouped as run (run.group.id)}
+        <p
+          class={[
+            'px-2 text-xs font-medium text-muted-foreground uppercase',
+            collapsed ? 'sr-only mt-3' : 'mt-6',
+          ]}
+        >
+          {run.group.label}
+        </p>
+        {#each run.items as item (item.id)}
+          {@render topRow(item)}
+        {/each}
+      {/each}
+
+      {#if settings}
+        <Separator decorative={false} class={collapsed ? 'my-1.5' : 'my-4'} />
+        {@render topRow(settings)}
+      {/if}
+    </div>
 
     <div
+      data-slot="rail-footer"
       class={[
-        'mt-auto flex shrink-0 gap-1 border-t border-border px-3 py-3',
+        'flex shrink-0 gap-1 border-t border-border px-3 py-3',
         collapsed ? 'flex-col items-center' : 'flex-row items-center',
       ]}
     >
@@ -295,3 +315,32 @@
     </div>
   </div>
 </TooltipProvider>
+
+<style>
+  [data-slot='rail']:not([data-collapsed]) {
+    inline-size: calc(var(--spacing) * 64);
+    padding-block-start: calc(var(--spacing) * 6);
+  }
+
+  [data-slot='rail'] :global([data-part='section-toggle']) {
+    padding-inline: calc(var(--spacing) * 2.5);
+    font-weight: var(--font-weight-medium);
+  }
+
+  [data-settings-sections] > :global(a:not([aria-current])) {
+    font-weight: var(--font-weight-normal);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    [data-slot='rail']
+      :global(
+        :is([data-part='rail-link'], [data-part='section-toggle']):not(
+            [aria-current='page'],
+            [data-current='true']
+          ):hover
+      ) {
+      background-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+      color: var(--foreground);
+    }
+  }
+</style>

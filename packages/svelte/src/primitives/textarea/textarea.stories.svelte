@@ -15,6 +15,8 @@
 
 <Story name="Default" />
 
+<Story name="Resizable" args={{ resizable: true, rows: 4 }} />
+
 <Story name="All States" asChild>
   <div class="flex flex-col gap-3">
     <Textarea placeholder="Rest" />

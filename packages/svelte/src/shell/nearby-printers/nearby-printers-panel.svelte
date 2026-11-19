@@ -9,6 +9,8 @@
   the list at all.
 -->
 <script lang="ts">
+  import PlusIcon from '@lucide/svelte/icons/plus';
+
   import { describeFault, t } from '../../i18n';
   import { Button, FaultAlert, RowList } from '../../primitives';
   import { printersToAdd } from './presentation';
@@ -65,13 +67,14 @@
               </span>
             </div>
             {#if addHref !== undefined}
-              <Button variant="secondary" size="sm">
+              <Button variant="default" size="sm">
                 {#snippet child({ props })}
                   <a
                     {...props}
                     href={addHref}
                     aria-describedby={`${headingId}-${String(index)}`}
                   >
+                    <PlusIcon aria-hidden="true" />
                     {t('nearbyPrinters.add')}
                   </a>
                 {/snippet}

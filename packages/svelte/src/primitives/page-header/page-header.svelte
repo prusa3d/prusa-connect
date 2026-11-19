@@ -17,7 +17,7 @@
   {#if actions ?? action}
     <div
       data-slot="page-header-actions"
-      class="flex min-h-9 items-center gap-2"
+      class="flex min-h-button-medium items-center gap-2"
     >
       {#if actions}
         {@render actions()}

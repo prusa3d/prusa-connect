@@ -38,6 +38,7 @@
     onOn,
     onChoice,
     instead,
+    settingsPanel,
   }: AccessListProps = $props();
 
   const described = $derived(
@@ -45,13 +46,21 @@
   );
 </script>
 
-<Card data-part="access-list">
+<Card
+  data-part="access-list"
+  data-settings-panel={settingsPanel ? true : undefined}
+>
   <CardHeader>
     <CardTitle><h2 class="contents">{title}</h2></CardTitle>
-    <CardDescription>{description}</CardDescription>
+    {#if !settingsPanel}
+      <CardDescription>{description}</CardDescription>
+    {/if}
   </CardHeader>
 
   <CardContent class="flex flex-col gap-4">
+    {#if settingsPanel}
+      <CardDescription>{description}</CardDescription>
+    {/if}
     {#if described !== undefined}
       <FaultAlert fault={described} />
     {/if}

@@ -1,4 +1,7 @@
+import type { Snippet } from 'svelte';
+
 import type { Device } from '../../../domain';
+import type { CommandsSource } from '../commands/types';
 import type { CommandPort, TelemetrySource } from '../types';
 
 /**
@@ -12,4 +15,17 @@ export interface PrinterControlsPanelProps {
   telemetry: TelemetrySource;
   commands: CommandPort;
   loading?: boolean | undefined;
+  /**
+   * Draws the material of one tool, handed its id and the chip to fall back
+   * on. An extension that assigns materials supplies it; absent, the chip is
+   * the host's own.
+   */
+  material?: Snippet<[string, Snippet]> | undefined;
+  advanced?:
+    | {
+        commands: CommandsSource;
+        requested: boolean;
+        highlight?: string | undefined;
+      }
+    | undefined;
 }

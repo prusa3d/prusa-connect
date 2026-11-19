@@ -161,10 +161,6 @@
 
 <div>
   {#if searchable}
-    <!-- `sm` and not the `md` the React source leaves it on. Nothing merges
-         two heights here, and `h-9` is the later of the two in the stylesheet,
-         so the `h-8` this box asks for only lands over the `h-7` of the
-         smaller step. The inset is 8px rather than React's 12px because of it. -->
     <Input
       type="search"
       size="sm"
@@ -173,7 +169,7 @@
       {@attach escapeEmpties}
       {placeholder}
       aria-label={searchName}
-      class="mb-2 h-8 text-xs"
+      class="mb-2"
     />
   {/if}
   <!-- A scroll area and not a bare `overflow-y-auto`: the browser's own
@@ -214,7 +210,7 @@
         {/if}
         {#if group.heading !== ''}
           <p
-            class="mt-2.5 mb-1 text-xs font-bold tracking-[0.06em] text-muted-foreground uppercase first:mt-0"
+            class="mt-2.5 mb-1 text-xs font-bold tracking-facet-heading text-muted-foreground uppercase first:mt-0"
           >
             {group.heading}
           </p>
@@ -254,7 +250,7 @@
         type="button"
         data-slot="select-facet-create"
         onclick={create}
-        class="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-md border-t border-border px-1.5 py-2 text-left text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        class="mt-1 flex w-full cursor-pointer items-center gap-2 rounded-sm border-t border-border px-1.5 py-2 text-left text-xs outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <PlusIcon
           class="size-4 flex-none text-muted-foreground"
