@@ -348,6 +348,14 @@ func FileTypes(entry map[string]any, where, key string) ([]string, error)
 
 FileTypes reads an optional list of file types under key. Each entry must be a lowercase extension with its dot, such as .3mf. A storage reports no media type, so a file is known by its name.
 
+### `IsAllowedOrigin` {#manifest-isallowedorigin}
+
+```go
+func IsAllowedOrigin(origin string) bool
+```
+
+IsAllowedOrigin reports whether origin is one a module may bring: an https scheme and a host in lower case, a port only when it is not 443, and nothing after the host. A browser writes its Origin header in that one form, and the host compares the two byte for byte.
+
 ### `IsListenName` {#manifest-islistenname}
 
 ```go

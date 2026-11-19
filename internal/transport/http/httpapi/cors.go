@@ -46,22 +46,23 @@ const (
 // answered as if no list were set. Vary: Origin goes on every response once a
 // list is set, allowed or not. The response depends on a request header, and
 // a cache without Vary would hand one origin's answer to another.
-func corsMiddleware(origins []string) func(http.Handler) http.Handler {
-	if len(origins) == 0 {
-		return func(next http.Handler) http.Handler { return next }
-	}
-
-	allowed := make(map[string]struct{}, len(origins))
-	for _, origin := range origins {
-		allowed[origin] = struct{}{}
-	}
-
+//
+// The list is read for every request, because a person changes it in Settings
+// and an extension adds to it while the server runs. A list that is empty at
+// the time of a request sends nothing, Vary included.
+func corsMiddleware(origins allowedOrigins) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !origins.Any() {
+				next.ServeHTTP(w, r)
+
+				return
+			}
+
 			w.Header().Add("Vary", "Origin")
 
 			origin := r.Header.Get("Origin")
-			if _, ok := allowed[origin]; !ok {
+			if !origins.Allows(origin) {
 				next.ServeHTTP(w, r)
 
 				return
@@ -85,6 +86,38 @@ func corsMiddleware(origins []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// allowedOrigins is the allow-list as the middleware asks it.
+type allowedOrigins interface {
+	Any() bool
+	Allows(origin string) bool
+}
+
+// fixedOrigins is the allow-list of a server built with a list and no store.
+type fixedOrigins map[string]struct{}
+
+func (f fixedOrigins) Any() bool { return len(f) > 0 }
+
+func (f fixedOrigins) Allows(origin string) bool {
+	_, ok := f[origin]
+
+	return ok
+}
+
+// originsOf is the allow-list the middleware reads: the store when the
+// composition root wired one, else the fixed list.
+func originsOf(cfg Config) allowedOrigins {
+	if cfg.Origins != nil {
+		return cfg.Origins
+	}
+
+	fixed := make(fixedOrigins, len(cfg.AllowedOrigins))
+	for _, origin := range cfg.AllowedOrigins {
+		fixed[origin] = struct{}{}
+	}
+
+	return fixed
 }
 
 // isPreflight reports whether this is the browser asking before it sends,

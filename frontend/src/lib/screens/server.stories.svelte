@@ -242,6 +242,21 @@
         }),
       'GET /api/v1/time-server': () =>
         json(200, { enabled: true, state: 'serving', port: 123 }),
+      'GET /api/v1/allowed-origins': () =>
+        json(200, {
+          items: [
+            {
+              origin: 'https://dashboard.workshop.example',
+              source: 'settings',
+            },
+            {
+              origin: 'https://slicer.example',
+              source: 'extension',
+              extension: 'com.github.acme.slicer',
+              title: 'Web slicer',
+            },
+          ],
+        }),
     }}
   />
 </Story>

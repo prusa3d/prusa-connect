@@ -575,6 +575,11 @@ func serveOver(
 	clock := newTimeService(ctx, core, timeserver.New(timeserver.Addr, logger), timeserver.Port, store, logger)
 	defer clock.stop()
 
+	// The store hands it the origins of the modules that are switched on, as
+	// they stand and again with every write, so an origin needs no restart.
+	origins := newBrowserOrigins(ctx, core, store, logger)
+	store.WatchModuleOrigins(ctx, origins)
+
 	probes := readiness{store: store, host: supervision.host, app: appState, announcer: announcer}
 
 	// The limit on login attempts, which the credential store cannot enforce for
@@ -695,7 +700,7 @@ func serveOver(
 		Heartbeat:       core.Events.Heartbeat,
 		Retry:           core.Events.Retry,
 		InsecureCookies: !who.secureCookies,
-		AllowedOrigins:  core.API.AllowedOrigins,
+		Origins:         origins,
 		RequestBudget:   core.API.RequestTimeout,
 		StreamBudget:    core.API.StreamTimeout,
 		Mounts:          mounts,

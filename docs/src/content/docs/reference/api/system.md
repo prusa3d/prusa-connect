@@ -599,6 +599,47 @@ The server answers `200`:
 }
 ```
 
+### `list-allowed-origins` {#list-allowed-origins}
+
+`GET /api/v1/allowed-origins`. The browser origins that may call this API.
+
+Every origin a page may call this API from, other than this server's own, with where each comes from: core.api.allowed_origins in the configuration file, the list stored through set-allowed-origins, and each extension that is switched on and was granted an origin. It takes view_resource on the link resource kind, which every org viewer holds.
+
+- credential: bearer token. The client method is `listAllowedOrigins`
+- request body: none
+- response `200`: OK, `application/json` (`AllowedOriginsOutputBody`)
+- errors: `401`, `403`, `500`, each a [problem document](../../error-codes.md)
+
+#### Sample {#sample-list-allowed-origins}
+
+```sh
+curl "http://127.0.0.1:8080/api/v1/allowed-origins" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```ts
+await client.listAllowedOrigins();
+```
+
+The server answers `200`:
+
+```json
+{
+  "items": [
+    {
+      "origin": "https://dashboard.workshop.example",
+      "source": "settings"
+    },
+    {
+      "extension": "com.github.acme.slicer",
+      "origin": "https://slicer.example",
+      "source": "extension",
+      "title": "Web slicer"
+    }
+  ]
+}
+```
+
 ### `list-server-backups` {#list-server-backups}
 
 `GET /api/v1/server/backups`. Protected core backups.
@@ -843,6 +884,59 @@ Schedules offline restoration after database shutdown. The server restarts with 
 - errors: `401`, `403`, `404`, `409`, `422`, `500`, each a [problem document](../../error-codes.md)
 
 This operation has no sample: 202. Restoration is the operation and a fresh listing describes the retained backup.
+
+### `set-allowed-origins` {#set-allowed-origins}
+
+`PUT /api/v1/allowed-origins`. Replace the stored list of browser origins that may call this API.
+
+Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
+
+- credential: bearer token. The client method is `setAllowedOrigins`
+- request body: `application/json` (`SetAllowedOriginsInputBody`), required
+- response `200`: OK, `application/json` (`AllowedOriginsOutputBody`)
+- errors: `401`, `403`, `404`, `422`, `500`, each a [problem document](../../error-codes.md)
+
+#### Sample {#sample-set-allowed-origins}
+
+```sh
+curl -X PUT "http://127.0.0.1:8080/api/v1/allowed-origins" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origins": [
+      "https://dashboard.workshop.example"
+    ]
+  }'
+```
+
+```ts
+await client.setAllowedOrigins({
+  body: {
+    origins: [
+      "https://dashboard.workshop.example",
+    ],
+  },
+});
+```
+
+The server answers `200`:
+
+```json
+{
+  "items": [
+    {
+      "origin": "https://dashboard.workshop.example",
+      "source": "settings"
+    },
+    {
+      "extension": "com.github.acme.slicer",
+      "origin": "https://slicer.example",
+      "source": "extension",
+      "title": "Web slicer"
+    }
+  ]
+}
+```
 
 ### `stage-server-upgrade` {#stage-server-upgrade}
 

@@ -254,6 +254,11 @@ var Keys = map[string]config.Key{
 		Doc: "The request headers the manifest asked for when the operator approved the install. An " +
 			"approved update leaves out each one the operator removed from the service block.",
 	},
+	"resources.<kind>.<name>.module.allowed_origins": {
+		Doc: "The browser origins this module adds to the ones the API answers while it is switched " +
+			"on, each an exact https origin.",
+		See: "using-the-api-from-a-page/",
+	},
 	"resources.<kind>.<name>.module.asked.listen": {
 		Doc: "The ports the manifest asked for when the operator approved the install. An approved " +
 			"update keeps a port grant whose name and network are unchanged.",

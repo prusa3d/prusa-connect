@@ -113,6 +113,10 @@ type Store struct {
 	// It is nil until WatchEndpoints sets it. That happens after the startup
 	// reconcile, so WatchEndpoints passes the first list itself.
 	endpoints EndpointWatcher
+	// origins receives the browser origins of the modules that are switched
+	// on whenever the document changes. It is nil until WatchModuleOrigins
+	// sets it.
+	origins OriginWatcher
 }
 
 var _ httpapi.ResourceStore = (*Store)(nil)
@@ -677,6 +681,10 @@ func (s *Store) reconcile(ctx context.Context, next Document) error {
 	if moved && s.endpoints != nil {
 		s.endpoints.SyncEndpoints(ctx, slices.Clone(next.Endpoints))
 	}
+
+	// With the document, so an origin holds from the write that switched its
+	// module on and leaves with the one that switched it off or removed it.
+	s.syncModuleOrigins(ctx)
 
 	if plan.Empty() || s.plane == nil {
 		return directory

@@ -14,6 +14,7 @@ import {
   DeviceModels,
   DeviceStates,
   DiscoveryVisibility,
+  AllowedOrigins,
   TimeServerSwitch,
   Fleet,
   FleetListing,
@@ -72,6 +73,7 @@ export const appContext = (
     nearby: new NearbyPrinters(client),
     discovery: new DiscoveryVisibility(client),
     timeServer: new TimeServerSwitch(client),
+    allowedOrigins: new AllowedOrigins(client),
     health: new ServerHealth(client),
     maintenance: new Maintenance(client, undefined, {
       upgrades: () => settings.upgrades,

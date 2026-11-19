@@ -195,6 +195,10 @@ type Config struct {
 	// It applies to the API listener alone. The device listener serves wires a
 	// printer dials, and a printer is not a browser.
 	AllowedOrigins []string
+	// Origins is the allow-list a person and the extensions change while the
+	// server runs. When it is set the CORS answer reads it for every request
+	// and AllowedOrigins is not read. Nil serves AllowedOrigins as built.
+	Origins BrowserOrigins
 	// InsecureCookies drops the Secure attribute from the session cookie. It is
 	// set from the scheme of the redirect URI the issuer sends the browser back
 	// to, because a Secure cookie on an origin a browser reaches over http is
@@ -518,7 +522,7 @@ func New(cfg Config) (*Server, error) {
 	// First, and on this router only. A preflight is answered here before it
 	// is counted, traced or routed, and the device router never sees the
 	// allow-list; see corsMiddleware.
-	mux.Use(corsMiddleware(cfg.AllowedOrigins))
+	mux.Use(corsMiddleware(originsOf(cfg)))
 	mux.Use(middlewareStack(cfg)...)
 	// Last of the router's own, so the deadline is the nearest bound to the
 	// handler and the refusal it leads to is recovered, counted and traced like

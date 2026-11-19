@@ -302,6 +302,56 @@
         ],
         "type": "object"
       },
+      "AllowedOrigin": {
+        "additionalProperties": false,
+        "properties": {
+          "extension": {
+            "description": "The namespace of the extension the origin comes from. Absent unless the source is extension. The origin stays allowed while that extension is switched on, and leaves when it is switched off or removed.",
+            "type": "string"
+          },
+          "origin": {
+            "description": "The origin, as a browser writes it in its Origin header: a scheme and a host, with a port only when it is not the scheme's default.",
+            "type": "string"
+          },
+          "source": {
+            "description": "Where the origin comes from: file for core.api.allowed_origins in the configuration file, settings for the list this API stores, and extension for an extension that is switched on. Only a settings origin is changed through this API.",
+            "enum": [
+              "file",
+              "settings",
+              "extension"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "description": "The name a person reads for that extension. Absent unless the source is extension.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "origin",
+          "source"
+        ],
+        "type": "object"
+      },
+      "AllowedOriginsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "description": "Every browser origin this server answers, sorted by source and then by origin.",
+            "items": {
+              "$ref": "#/components/schemas/AllowedOrigin"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "AppPairing": {
         "additionalProperties": false,
         "properties": {
@@ -10179,6 +10229,14 @@
       "ResourceModule": {
         "additionalProperties": false,
         "properties": {
+          "allowed_origins": {
+            "description": "The browser origins this module adds to the ones the API answers. A page served from one may call the API from a browser while this instance is switched on. Absent when none is granted.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "type": "array"
+          },
           "asked": {
             "$ref": "#/components/schemas/ModuleRequests",
             "description": "What the install granted: the permissions, events and records room the release asked for when an operator approved it. Absent for an install without approval, which leaves the module switched off; switching such a module on starts it with nothing granted."
@@ -11179,6 +11237,23 @@
           "host_schema_version",
           "host_schema_compat",
           "managed_externally"
+        ],
+        "type": "object"
+      },
+      "SetAllowedOriginsInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "origins": {
+            "description": "The whole settings list, which replaces the stored one. Each entry is an exact origin such as https://slicer.example: a lowercase scheme and host, a port only when it is not the scheme's default, and nothing after the host. A wildcard is refused. An empty list stores none.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "type": "array"
+          }
+        },
+        "required": [
+          "origins"
         ],
         "type": "object"
       },
@@ -12814,6 +12889,171 @@
         "summary": "What the caller may do to one object",
         "tags": [
           "access"
+        ]
+      }
+    },
+    "/api/v1/allowed-origins": {
+      "get": {
+        "description": "Every origin a page may call this API from, other than this server's own, with where each comes from: core.api.allowed_origins in the configuration file, the list stored through set-allowed-origins, and each extension that is switched on and was granted an origin. It takes view_resource on the link resource kind, which every org viewer holds.",
+        "operationId": "list-allowed-origins",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "origin": "https://dashboard.workshop.example",
+                      "source": "settings"
+                    },
+                    {
+                      "extension": "com.github.acme.slicer",
+                      "origin": "https://slicer.example",
+                      "source": "extension",
+                      "title": "Web slicer"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AllowedOriginsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "The browser origins that may call this API",
+        "tags": [
+          "system"
+        ]
+      },
+      "put": {
+        "description": "Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.",
+        "operationId": "set-allowed-origins",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "origins": [
+                  "https://dashboard.workshop.example"
+                ]
+              },
+              "schema": {
+                "$ref": "#/components/schemas/SetAllowedOriginsInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "origin": "https://dashboard.workshop.example",
+                      "source": "settings"
+                    },
+                    {
+                      "extension": "com.github.acme.slicer",
+                      "origin": "https://slicer.example",
+                      "source": "extension",
+                      "title": "Web slicer"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AllowedOriginsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Replace the stored list of browser origins that may call this API",
+        "tags": [
+          "system"
         ]
       }
     },

@@ -21,10 +21,17 @@
     Skeleton,
     Switch,
   } from '../../primitives';
+  import AllowedOriginsSection from './allowed-origins-section.svelte';
   import type { SettingsNetworkScreenProps } from './types';
   import { networkVerdict } from './verdict';
 
-  let { source, timeServer, docsHref }: SettingsNetworkScreenProps = $props();
+  let {
+    source,
+    timeServer,
+    origins,
+    extensionHref,
+    docsHref,
+  }: SettingsNetworkScreenProps = $props();
 
   // Every key is written out rather than assembled from a value.
   const ANNOUNCEMENT: Readonly<Record<string, string>> = {
@@ -270,6 +277,12 @@
 
         <FaultAlert fault={timeFault} />
       </div>
+    </SettingsPane>
+  {/if}
+
+  {#if origins !== undefined}
+    <SettingsPane class="w-full" title={t('settingsNetwork.origins.heading')}>
+      <AllowedOriginsSection source={origins} {extensionHref} />
     </SettingsPane>
   {/if}
 </div>

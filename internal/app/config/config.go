@@ -1096,7 +1096,7 @@ func validOrigins(key string, origins []string) error {
 				ErrInvalid, key)
 		}
 
-		if err := validOrigin(origin); err != nil {
+		if err := CheckOrigin(origin); err != nil {
 			return fmt.Errorf("%w: %s has %q, %w. Expected an exact origin such as https://printers.example",
 				ErrInvalid, key, origin, err)
 		}
@@ -1121,7 +1121,10 @@ var (
 	errOriginDefaultPort = errors.New("a browser writes its origin without the scheme's default port")
 )
 
-func validOrigin(origin string) error {
+// CheckOrigin refuses a value a browser never sends as its Origin header, and
+// says why in words that follow the value. The settings list is held to it as
+// core.api.allowed_origins is.
+func CheckOrigin(origin string) error {
 	parsed, err := url.Parse(origin)
 	if err != nil || (parsed.Scheme != schemeHTTP && parsed.Scheme != schemeHTTPS) {
 		return errOriginScheme

@@ -1,7 +1,11 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
-  import type { TimeServerSource, VisibilitySource } from './types';
+  import type {
+    AllowedOriginsSource,
+    TimeServerSource,
+    VisibilitySource,
+  } from './types';
   import SettingsNetworkScreen from './settings-network-screen.svelte';
 
   const { Story } = defineMeta({
@@ -41,6 +45,26 @@
     saving: false,
     error: undefined,
     setEnabled: () => Promise.resolve(),
+    ...over,
+  });
+
+  const originsOf = (
+    over: Partial<AllowedOriginsSource> = {},
+  ): AllowedOriginsSource => ({
+    items: [
+      { origin: 'https://dashboard.workshop.example', source: 'settings' },
+      {
+        origin: 'https://slicer.example',
+        source: 'extension',
+        extension: 'com.github.acme.slicer',
+        title: 'Web slicer',
+      },
+    ],
+    loaded: true,
+    saving: false,
+    error: undefined,
+    add: () => Promise.resolve(true),
+    remove: () => Promise.resolve(true),
     ...over,
   });
 </script>
@@ -159,5 +183,13 @@
   <SettingsNetworkScreen
     source={sourceOf()}
     timeServer={timeOf({ loaded: false, state: undefined })}
+  />
+</Story>
+
+<Story name="With Allowed Origins" asChild>
+  <SettingsNetworkScreen
+    source={sourceOf()}
+    timeServer={timeOf()}
+    origins={originsOf()}
   />
 </Story>

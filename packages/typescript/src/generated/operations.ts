@@ -98,6 +98,7 @@ export const operationTable = {
   "get-ui-settings": { id: "get-ui-settings", method: "GET", path: "/api/v1/ui", response: "json", anonymous: true },
   "install-module": { id: "install-module", method: "POST", path: "/api/v1/modules", body: "application/json", response: "json", anonymous: false, longRunning: true },
   "list-accounts": { id: "list-accounts", method: "GET", path: "/api/v1/auth/accounts", response: "json", anonymous: false },
+  "list-allowed-origins": { id: "list-allowed-origins", method: "GET", path: "/api/v1/allowed-origins", response: "json", anonymous: false },
   "list-camera-settings": { id: "list-camera-settings", method: "GET", path: "/api/v1/camera-settings", response: "json", anonymous: false },
   "list-camera-types": { id: "list-camera-types", method: "GET", path: "/api/v1/camera-types", response: "json", anonymous: false },
   "list-cameras": { id: "list-cameras", method: "GET", path: "/api/v1/cameras", response: "json", anonymous: false },
@@ -171,6 +172,7 @@ export const operationTable = {
   "send-printer-gcode": { id: "send-printer-gcode", method: "POST", path: "/api/v1/devices/{device_id}/gcode", body: "application/json", response: "json", anonymous: false },
   "set-account-password": { id: "set-account-password", method: "POST", path: "/api/v1/auth/accounts/{account}/password", body: "application/json", response: "none", anonymous: false },
   "set-account-role": { id: "set-account-role", method: "PUT", path: "/api/v1/auth/accounts/{account}/role", body: "application/json", response: "none", anonymous: false },
+  "set-allowed-origins": { id: "set-allowed-origins", method: "PUT", path: "/api/v1/allowed-origins", body: "application/json", response: "json", anonymous: false },
   "set-default-dashboard": { id: "set-default-dashboard", method: "PUT", path: "/api/v1/dashboards/default", body: "application/json", response: "json", anonymous: false },
   "set-device-labels": { id: "set-device-labels", method: "PUT", path: "/api/v1/devices/{device_id}/labels", body: "application/json", response: "json", anonymous: false },
   "set-device-name": { id: "set-device-name", method: "PUT", path: "/api/v1/devices/{device_id}/name", body: "application/json", response: "json", anonymous: false },
@@ -1307,6 +1309,16 @@ export interface Operations {
   ): Promise<operations["list-accounts"]["responses"][200]["content"]["application/json"]>;
 
   /**
+   * GET /api/v1/allowed-origins
+   *
+   * The browser origins that may call this API
+   */
+  listAllowedOrigins(
+    request?: Record<string, never>,
+    signal?: AbortSignal,
+  ): Promise<operations["list-allowed-origins"]["responses"][200]["content"]["application/json"]>;
+
+  /**
    * GET /api/v1/camera-settings
    *
    * What each camera is set up as
@@ -2179,6 +2191,18 @@ export interface Operations {
   ): Promise<void>;
 
   /**
+   * PUT /api/v1/allowed-origins
+   *
+   * Replace the stored list of browser origins that may call this API
+   */
+  setAllowedOrigins(
+    request: {
+      body: NonNullable<operations["set-allowed-origins"]["requestBody"]>["content"]["application/json"];
+    },
+    signal?: AbortSignal,
+  ): Promise<operations["set-allowed-origins"]["responses"][200]["content"]["application/json"]>;
+
+  /**
    * PUT /api/v1/dashboards/default
    *
    * Choose the dashboard the home page draws
@@ -2540,6 +2564,7 @@ export function bindOperations(transport: Transport): Operations {
     getUiSettings: (request = {}, signal) => transport.call(operationTable["get-ui-settings"], request, signal),
     installModule: (request, signal) => transport.call(operationTable["install-module"], request, signal),
     listAccounts: (request = {}, signal) => transport.call(operationTable["list-accounts"], request, signal),
+    listAllowedOrigins: (request = {}, signal) => transport.call(operationTable["list-allowed-origins"], request, signal),
     listCameraSettings: (request = {}, signal) => transport.call(operationTable["list-camera-settings"], request, signal),
     listCameraTypes: (request = {}, signal) => transport.call(operationTable["list-camera-types"], request, signal),
     listCameras: (request = {}, signal) => transport.call(operationTable["list-cameras"], request, signal),
@@ -2613,6 +2638,7 @@ export function bindOperations(transport: Transport): Operations {
     sendPrinterGcode: (request, signal) => transport.call(operationTable["send-printer-gcode"], request, signal),
     setAccountPassword: (request, signal) => transport.call(operationTable["set-account-password"], request, signal),
     setAccountRole: (request, signal) => transport.call(operationTable["set-account-role"], request, signal),
+    setAllowedOrigins: (request, signal) => transport.call(operationTable["set-allowed-origins"], request, signal),
     setDefaultDashboard: (request, signal) => transport.call(operationTable["set-default-dashboard"], request, signal),
     setDeviceLabels: (request, signal) => transport.call(operationTable["set-device-labels"], request, signal),
     setDeviceName: (request, signal) => transport.call(operationTable["set-device-name"], request, signal),

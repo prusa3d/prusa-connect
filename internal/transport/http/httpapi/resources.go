@@ -344,6 +344,8 @@ type ResourceModule struct {
 	// Listening is the ports the declaration grants, which may differ from
 	// the ones the manifest asked for.
 	Listening []ModuleListen `json:"listening,omitempty" doc:"The ports this instance may listen on now, by the name its manifest gave each, with the reason from the manifest. A port the operator moved carries the number it was moved to. Absent when no port is granted."`
+	// AllowedOrigins is the browser origins the declaration grants.
+	AllowedOrigins []string `json:"allowed_origins,omitempty" doc:"The browser origins this module adds to the ones the API answers. A page served from one may call the API from a browser while this instance is switched on. Absent when none is granted." maxItems:"8" nullable:"false"`
 	// Database is the database of its own the declaration grants, with no
 	// credential in it.
 	Database *ResourceDatabase `json:"database,omitempty" doc:"The database of its own this instance was granted. Absent when it was granted none."`

@@ -98,6 +98,9 @@ type overlayFile struct {
 	// is absent until somebody uses the switch, and while it is absent a
 	// configured core.marketplace.url is read.
 	Marketplace *overlayMarketplace `json:"marketplace,omitempty"`
+	// API is the browser origins a person added in the web app. It is absent
+	// until somebody stores a list.
+	API *overlayAPI `json:"api,omitempty"`
 	// Databases are the modules' own databases that no declaration grants. A
 	// removal leaves one, and so does an update that moved the module's data
 	// to another place. They stay until the operator purges them.

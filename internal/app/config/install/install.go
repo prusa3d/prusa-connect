@@ -490,6 +490,10 @@ type ModuleEntry struct {
 	// permission the operator took away stays away. Nil is a declaration
 	// installed without approve, or one that records no ask.
 	Asked *ModuleAsks `json:"asked,omitempty" yaml:"asked"`
+	// AllowedOrigins is the browser origins the operator let this module add
+	// to the ones the API answers. The server answers them while the module
+	// is switched on, and they leave with the declaration.
+	AllowedOrigins []string `json:"allowed_origins,omitempty" yaml:"allowed_origins"`
 	// Channel is the marketplace channel the release came from, stable or
 	// beta, and empty for a release that did not come from a marketplace. An
 	// empty channel reads as stable.

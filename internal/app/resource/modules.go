@@ -213,6 +213,7 @@ func moduleFactsOf(spec Spec) *httpapi.ResourceModule {
 		facts.Asked = &granted
 	}
 
+	facts.AllowedOrigins = slices.Clone(spec.Module.AllowedOrigins)
 	facts.Listening = listeningOf(spec)
 	facts.Database = databaseOf(spec)
 
