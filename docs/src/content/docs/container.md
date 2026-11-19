@@ -226,7 +226,7 @@ file in it answers the same document, so reloading a page inside the app works.
 | Working directory | `/` |
 | Runtime user | `prusa`, uid `10001`, gid `10001`, no home, `/usr/sbin/nologin` |
 | Config path | `/config/config.yaml`, the default `config/config.yaml` relative to `/` |
-| Extensions | read-only folders in `/opt/modules`: `parts`, `fleet-stats`, `buddy-debug-logs`, `threemf`, `server-slicing`, `materials`, `fractal` |
+| Extensions | read-only folders in `/opt/modules`, one for each entry under [Bundled extensions](#bundled-extensions) |
 
 The uid is fixed at build time rather than assigned by `useradd`, so a host directory mounted over
 one of the data paths can be chowned to a known number. Both `APP_UID` and `APP_GID` are build args.
@@ -247,6 +247,7 @@ core:
     github.com/prusa3d/threemf: /opt/modules/threemf
     github.com/prusa3d/server-slicing: /opt/modules/server-slicing
     github.com/prusa3d/materials: /opt/modules/materials
+    github.com/prusa3d/easyprint: /opt/modules/easyprint
     github.com/prusa3d/fractal-link: /opt/modules/fractal
 ```
 

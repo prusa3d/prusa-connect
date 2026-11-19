@@ -1,0 +1,17 @@
+{
+  "_meta.language": "English",
+  "_meta.note": "This module's own texts. The host reads this file from locales/en.json beside the bundle's entry and merges it under the module's namespace. Copy it to <tag>.json to translate; a key you leave out falls back to the line here.",
+
+  "easyprint.settings.title": "EasyPrint",
+  "easyprint.settings.about": "EasyPrint is the Prusa slicer that runs in a browser, on Printables. It sends a print to this server from the browser of the person who uses it.",
+  "easyprint.settings.notAllowed.title": "This server does not answer EasyPrint yet",
+  "easyprint.settings.notAllowed.body": "EasyPrint calls this server from {origin}, and that address is not among the pages that may call it. Install this extension again and approve what it asks for, or add the address under Settings, Server, Network.",
+  "easyprint.settings.pair.heading": "Add this server to EasyPrint",
+  "easyprint.settings.pair.note": "The link opens EasyPrint in a new tab with the address below filled in. EasyPrint then asks this server for a credential, and you approve it here.",
+  "easyprint.settings.pair.address": "The address EasyPrint will call",
+  "easyprint.settings.pair.action": "Add this server to EasyPrint",
+  "easyprint.settings.https.heading": "HTTPS",
+  "easyprint.settings.https.note": "EasyPrint is an HTTPS page. Every browser lets it call a server that answers over HTTPS with a certificate the browser trusts. A server on plain HTTP works only on an address of the local network, and only in a browser that asks for permission to reach devices on that network, as Chrome does.",
+  "easyprint.settings.https.plainTitle": "This page is open over plain HTTP",
+  "easyprint.settings.https.plainBody": "Chrome will ask for permission to reach devices on the local network before EasyPrint can call this server. Another browser may refuse the call. Open this server over HTTPS to make it work everywhere."
+}

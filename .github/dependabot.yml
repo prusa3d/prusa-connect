@@ -29,6 +29,7 @@ updates:
       - /examples/spools/ui
       - /examples/spools/client
       - /extensions/fleet-stats/ui
+      - /extensions/easyprint/ui
       - /extensions/parts/ui
       - /extensions/parts/client
       - /extensions/materials/ui

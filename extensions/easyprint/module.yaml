@@ -1,0 +1,53 @@
+# The manifest for a module that is one browser bundle and nothing else. There
+# is no process here, so there is no contract_major, no permissions block and
+# no OpenAPI fragment.
+#
+# `prusa-connect module add` reads it out of the release, writes one
+# declaration, and copies it into the bundle directory it installs, because
+# that is where the host reads the ui block from. The digest covers it there,
+# so the manifest the host reads is the one the install recorded.
+#
+# The namespace is absent on purpose. The host derives it from the repository
+# address the operator installed, so no module can name another module's
+# address. For this module that is com.github.aux.prusa3d.easyprint.
+
+name: easyprint
+# The one kind this module is declared under: a directory of files the host
+# verifies against a digest and serves, and never runs.
+kind: asset
+version: 0.1.0
+license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
+# The first core that reads allowed_origins. An older core refuses a manifest
+# with a key it does not know, so a catalogue offers the release to none.
+require:
+  core: ">=0.1.0-beta.2"
+# What a marketplace card prints beside the name: one sentence about this
+# module, and who answers for it. The install copies both into the declaration,
+# so `GET /api/v1/resources` carries them for an installed module.
+title: EasyPrint
+summary: Lets EasyPrint, the Prusa slicer in the browser on Printables, send prints to this server.
+codeowner: Prusa Research
+
+# The one thing this module is for. EasyPrint is served from this origin and
+# calls the API from the browser of the person who uses it. The operator
+# approves the origin at install, and the server answers it while this module
+# is switched on. A page of the origin still needs a credential, which
+# EasyPrint gets through the app pairing.
+allowed_origins:
+  - https://slicer.printables.com
+
+ui:
+  # The built bundle's entry, relative to the bundle root. The host serves it
+  # at /api/v1/modules/com.github.aux.prusa3d.easyprint/ui/ui/index.js.
+  entry: ui/index.js
+  # The range of @prusa/connect-ui this bundle was built against. The app
+  # refuses a bundle its own version falls outside of.
+  library: ">=0.0.1 <1.0.0"
+  contributes:
+    # The whole of what this bundle may register. A registration the block
+    # does not declare is refused at run time and the app drops this module.
+    # The one entry here has one `host.register` call behind it in
+    # ui/src/index.ts.
+    settings:
+      - id: easyprint
+        title: EasyPrint

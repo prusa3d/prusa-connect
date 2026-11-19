@@ -1,0 +1,6 @@
+# What a build writes. It is made again from the files beside it, so it is
+# never committed.
+/ui/node_modules/
+/ui/dist/
+# The repository-wide data/ rule would hide this module's source folder.
+!/ui/src/data/
