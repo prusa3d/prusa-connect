@@ -106,6 +106,7 @@ type marketplaceRelease struct {
 	Sha256            string                  `json:"sha256"`
 	DownloadURL       string                  `json:"download_url"`
 	Changelog         string                  `json:"changelog"`
+	AllowedOrigins    []string                `json:"allowed_origins"`
 	// The release manifest's require, suggest and conflict, in Composer's
 	// shape, as the marketplace read them.
 	Require  map[string]string `json:"require"`
@@ -245,6 +246,7 @@ func (r marketplaceRelease) asks() install.ModuleAsks {
 		Listen:            slices.Clone(r.Listen),
 		Data:              r.Data,
 		Database:          r.Database,
+		AllowedOrigins:    slices.Clone(r.AllowedOrigins),
 	}
 }
 
@@ -616,6 +618,7 @@ func (c *marketplaceCatalogue) offerOf(row marketplaceModule) (httpapi.ModuleOff
 		CheckAbsentPeople: row.Latest.CheckAbsentPeople,
 		ListPeople:        row.Latest.ListPeople,
 		Calls:             row.Latest.Calls,
+		AllowedOrigins:    row.Latest.AllowedOrigins,
 		PublicRoutes:      row.Latest.PublicRoutes,
 		StagedRoutes:      resource.StagedRoutesOf(row.Latest.StagedRoutes),
 		RequestHeaders:    resource.RequestHeadersOf(row.Latest.requestHeaders()),

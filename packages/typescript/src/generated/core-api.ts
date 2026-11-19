@@ -6157,6 +6157,8 @@ export interface components {
             source?: "detected" | "configured";
         };
         ModuleOffer: {
+            /** @description The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row. */
             author?: string;
             /** @description The namespaces of the other modules whose routes the release's manifest asks to call. */
@@ -6299,6 +6301,8 @@ export interface components {
             dependencies: components["schemas"]["ModulePlanned"][] | null;
         };
         ModulePlanned: {
+            /** @description The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row. */
             author?: string;
             /** @description The namespaces of the other modules whose routes the release's manifest asks to call. */
@@ -6498,6 +6502,8 @@ export interface components {
             required?: boolean;
         };
         ModuleRequests: {
+            /** @description The browser origins the module asks this server to answer, each an exact https origin. A page served from one may call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description The namespaces of the other modules whose routes the module calls. */
             calls?: string[] | null;
             /** @description Whether the module may ask about a person it is not serving. */

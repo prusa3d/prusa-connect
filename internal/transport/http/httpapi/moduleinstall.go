@@ -214,6 +214,7 @@ type ModuleRequests struct {
 	Listen            []ModuleListen        `json:"listen,omitempty"              doc:"The ports the module listens on for a protocol of its own. They are approved with approve_listen."`
 	Data              bool                  `json:"data,omitempty"                doc:"Whether the module asks for a writable directory of its own."`
 	Database          bool                  `json:"database,omitempty"            doc:"Whether the module asks for a database of its own. The operator chooses where it goes with database on the install."`
+	AllowedOrigins    []string              `json:"allowed_origins,omitempty"     doc:"The browser origins the module asks this server to answer, each an exact https origin. A page served from one may call the API from a browser while the module is switched on."                            maxItems:"8" nullable:"false"`
 }
 
 // ModuleDatabaseChoice is where an operator puts a module's own database.
@@ -354,6 +355,7 @@ type ModuleOffer struct {
 	Listen            []ModuleListen        `json:"listen,omitempty"              doc:"The ports the release's manifest asks to listen on. An install grants them only with approve_listen."`
 	Data              bool                  `json:"data,omitempty"                doc:"Whether the release's manifest asks for a writable directory of its own."`
 	Database          bool                  `json:"database,omitempty"            doc:"Whether the release's manifest asks for a database of its own."`
+	AllowedOrigins    []string              `json:"allowed_origins,omitempty"     doc:"The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on." maxItems:"8" nullable:"false"`
 	// The modules the release depends on.
 	Requires  []ResourceRequirement `json:"requires,omitempty"  doc:"The release's require: the core constraint, the capabilities, and the modules it cannot run without, each with a constraint in Composer's grammar. An install adds the modules this server does not have; read the plan first."`
 	Suggests  []ResourceRequirement `json:"suggests,omitempty"  doc:"The modules the release works better with, each with the reason. A suggestion installs nothing."`

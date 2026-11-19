@@ -3,7 +3,7 @@
 // An index row and an install's `expect` carry the requests as fields. An
 // install's answer and a refusal carry them as lines in the server's own
 // words: `permission operate`, `check operate`, `permission check_absent_people`,
-// `permission list_people`, `call <namespace>`,
+// `permission list_people`, `call <namespace>`, `origin <origin>`,
 // `public <method> <path>`, `upload <method> <path> up to 1024 MiB`,
 // `header <name> (<reason>)`, `header <name>, required (<reason>)`,
 // `records 128 MiB`, `memory 192 MiB`, `event <endpoint> as <namespace>.<name>`,
@@ -56,6 +56,8 @@ export type ModuleRequest =
       /** The module does not start without the header. */
       readonly required: boolean;
     }
+  // A site whose pages may call the server from a browser (ADR-20261119-6be).
+  | { readonly kind: 'origin'; readonly origin: string }
   | { readonly kind: 'records'; readonly mib: number }
   | { readonly kind: 'memory'; readonly mib: number }
   | { readonly kind: 'data' }
@@ -89,6 +91,7 @@ export const requestsOfOffer = (
         ...publicOf(offer.public_routes),
         ...stagedOf(offer.staged_routes),
         ...headersOf(offer.request_headers),
+        ...originsOf(offer.allowed_origins),
         records_mib: offer.records_mib ?? 0,
         ...memory(offer.memory_mib),
         ...portsAndData(offer.data, offer.listen, offer.database),
@@ -187,6 +190,13 @@ const mergeStaged = (
 
   return out;
 };
+
+// The origins asked for, written only when there are some, so a release that
+// asks for none sends the same expect it always did.
+const originsOf = (
+  origins: readonly string[] | null | undefined,
+): Pick<ModuleRequests, 'allowed_origins'> =>
+  (origins ?? []).length > 0 ? { allowed_origins: [...(origins ?? [])] } : {};
 
 // The memory recommendation, written only when there is one, so a release
 // that makes none sends the same expect it always did.
@@ -296,6 +306,7 @@ const MEMORY = /^memory (\d+) MiB$/u;
 const LISTEN = /^listen (udp|tcp) (\d+) as (\S+) \((.*)\)$/u;
 const EVENT = /^event (\S+) as (\S+)$/u;
 const CALL = /^call (\S+)$/u;
+const ORIGIN = /^origin (\S+)$/u;
 const CHECK = /^check (\S+)$/u;
 const PUBLIC = /^public (\S+ \S+)$/u;
 const STAGED = /^upload (\S+) (\S+) up to (\d+) MiB$/u;
@@ -349,6 +360,9 @@ export const requestOfLine = (
       required: header[2] !== undefined,
     };
   }
+
+  const origin = ORIGIN.exec(text);
+  if (origin?.[1] !== undefined) return { kind: 'origin', origin: origin[1] };
 
   if (text === DATA) return { kind: 'data' };
   if (text === DATABASE) return { kind: 'database' };
@@ -413,6 +427,7 @@ export const requestsOfLines = (
       | 'request_headers'
       | 'checks'
       | 'memory_mib'
+      | 'allowed_origins'
     >
   > = {
     permissions: [],
@@ -427,6 +442,7 @@ export const requestsOfLines = (
   const routes: string[] = [];
   let staged: ModuleStagedRoute[] = [];
   let headers: ModuleRequestHeader[] = [];
+  const origins: string[] = [];
   const checks: string[] = [];
   let memoryMiB = 0;
   const listen: ModuleListen[] = [];
@@ -471,6 +487,9 @@ export const requestsOfLines = (
           },
         ]);
         break;
+      case 'origin':
+        if (!origins.includes(request.origin)) origins.push(request.origin);
+        break;
       case 'records':
         out.records_mib = Math.max(out.records_mib, request.mib);
         break;
@@ -506,6 +525,7 @@ export const requestsOfLines = (
     ...publicOf(routes),
     ...stagedOf(staged),
     ...headersOf(headers),
+    ...originsOf(origins),
     ...memory(memoryMiB),
     ...portsAndData(data, listen, database),
   };
@@ -530,6 +550,9 @@ export const mergeRequests = (
   ]),
   ...stagedOf(mergeStaged(a.staged_routes ?? [], b.staged_routes ?? [])),
   ...headersOf(mergeHeaders(a.request_headers ?? [], b.request_headers ?? [])),
+  ...originsOf([
+    ...new Set([...(a.allowed_origins ?? []), ...(b.allowed_origins ?? [])]),
+  ]),
   records_mib: Math.max(a.records_mib ?? 0, b.records_mib ?? 0),
   ...memory(Math.max(a.memory_mib ?? 0, b.memory_mib ?? 0)),
   ...portsAndData(
@@ -544,7 +567,7 @@ export const mergeRequests = (
   ),
 });
 
-/** The requests as a list to draw, in a fixed order: permissions, checks, events, people, the list of people, calls, public routes, staged routes, request headers, room, memory, directory, database, ports. */
+/** The requests as a list to draw, in a fixed order: permissions, checks, events, people, the list of people, calls, public routes, staged routes, request headers, origins, room, memory, directory, database, ports. */
 export const listRequests = (requests: ModuleRequests): ModuleRequest[] => [
   ...(requests.permissions ?? []).map((permission): ModuleRequest => ({
     kind: 'permission',
@@ -582,6 +605,10 @@ export const listRequests = (requests: ModuleRequests): ModuleRequest[] => [
     name: header.name,
     reason: header.reason,
     required: header.required === true,
+  })),
+  ...(requests.allowed_origins ?? []).map((origin): ModuleRequest => ({
+    kind: 'origin',
+    origin,
   })),
   ...((requests.records_mib ?? 0) > 0
     ? [

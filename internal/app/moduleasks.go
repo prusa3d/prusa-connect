@@ -27,6 +27,10 @@ const listPeople = "list_people"
 // about without taking it as itself.
 func checkRequest(action string) string { return "check " + action }
 
+// originRequest is the request line of a browser origin the module asks the
+// API to answer.
+func originRequest(origin string) string { return "origin " + origin }
+
 // callRequest is the request line of a call to another module's routes.
 func callRequest(namespace string) string { return "call " + namespace }
 
@@ -68,6 +72,7 @@ func asksOf(declared manifest.Manifest) install.ModuleAsks {
 		Listen:            listenAsksOf(declared.Needs.Listen),
 		Data:              declared.Needs.Data,
 		Database:          declared.Needs.Database,
+		AllowedOrigins:    slices.Clone(declared.AllowedOrigins),
 	}
 }
 
@@ -94,6 +99,7 @@ func beyondAsks(asked, ceiling install.ModuleAsks, namespace string) []string {
 	}
 
 	out = append(out, callsBeyond(asked.Calls, ceiling.Calls)...)
+	out = append(out, linesBeyond(asked.AllowedOrigins, ceiling.AllowedOrigins, originRequest)...)
 	out = append(out, linesBeyond(asked.PublicRoutes, ceiling.PublicRoutes, publicRequest)...)
 	out = append(out, stagedBeyond(asked.StagedRoutes, ceiling.StagedRoutes)...)
 	out = append(out, headersBeyond(asked.RequestHeaders, ceiling.RequestHeaders)...)
@@ -396,22 +402,36 @@ func decidedAsks(
 		return install.ModuleAsks{}, nil, err
 	}
 
-	if !request.approve || before == nil || declared.Spec.Service == nil {
+	if !request.approve || before == nil {
 		return given, nil, nil
+	}
+
+	// A module with no process holds its origins too, so they are decided
+	// before the service block is asked for.
+	var added []string
+
+	given.AllowedOrigins, added = keptOrigins(asked.AllowedOrigins, before.AllowedOrigins,
+		declared.Spec.Module.AllowedOrigins, added)
+
+	if declared.Spec.Service == nil {
+		slices.Sort(added)
+
+		return given, added, nil
 	}
 
 	held := declared.Spec.Service
 
-	var added []string
+	var fresh []string
 
-	given.Permissions, added = keptPermissions(asked.Permissions, before.Permissions, declaredPermissions(declared))
+	given.Permissions, fresh = keptPermissions(asked.Permissions, before.Permissions, declaredPermissions(declared))
+	added = append(added, fresh...)
 	given.Checks, added = keptChecks(asked.Checks, before.Checks, authz.ActionNames(held.Checks), added)
 	given.Events, added = keptEvents(asked.Events, before.Events, held.Events, namespace, added)
 
-	fresh := asked.CheckAbsentPeople && !before.CheckAbsentPeople
-	given.CheckAbsentPeople = asked.CheckAbsentPeople && (fresh || held.CheckAbsentPeople)
+	freshAbsent := asked.CheckAbsentPeople && !before.CheckAbsentPeople
+	given.CheckAbsentPeople = asked.CheckAbsentPeople && (freshAbsent || held.CheckAbsentPeople)
 
-	if fresh {
+	if freshAbsent {
 		added = append(added, "permission "+checkAbsentPeople)
 	}
 
@@ -488,6 +508,7 @@ func grantAsks(declared *manifest.Manifest, given install.ModuleAsks) {
 	declared.CheckAbsentPeople = given.CheckAbsentPeople
 	declared.ListPeople = given.ListPeople
 	declared.Calls = given.Calls
+	declared.AllowedOrigins = given.AllowedOrigins
 	declared.Routes.Public = slices.DeleteFunc(declared.Routes.Public, func(route manifest.Route) bool {
 		return !slices.Contains(given.PublicRoutes, route.String())
 	})
@@ -685,6 +706,26 @@ func routeLines(routes []manifest.Route) []string {
 	}
 
 	return out
+}
+
+// keptOrigins is each origin asked that the declaration still holds, or that
+// the ask before did not have, with the lines for the second kind added to
+// added. An origin the operator took away from the release before stays away.
+func keptOrigins(asked, before, held, added []string) ([]string, []string) {
+	var kept []string
+
+	for _, origin := range asked {
+		fresh := !slices.Contains(before, origin)
+		if fresh {
+			added = append(added, originRequest(origin))
+		}
+
+		if fresh || slices.Contains(held, origin) {
+			kept = append(kept, origin)
+		}
+	}
+
+	return kept, added
 }
 
 // keptChecks is each check asked that the declaration still holds, or that the

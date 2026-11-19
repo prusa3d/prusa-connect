@@ -80,6 +80,11 @@ type Manifest struct {
 	// with routes.call. Each is also under Requires or Suggests. It is a
 	// request like Permissions.
 	Calls []string
+	// AllowedOrigins is the browser origins the module asks the server to
+	// answer, each an exact https origin. A page of another site that works
+	// with the module calls the API from one. It is a request like
+	// Permissions, and it holds only while the module is switched on.
+	AllowedOrigins []string
 	// Needs is the ports the module listens on and whether it asks for a
 	// data directory. It is a request like Permissions, and a port takes an
 	// approval of its own.
@@ -155,6 +160,7 @@ const MaxRecordsMiB = 1024
 var manifestKeys = []string{
 	"name", "kind", "version", "license", "contract_major", "require", "suggest", "conflict",
 	"permissions", "checks", "check_absent_people", "list_people", "records_mib", "events", "calls", "needs",
+	"allowed_origins",
 	"routes", "options", "egress",
 	"openapi", "platforms", "build",
 	"title", "summary", "codeowner", "issue_tracker", "lifecycle", "ui", "file_analysis", "camera_types",
@@ -336,7 +342,7 @@ func readContract(tree map[string]any, held *Manifest) error {
 }
 
 // readRequests reads the keys the operator must approve: permissions, checks,
-// records, events, calls and needs.
+// records, events, calls, allowed origins and needs.
 func readRequests(tree map[string]any, held *Manifest) error {
 	var err error
 
@@ -385,6 +391,10 @@ func readRequests(tree map[string]any, held *Manifest) error {
 	}
 
 	if held.Calls, err = readCalls(tree); err != nil {
+		return err
+	}
+
+	if held.AllowedOrigins, err = readAllowedOrigins(tree); err != nil {
 		return err
 	}
 

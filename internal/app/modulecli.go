@@ -652,6 +652,7 @@ func writeDeclaration(
 	if approve {
 		asked := decided.asked
 		entry.Module.Asked = &asked
+		entry.Module.AllowedOrigins = held.manifest.AllowedOrigins
 	}
 
 	entry.Module.Channel = decided.channel

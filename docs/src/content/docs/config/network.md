@@ -21,7 +21,8 @@ wizard asks for it on both of its paths.
 A web page served from another address, such as a dashboard you host
 yourself, may call the API only when the server allows its origin. List the
 origin in `core.api.allowed_origins`, or add it under Settings, Server,
-Network. A reverse proxy in front of the server, such as
+Network. An extension can bring an origin too, which an administrator approves
+when they install it. A reverse proxy in front of the server, such as
 nginx or Traefik, belongs in `core.trusted_proxies`. The server then reads the
 real address of each visitor from the header the proxy adds.
 

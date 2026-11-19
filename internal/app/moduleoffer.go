@@ -11,7 +11,7 @@ func (row moduleIndexRow) statesRequests() bool {
 	return row.Permissions != nil || row.Checks != nil || row.Events != nil || row.CheckAbsentPeople != nil ||
 		row.ListPeople != nil || row.Calls != nil || row.PublicRoutes != nil ||
 		row.StagedRoutes != nil || row.RequestHeaders != nil || row.RecordsMiB != nil || row.MemoryMiB != nil ||
-		row.Listen != nil || row.Data != nil || row.Database != nil
+		row.Listen != nil || row.Data != nil || row.Database != nil || row.AllowedOrigins != nil
 }
 
 // calls is the modules the row says the release calls, and nil for none.
@@ -66,6 +66,7 @@ func withAsks(offer *httpapi.ModuleOffer, asked install.ModuleAsks) {
 	offer.Listen = resource.RequestsOf(asked).Listen
 	offer.Data = asked.Data
 	offer.Database = asked.Database
+	offer.AllowedOrigins = asked.AllowedOrigins
 }
 
 // fill copies what the index row states into an offer. A request the row does
@@ -111,6 +112,10 @@ func (row moduleIndexRow) fill(offer *httpapi.ModuleOffer) {
 
 	if row.Database != nil {
 		offer.Database = *row.Database
+	}
+
+	if row.AllowedOrigins != nil {
+		offer.AllowedOrigins = *row.AllowedOrigins
 	}
 
 	offer.Calls = row.calls()

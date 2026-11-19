@@ -183,6 +183,14 @@ const MaxMemoryMiB = 8192
 
 The memory budget a module may recommend, in MiB.
 
+### `MaxAllowedOrigins` {#manifest-maxallowedorigins}
+
+```go
+const MaxAllowedOrigins = 8
+```
+
+MaxAllowedOrigins is how many origins one manifest may name under allowed\_origins.
+
 ### `MaxCalls` {#manifest-maxcalls}
 
 ```go
@@ -354,7 +362,7 @@ FileTypes reads an optional list of file types under key. Each entry must be a l
 func IsAllowedOrigin(origin string) bool
 ```
 
-IsAllowedOrigin reports whether origin is one a module may bring: an https scheme and a host in lower case, a port only when it is not 443, and nothing after the host. A browser writes its Origin header in that one form, and the host compares the two byte for byte.
+IsAllowedOrigin reports whether origin is one a manifest may ask for: an https scheme and a host in lower case, a port only when it is not 443, and nothing after the host. A browser writes its Origin header in that one form, and the host compares the two byte for byte.
 
 ### `IsListenName` {#manifest-islistenname}
 
@@ -986,6 +994,11 @@ type Manifest struct {
     // with routes.call. Each is also under Requires or Suggests. It is a
     // request like Permissions.
     Calls []string
+    // AllowedOrigins is the browser origins the module asks the server to
+    // answer, each an exact https origin. A page of another site that works
+    // with the module calls the API from one. It is a request like
+    // Permissions, and it holds only while the module is switched on.
+    AllowedOrigins []string
     // Needs is the ports the module listens on and whether it asks for a
     // data directory. It is a request like Permissions, and a port takes an
     // approval of its own.

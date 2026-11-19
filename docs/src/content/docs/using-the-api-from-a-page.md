@@ -207,7 +207,8 @@ demo after adding one. A server reads the file once, when it starts.
 An administrator can also add the origin in the web app, with no file and no
 restart. Open **Settings**, then **Server**, then **Network**, and add it
 under **Pages that may call this server**. The server answers it at once. That
-list is added to the file's list. Without it, the console says this and the page shows
+list is added to the file's list. It also shows each origin an extension
+brings while that extension is switched on. Without it, the console says this and the page shows
 `NetworkError: request failed after 3 attempts: Failed to fetch`:
 
 ```

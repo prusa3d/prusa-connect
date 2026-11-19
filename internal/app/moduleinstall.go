@@ -700,6 +700,7 @@ type moduleIndexRow struct {
 	Listen            *[]install.ListenAsk     `json:"listen,omitempty"`
 	Data              *bool                    `json:"data,omitempty"`
 	Database          *bool                    `json:"database,omitempty"`
+	AllowedOrigins    *[]string                `json:"allowed_origins,omitempty"`
 
 	// The release's require, suggest and conflict, in Composer's shape.
 	Require  map[string]string `json:"require,omitempty"`

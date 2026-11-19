@@ -1033,7 +1033,7 @@ on :8080, so the next start reads it.
 ```
 
 The declaration is written switched off. The keys that are a request rather
-than a grant, `permissions`, `checks`, `check_absent_people`, `list_people`, `calls`, `records_mib` and `events`, are left out
+than a grant, `permissions`, `checks`, `check_absent_people`, `list_people`, `calls`, `allowed_origins`, `records_mib` and `events`, are left out
 until you say yes. `-approve` writes them and switches the instance on.
 
 `-approve` also writes what the module needs to reach a printer. A module reads
@@ -1122,7 +1122,7 @@ reason under `reason` when it did not.
 
 The same admin role is needed whenever `approve` records what the module may
 do as itself. That includes a permission no grant answers, such as operate,
-`checks`, `check_absent_people` and `list_people`. A reinstall that takes a grant back needs it too, and a
+`checks`, `check_absent_people`, `list_people` and `allowed_origins`. A reinstall that takes a grant back needs it too, and a
 caller without it is refused before any file changes.
 
 A reinstall cannot tell a grant it wrote from the same grant an administrator
@@ -1306,7 +1306,7 @@ except to loopback when the marketplace itself is configured on loopback over
 http, for local development. A failed download answers `MODULE_DOWNLOAD_FAILED`.
 
 An install with `approve` grants only what the operator was shown. The
-release's permissions, `checks`, events, `check_absent_people`, `list_people`, `records_mib` and `memory_mib` must be
+release's permissions, `checks`, events, `check_absent_people`, `list_people`, `allowed_origins`, `records_mib` and `memory_mib` must be
 within what the marketplace lists for it, and within `expect` when the request
 carries it. Anything more is refused with `MODULE_REQUESTS_CHANGED`. A release
 whose name another module already holds is refused with `MODULE_NAME_TAKEN`.
@@ -1853,6 +1853,32 @@ Each row has three fields: `Subject` is `user:<id>`, the same principal `Check` 
 | a burst of more than 600 questions and listings, or more than 10 a second after it | `accessapi.ErrTooManyQuestions`. Ask again a moment later |
 
 The list is what the server holds at the moment of the call. Keep the subject, not the name, and ask `Check` again before you act for that person. The server writes one log line for each listing, naming the module and the number of rows.
+
+### Letting a page of another site call the server
+
+Some modules work with a page that another site serves. A slicer that runs in
+a browser on its own site sends a print to this server from that browser. A
+browser lets such a page read the server's answer only when the server names
+the page's origin, which is its scheme, host and port. So a module may ask for
+the origin in `module.yaml`:
+
+```yaml
+allowed_origins:
+  - https://slicer.example
+```
+
+A module with no process may ask too. Each entry is an exact `https` origin as
+a browser writes it: lower case, no path, and a port only when it is not 443.
+A manifest names at most 8, and a wildcard or an `http` origin is refused when
+the manifest is read.
+
+The operator sees `origin https://slicer.example` among the requests, and the
+origin is granted only on an approved install. The server then answers pages
+of that origin while the module is switched on. The origin leaves when the
+module is switched off or removed, with no restart. The grant gives the page
+no credential: it still needs one, such as the one the
+[app pairing](./scoped-credentials-and-app-pairing.md#pairing) gives
+(ADR-20261119-6be).
 
 ## Calling another module
 

@@ -24,6 +24,7 @@ func (o ModuleOffer) Requests() ModuleRequests {
 		Listen:            o.Listen,
 		Data:              o.Data,
 		Database:          o.Database,
+		AllowedOrigins:    o.AllowedOrigins,
 	}
 }
 

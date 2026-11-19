@@ -3,10 +3,10 @@
   permission, each event it publishes, whether it may ask about people it is
   not serving, each route anybody may call without signing in, each route
   whose body the server writes to a file with its largest body, each request
-  header it reads with the reason it gives, the room it
-  wants for its records, the memory it recommends
-  for its process, a directory of its own, a
-  database of its own and each network port it listens on. An empty list says so,
+  header it reads with the reason it gives, each site whose pages may call the
+  server, the room it wants for its records, the memory it recommends for its
+  process, a directory of its own, a database of its own and each network port
+  it listens on. An empty list says so,
   because "asks for nothing" is something the person is agreeing to as well.
 -->
 <script lang="ts">
@@ -79,6 +79,10 @@
             reason: request.reason.replace(/\.+$/, ''),
           },
         );
+      case 'origin':
+        return t('app.settings.extensions.request.origin', {
+          origin: request.origin,
+        });
       case 'records':
         return t('app.settings.extensions.request.records', {
           size: formatNumber(request.mib),

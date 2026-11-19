@@ -184,11 +184,12 @@ func TestEveryAskSurvivesEveryHop(t *testing.T) {
 		RequestHeaders: []install.RequestHeader{
 			{Name: "Print-After-Upload", Reason: "prints the file", Required: true},
 		},
-		RecordsMiB: 16,
-		MemoryMiB:  128,
-		Listen:     []install.ListenAsk{{Name: "web", Network: "tcp", Port: 8080, Why: "serves the page"}},
-		Data:       true,
-		Database:   true,
+		RecordsMiB:     16,
+		MemoryMiB:      128,
+		Listen:         []install.ListenAsk{{Name: "web", Network: "tcp", Port: 8080, Why: "serves the page"}},
+		Data:           true,
+		Database:       true,
+		AllowedOrigins: []string{"https://slicer.example"},
 	}
 
 	allType := reflect.TypeOf(all)

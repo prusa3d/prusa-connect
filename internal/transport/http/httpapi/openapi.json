@@ -6949,6 +6949,14 @@
       "ModuleOffer": {
         "additionalProperties": false,
         "properties": {
+          "allowed_origins": {
+            "description": "The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "type": "array"
+          },
           "author": {
             "description": "Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row.",
             "type": "string"
@@ -7329,6 +7337,14 @@
       "ModulePlanned": {
         "additionalProperties": false,
         "properties": {
+          "allowed_origins": {
+            "description": "The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "type": "array"
+          },
           "author": {
             "description": "Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row.",
             "type": "string"
@@ -7857,6 +7873,14 @@
       "ModuleRequests": {
         "additionalProperties": false,
         "properties": {
+          "allowed_origins": {
+            "description": "The browser origins the module asks this server to answer, each an exact https origin. A page served from one may call the API from a browser while the module is switched on.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "type": "array"
+          },
           "calls": {
             "description": "The namespaces of the other modules whose routes the module calls.",
             "items": {
