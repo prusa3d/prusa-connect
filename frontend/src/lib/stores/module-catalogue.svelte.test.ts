@@ -899,10 +899,34 @@ describe('a write to an installed module', () => {
       required: false,
       config: { shelf_size: 4, token: 'xxxxx' },
       hidden_contributions: [],
+    });
+    expect(changed).toHaveBeenCalledOnce();
+  });
+
+  // The server refuses on_over_memory on an instance that runs no process, so
+  // a write that carried it could not switch a bundle-only module off.
+  it('a module with a process sends its memory keys, and one without sends none', async () => {
+    const { client, calls } = stubClient({
+      'PUT /api/v1/resources/asset/spools': json(200, spools),
+    });
+    const store = new ModuleCatalogue(client, vi.fn());
+
+    await store.writeInstance(spools, { enabled: false });
+    expect(JSON.parse(put(calls)?.body ?? '{}')).not.toHaveProperty(
+      'on_over_memory',
+    );
+    expect(JSON.parse(put(calls)?.body ?? '{}')).not.toHaveProperty(
+      'memory_mib',
+    );
+
+    await store.writeInstance(
+      { ...spools, runtime: 'service' },
+      { enabled: false },
+    );
+    expect(JSON.parse(put(calls)?.body ?? '{}')).toMatchObject({
       memory_mib: 0,
       on_over_memory: 'stop',
     });
-    expect(changed).toHaveBeenCalledOnce();
   });
 
   it('a write keeps the hidden contributions unless it sets them', async () => {
@@ -939,6 +963,7 @@ describe('a write to an installed module', () => {
     await store.writeInstance(
       {
         ...spools,
+        runtime: 'service',
         memory_mib: 256,
         on_over_memory: 'warn',
         switch_off: switchOff,

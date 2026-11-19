@@ -952,11 +952,17 @@ export class ModuleCatalogue {
           // The write replaces the whole spec: leaving the list out clears it.
           hidden_contributions:
             change.hidden_contributions ?? instance.hidden_contributions ?? [],
-          // Leaving these out resets the operator's memory budget,
+          // Only a module that runs a process has a memory budget, and the
+          // server refuses on_over_memory on any other instance. For one
+          // that has, leaving these out resets the operator's memory budget,
           // on_over_memory and switch-off.
-          memory_mib: change.memory_mib ?? instance.memory_mib ?? 0,
-          on_over_memory:
-            change.on_over_memory ?? instance.on_over_memory ?? 'stop',
+          ...(instance.runtime === 'service'
+            ? {
+                memory_mib: change.memory_mib ?? instance.memory_mib ?? 0,
+                on_over_memory:
+                  change.on_over_memory ?? instance.on_over_memory ?? 'stop',
+              }
+            : {}),
           ...(switchOff === undefined ? {} : { switch_off: switchOff }),
           // A route left out keeps its limit, so a write of another field
           // sends none.
