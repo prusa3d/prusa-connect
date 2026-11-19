@@ -26,6 +26,7 @@ Each page below says what the extension adds to the app, what it needs from the 
 ## The extensions {#the-extensions}
 
 - **[Prusa printer logs](./buddy-debug-logs.md)** 0.1.10. Keeps the log lines and metrics your Prusa printers send, for a day, and adds them to the diagnostics bundle.
+- **[EasyPrint](./easyprint.md)** 0.1.0. Lets EasyPrint, the Prusa slicer in the browser on Printables, send prints to this server.
 - **[Fleet stats](./fleet-stats.md)** 0.3.4. Job KPIs, a daily trend, the most printed files, a utilization heatmap and failures for the fleet, with dashboard cards.
 - **[Materials](./materials.md)** 0.2.7. A catalogue of filament materials, and the spools a person has of them.
 - **[Parts](./parts.md)** 0.3.8. A private catalogue of parts, with folders, versions of their files, comments and printing.

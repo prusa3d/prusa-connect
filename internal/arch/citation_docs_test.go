@@ -289,6 +289,7 @@ var pagesCitingNothing = []string{
 	// The official extension pages: prose around a region the generator
 	// writes from each extension's module.yaml and openapi.json.
 	"reference/extensions/buddy-debug-logs.md",
+	"reference/extensions/easyprint.md",
 	"reference/extensions/fleet-stats.md",
 	"reference/extensions/index.md",
 	"reference/extensions/materials.md",

@@ -1,0 +1,17 @@
+{
+  "_meta.language": "Čeština",
+  "_meta.note": "Vlastní texty tohoto modulu. Klíč, který tu chybí, se vezme z en.json.",
+
+  "easyprint.settings.title": "EasyPrint",
+  "easyprint.settings.about": "EasyPrint je slicer od Prusy, který běží v prohlížeči na Printables. Tisk na tento server posílá z prohlížeče toho, kdo ho používá.",
+  "easyprint.settings.notAllowed.title": "Tento server zatím EasyPrintu neodpovídá",
+  "easyprint.settings.notAllowed.body": "EasyPrint volá tento server z adresy {origin} a ta není mezi stránkami, které ho smějí volat. Nainstalujte rozšíření znovu a schvalte, o co žádá, nebo adresu přidejte v Nastavení, Server, Síť.",
+  "easyprint.settings.pair.heading": "Přidat tento server do EasyPrintu",
+  "easyprint.settings.pair.note": "Odkaz otevře EasyPrint v nové záložce s vyplněnou adresou uvedenou níže. EasyPrint pak tento server požádá o přístup a vy ho tady schválíte.",
+  "easyprint.settings.pair.address": "Adresa, kterou bude EasyPrint volat",
+  "easyprint.settings.pair.action": "Přidat tento server do EasyPrintu",
+  "easyprint.settings.https.heading": "HTTPS",
+  "easyprint.settings.https.note": "EasyPrint je stránka na HTTPS. Každý prohlížeč jí dovolí volat server, který odpovídá přes HTTPS s certifikátem, jemuž prohlížeč věří. Server na obyčejném HTTP funguje jen na adrese v místní síti a jen v prohlížeči, který se zeptá na povolení přistupovat k zařízením v této síti, jako to dělá Chrome.",
+  "easyprint.settings.https.plainTitle": "Tato stránka je otevřená přes obyčejné HTTP",
+  "easyprint.settings.https.plainBody": "Než bude EasyPrint moci tento server volat, Chrome se zeptá na povolení přistupovat k zařízením v místní síti. Jiný prohlížeč může volání odmítnout. Aby to fungovalo všude, otevřete tento server přes HTTPS."
+}

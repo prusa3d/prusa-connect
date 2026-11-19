@@ -16,6 +16,7 @@ either is tested against it before it merges.
 | `prusaslicer2-connector/` | PrusaSlicer 2 prints on each printer here as on a printer with PrusaLink. See [its README](prusaslicer2-connector/README.md) |
 | `prusaslicer3-connector/` | lets PrusaSlicer 3 in offline mode use this server as Prusa Connect. See [its README](prusaslicer3-connector/README.md) |
 | `simple-queue/` | a print queue for each printer, with a Go half and a browser half. See [its README](simple-queue/README.md) |
+| `easyprint/` | lets EasyPrint on Printables call the server from a browser: a browser bundle alone. See [its README](easyprint/README.md) |
 
 ## Who maintains them
 
