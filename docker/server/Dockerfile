@@ -70,6 +70,8 @@ RUN cd frontend && pnpm install --frozen-lockfile && pnpm run build && test -f d
 FROM packages-builder AS extensions-builder
 COPY extensions/fleet-stats ./extensions/fleet-stats
 RUN cd extensions/fleet-stats/ui && pnpm install --frozen-lockfile && pnpm run build && test -f dist/ui/index.js
+COPY extensions/easyprint ./extensions/easyprint
+RUN cd extensions/easyprint/ui && pnpm install --frozen-lockfile && pnpm run build && test -f dist/ui/index.js
 COPY extensions/parts ./extensions/parts
 RUN cd extensions/parts/client && pnpm install --frozen-lockfile && pnpm run build && \
     cd ../ui && pnpm install --frozen-lockfile && pnpm run build && test -f dist/ui/index.js
@@ -253,6 +255,7 @@ COPY --from=builder /prusa_connect /prusa_connect
 # offers each, and switching one on installs a copy into `core.modules`. Owned
 # by root, readable by the runtime user, because nothing writes here.
 COPY --from=extensions-builder /app/extensions/fleet-stats/ui/dist /opt/modules/fleet-stats
+COPY --from=extensions-builder /app/extensions/easyprint/ui/dist /opt/modules/easyprint
 COPY --from=builder /opt/modules/parts /opt/modules/parts
 COPY --from=builder /opt/modules/buddy-debug-logs /opt/modules/buddy-debug-logs
 COPY --from=builder /opt/modules/threemf /opt/modules/threemf

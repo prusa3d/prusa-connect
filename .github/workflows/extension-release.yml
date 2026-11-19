@@ -28,6 +28,7 @@ on:
           - simple-queue
           - prusaslicer2-connector
           - prusaslicer3-connector
+          - easyprint
       channel:
         description: The marketplace channel
         type: choice
@@ -131,7 +132,8 @@ jobs:
     uses: prusa3d/prusa-connect-marketplace-publish/.github/workflows/publish.yml@448af8c91938825d28df9d28cbd253022ecaaea7 # v1.0.1
     with:
       path: extensions/${{ inputs.extension }}
-      # fleet-stats has no go.mod, so the module path is named, not read.
+      # fleet-stats and easyprint have no go.mod, so the module path is named,
+      # not read.
       module: github.com/prusa3d/${{ inputs.extension }}
       environment: marketplace-production
       channel: ${{ inputs.channel }}

@@ -247,6 +247,7 @@ core:
     github.com/prusa3d/threemf: /opt/modules/threemf
     github.com/prusa3d/server-slicing: /opt/modules/server-slicing
     github.com/prusa3d/materials: /opt/modules/materials
+    github.com/prusa3d/easyprint: /opt/modules/easyprint
     github.com/prusa3d/fractal-link: /opt/modules/fractal
     github.com/prusa3d/simple-queue: /opt/modules/simple-queue
 ```
