@@ -44,6 +44,11 @@ var chamberPaths = map[string]string{
 // stands. A full frame, the one that carries temp_bed, with neither block
 // means the enclosure was switched off, and the reading goes.
 func (s *Session) reportChamber(fields map[string]json.RawMessage) {
+	s.reportChamberBlocks(fields)
+	s.describeChamber()
+}
+
+func (s *Session) reportChamberBlocks(fields map[string]json.RawMessage) {
 	if raw, present := fields["chamber"]; present {
 		block := chamberBlock(raw)
 
@@ -52,6 +57,7 @@ func (s *Session) reportChamber(fields map[string]json.RawMessage) {
 		}
 
 		if target, said := block["target_temp"]; said {
+			s.chamberTargetReported = true
 			s.report(connectorapi.StatePatch{Path: chamberTargetPath, Value: target})
 		}
 

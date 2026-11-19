@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fakeDevice } from '../../test/fakes';
+import { DESCRIBED_BED, describedReading } from '../../test/readings';
 import {
   printerArtworkOf,
   printerHref,
@@ -130,5 +131,43 @@ describe('printerRowOf removable', () => {
     expect(
       printerRowOf({ ...administering, actions: ['observe'] }).removable,
     ).toBe(false);
+  });
+});
+
+describe('printerRowOf bed', () => {
+  it('reads the bed from the reading with the bed role', () => {
+    const device = {
+      ...fakeDevice('p'),
+      state: {
+        ...describedReading({
+          id: 'heater_bed',
+          valuePath: '/heater_bed/temperature',
+          targetPath: '/heater_bed/target',
+          role: 'bed',
+        }),
+        '/heater_bed/temperature': 61,
+        '/heater_bed/target': 60,
+      },
+    };
+
+    expect(printerRowOf(device)).toMatchObject({ bed: 61, bedTarget: 60 });
+  });
+
+  it('shows no bed for a printer that describes none', () => {
+    const device = {
+      ...fakeDevice('p'),
+      state: { '/temperature/bed': 61, '/temperature/bed_target': 60 },
+    };
+
+    expect(printerRowOf(device)).toMatchObject({
+      bed: undefined,
+      bedTarget: undefined,
+    });
+  });
+
+  it('shows a described bed with no value yet as no value', () => {
+    const device = { ...fakeDevice('p'), state: { ...DESCRIBED_BED } };
+
+    expect(printerRowOf(device).bed).toBeUndefined();
   });
 });

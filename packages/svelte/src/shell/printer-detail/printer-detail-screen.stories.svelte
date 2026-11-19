@@ -2,6 +2,7 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
   import { fakeDevice } from '../../test/fakes';
+  import { DESCRIBED_BED } from '../../test/readings';
   import PrinterDetailScreen from './printer-detail-screen.svelte';
   import type { PrinterAdministration } from './info/types';
   import type { TelemetrySource } from './types';
@@ -23,7 +24,7 @@
       'core.command.load_filament',
       'core.command.unload_filament',
     ],
-    state: { '/state': state },
+    state: { '/state': state, ...DESCRIBED_BED },
   });
 
   const READINGS: Readonly<Record<string, number | string>> = {
@@ -71,6 +72,7 @@
     ],
     state: {
       '/state': 'PRINTING',
+      ...DESCRIBED_BED,
       '/tools/1/active': true,
       '/tools/0/enabled': true,
       '/tools/0/nozzle_temp': 170.2,

@@ -441,7 +441,7 @@ export {
   type LeastOf,
 } from './dashboard-editor.svelte';
 export {
-  CHARTED_PATHS,
+  chartedPaths,
   SHARED_TELEMETRY_MAX_DEVICES,
   SharedTelemetry,
   type SharedTelemetryClient,

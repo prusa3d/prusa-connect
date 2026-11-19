@@ -136,6 +136,25 @@ describe('readCardSettings', () => {
   it('starts a new card at its defaults', () => {
     expect(defaultCardSettings(spool)).toEqual(defaults);
   });
+
+  it('keeps a value no option names in an open field, and nothing empty or repeated', () => {
+    const open: readonly CardSetting[] = [
+      {
+        key: 'lines',
+        kind: 'choices',
+        label: 'Lines',
+        options: [{ value: 'nozzle', label: 'Nozzle' }],
+        default: ['nozzle'],
+        open: true,
+      },
+    ];
+    const read = (lines: unknown) => readCardSettings(open, { lines }).lines;
+
+    expect(read(['nozzle', 'enclosure'])).toEqual(['nozzle', 'enclosure']);
+    expect(read(['nozzle', ''])).toEqual(['nozzle']);
+    expect(read(['x', 'x'])).toEqual(['nozzle']);
+    expect(read(['a'.repeat(65)])).toEqual(['nozzle']);
+  });
 });
 
 describe('isCardType', () => {

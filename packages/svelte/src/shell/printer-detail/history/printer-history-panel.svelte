@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
 
   import type { DataFault } from '../../../data';
-  import { mergeSeries, thinSeries } from '../../../domain';
+  import { mergeSeries, readingsOf, thinSeries } from '../../../domain';
   import { describeFault, t } from '../../../i18n';
   import {
     Card,
@@ -21,7 +21,7 @@
   } from '../../../primitives';
   import HistoryLog from './history-log.svelte';
   import {
-    DEFAULT_CHART_METRICS,
+    defaultChartMetrics,
     metricLabel,
     metricUnit,
     minStepOf,
@@ -55,12 +55,16 @@
   const isRefusal = (fault: DataFault | undefined): boolean =>
     fault?.code === HISTORY_NOT_CONFIGURED_FAULT;
 
+  // The readings the printer describes name its lines and set their units.
+  const readings = $derived(readingsOf(reported ?? {}));
+  const usualMetrics = $derived(defaultChartMetrics(readings));
+
   // The tab reads when it opens, and only the readings it will draw. The
   // remembered choice decides both, so what is read and what is drawn cannot
   // disagree: asking for the usual readings while drawing none of them is a
   // query nobody sees the answer to.
   onMount(() => {
-    onOpen?.(remembered ?? DEFAULT_CHART_METRICS);
+    onOpen?.(remembered ?? usualMetrics);
 
     return () => onClose?.();
   });
@@ -109,7 +113,7 @@
    * to it.
    */
   const drawable = (metrics: readonly string[]): string[] =>
-    metrics.filter((one) => metricUnit(one) !== undefined);
+    metrics.filter((one) => metricUnit(one, readings) !== undefined);
 
   // The measurements are read only for the readings drawn, so a legend built
   // from what the read returned would never offer one nobody asked for. It
@@ -149,7 +153,7 @@
   const chosen = $derived.by(() => {
     if (remembered !== undefined) return remembered;
 
-    const usual = offered.filter((one) => DEFAULT_CHART_METRICS.includes(one));
+    const usual = offered.filter((one) => usualMetrics.includes(one));
 
     return usual.length > 0 ? usual : offered;
   });
@@ -160,9 +164,9 @@
   const metrics = $derived(
     [...new Set([...offered, ...chosen])].sort((a, b) => {
       const rank = (one: string): number =>
-        DEFAULT_CHART_METRICS.includes(one)
-          ? DEFAULT_CHART_METRICS.indexOf(one)
-          : DEFAULT_CHART_METRICS.length;
+        usualMetrics.includes(one)
+          ? usualMetrics.indexOf(one)
+          : usualMetrics.length;
 
       return rank(a) - rank(b) || a.localeCompare(b, 'en');
     }),
@@ -171,8 +175,8 @@
   const chartSeries = $derived<ChartSeries[]>(
     metrics.map((metric) => ({
       id: metric,
-      label: metricLabel(metric),
-      unit: metricUnit(metric),
+      label: metricLabel(metric, readings),
+      unit: metricUnit(metric, readings),
       hidden: !chosen.includes(metric),
       points: pointsOf(metric),
     })),
@@ -183,7 +187,10 @@
   );
 
   const unit = $derived(
-    sharedUnit(chartSeries.filter((one) => !one.hidden).map((one) => one.id)),
+    sharedUnit(
+      chartSeries.filter((one) => !one.hidden).map((one) => one.id),
+      readings,
+    ),
   );
 
   // The chart has one value axis, so it draws one unit at a time. A reading
@@ -192,9 +199,9 @@
   const toggled = (id: string): readonly string[] => {
     if (chosen.includes(id)) return chosen.filter((one) => one !== id);
 
-    const own = metricUnit(id);
+    const own = metricUnit(id, readings);
 
-    return chosen.every((one) => metricUnit(one) === own)
+    return chosen.every((one) => metricUnit(one, readings) === own)
       ? [...chosen, id]
       : [id];
   };

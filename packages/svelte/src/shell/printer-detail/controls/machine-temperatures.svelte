@@ -2,15 +2,14 @@
   import type { Snippet } from 'svelte';
 
   import {
-    BED_PATH,
-    BED_TARGET_PATH,
-    CHAMBER_PATH,
-    CHAMBER_TARGET_PATH,
     nozzlePath,
     nozzleTargetPath,
     PREHEAT_PRESETS,
     type PreheatPreset,
     type Device,
+    type Reading,
+    readingName,
+    readingWithRole,
     type ToolReading,
   } from '../../../domain';
   import { formatUnit, t } from '../../../i18n';
@@ -47,6 +46,7 @@
     device,
     telemetry,
     assign,
+    readings = [],
   }: SectionProps & {
     material: string | undefined;
     device?: Device | undefined;
@@ -56,6 +56,8 @@
      * the chip to fall back on: the Tools table's cell, so both assign alike.
      */
     assign?: Snippet<[string, Snippet]> | undefined;
+    /** The readings the printer describes, the bed first. */
+    readings?: readonly Reading[];
     /** The toolheads of a tool changer. Empty draws nothing. */
     slots?: readonly ToolReading[];
     /** Whether the nozzle verb takes a tool, so each head is set alone. */
@@ -73,11 +75,22 @@
   const nozzle = $derived(resolve(VERBS.nozzle));
   const bed = $derived(resolve(VERBS.bed));
   const chamber = $derived(resolve(VERBS.chamberTemp));
-  // A printer with no chamber has neither the verb nor the reading.
-  const hasChamber = $derived(
-    chamber.kind !== 'absent' || reading(CHAMBER_PATH) !== undefined,
-  );
   const reason = $derived(groupReason([nozzle, bed, chamber]));
+
+  // The set controls stay where the verbs are: the bed and the chamber.
+  const bedReading = $derived(readingWithRole(readings, 'bed'));
+  const chamberReading = $derived(readingWithRole(readings, 'chamber'));
+
+  const ROLE_LABEL = {
+    bed: 'printerDetailControls.bed.label',
+    chamber: 'printerDetailControls.chamberTemp.label',
+  } as const;
+
+  const labelOf = (one: Reading): string =>
+    one.role === undefined ? readingName(one) : t(ROLE_LABEL[one.role]);
+
+  const targetOf = (one: Reading | undefined): number | undefined =>
+    one?.targetPath === undefined ? undefined : reading(one.targetPath);
 
   const celsius = (value: number | undefined): string =>
     value === undefined
@@ -168,24 +181,21 @@
         {/each}
       </div>
     {/if}
-    <HeaterRow
-      class={READING_TILE}
-      label={t('printerDetailControls.bed.label')}
-      kind="bed"
-      nozzleTemp={reading(BED_PATH)}
-      targetTemp={reading(BED_TARGET_PATH)}
-      {...bed.kind === 'absent' ? {} : { action: bedEditor }}
-    />
-    {#if hasChamber}
+    {#each readings as one (one.id)}
+      {@const settable =
+        (one === bedReading && bed.kind !== 'absent') ||
+        (one === chamberReading && chamber.kind !== 'absent')}
       <HeaterRow
         class={READING_TILE}
-        label={t('printerDetailControls.chamberTemp.label')}
-        kind="chamber"
-        nozzleTemp={reading(CHAMBER_PATH)}
-        targetTemp={reading(CHAMBER_TARGET_PATH)}
-        {...chamber.kind === 'absent' ? {} : { action: chamberEditor }}
+        label={labelOf(one)}
+        kind={one.role ?? 'chamber'}
+        nozzleTemp={reading(one.valuePath)}
+        targetTemp={targetOf(one)}
+        {...settable
+          ? { action: one === bedReading ? bedEditor : chamberEditor }
+          : {}}
       />
-    {/if}
+    {/each}
   </div>
 
   {#if reason}
@@ -218,15 +228,17 @@
 {#snippet bedEditor()}
   <ValueEditor
     label={t('printerDetailControls.bed.label')}
-    currentLabel={celsius(reading(BED_PATH))}
-    target={scale.shown(reading(BED_TARGET_PATH) ?? 0)}
+    currentLabel={celsius(
+      bedReading === undefined ? undefined : reading(bedReading.valuePath),
+    )}
+    target={scale.shown(targetOf(bedReading) ?? 0)}
     unit={scale.unit}
     min={scale.shown(0)}
     max={scale.shown(BED_MAX_CELSIUS)}
     step={scale.step}
     presets={bedPresets}
     disabled={blocked(bed, busy)}
-    announceTarget={reading(BED_TARGET_PATH) !== undefined}
+    announceTarget={targetOf(bedReading) !== undefined}
     onCommit={(next: number) => send(VERBS.bed, 'bed_temperature', next)}
   />
 {/snippet}
@@ -234,8 +246,12 @@
 {#snippet chamberEditor()}
   <ValueEditor
     label={t('printerDetailControls.chamberTemp.label')}
-    currentLabel={celsius(reading(CHAMBER_PATH))}
-    target={scale.shown(reading(CHAMBER_TARGET_PATH) ?? 0)}
+    currentLabel={celsius(
+      chamberReading === undefined
+        ? undefined
+        : reading(chamberReading.valuePath),
+    )}
+    target={scale.shown(targetOf(chamberReading) ?? 0)}
     unit={scale.unit}
     min={scale.shown(0)}
     max={scale.shown(chamberMax)}
@@ -244,7 +260,7 @@
       { label: t('printerDetailControls.preset.off'), value: scale.shown(0) },
     ]}
     disabled={blocked(chamber, busy)}
-    announceTarget={reading(CHAMBER_TARGET_PATH) !== undefined}
+    announceTarget={targetOf(chamberReading) !== undefined}
     onCommit={(next: number) =>
       send(VERBS.chamberTemp, 'chamber.target_temp', next)}
   />

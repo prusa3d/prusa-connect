@@ -346,6 +346,48 @@ the driver carries the figures for the models it knows, with the public
 source of each. A Klipper machine is defined by its own configuration, and
 the Moonraker driver reads the travel of each axis from it.
 
+## Describe the readings
+
+A reading is one measured value of the whole machine, such as the bed or the
+chamber temperature. A value of one tool stays in the tool tree. A client
+learns from the state which readings a machine has. So describe each reading
+that the driver writes, under `/readings/<id>/`. The value stays at its own
+path.
+
+| path | value |
+| --- | --- |
+| `/readings/<id>/kind` | `temperature` |
+| `/readings/<id>/unit` | `celsius` |
+| `/readings/<id>/value_path` | the state path of the value, such as `/temperature/bed` |
+| `/readings/<id>/target_path` | the state path of the target, when the machine has one |
+| `/readings/<id>/name` | what the machine or its owner calls the reading, at most 64 bytes |
+| `/readings/<id>/role` | `bed` or `chamber`. One device has at most one reading per role |
+
+The id is 1 to 64 characters from `a` to `z`, `0` to `9` and `_`, and it
+starts with a letter. Do not type the paths in the driver. Build a
+`connectorapi.Reading` and send its `Patches`:
+
+```go
+bed := connectorapi.Reading{
+	ID:         "bed",
+	Kind:       connectorapi.ReadingTemperature,
+	Unit:       connectorapi.UnitCelsius,
+	ValuePath:  "/temperature/bed",
+	TargetPath: "/temperature/bed_target",
+	Role:       connectorapi.RoleBed,
+}
+
+for _, patch := range bed.Patches() {
+	report(patch)
+}
+```
+
+Send the description once per session, and again only when it changes. The
+host publishes an event for every patch, also for a value that did not change.
+When the machine loses a reading, send the patches of its `Removal`. Check
+each reading with `Reading.Problems` in a test. A reader builds the readings
+with `connectorapi.ReadReadings`.
+
 ## The name an operator writes
 
 A driver is the main module of its own test binary, so everything it registers there lands in namespace `core`. Installed in a host it is not the main module, and its namespace is its module path with the host reversed and the label `aux` where the host ends. A module path that contains the label `aux` is refused. The label keeps `github.com/acme/mk4` and `acme.github.com/mk4` in two collision domains rather than one.

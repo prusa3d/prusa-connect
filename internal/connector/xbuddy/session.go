@@ -240,6 +240,11 @@ type Session struct {
 	// chamberReported is whether the chamber reading in the tree is one this
 	// session wrote. Only the telemetry dispatch reads and writes it.
 	chamberReported bool
+	// chamberTargetReported is whether a chamber block carried a target, and
+	// the readings are what this session described. See readings.go.
+	chamberTargetReported bool
+	bedDescribed          bool
+	chamberDescribed      connectorapi.Reading
 	// storagesReported is whether the connection held now has answered an
 	// INFO, and storagesChanged wakes a reader when an INFO moves either.
 	storagesReported bool

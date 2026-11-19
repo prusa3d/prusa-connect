@@ -121,7 +121,10 @@ const fits = (setting: CardSetting, value: unknown): boolean => {
         setting.options.some((option) => option.value === value)
       );
     case 'choices':
-      return distinctTexts(value, setting.options.length, setting.options);
+      return setting.open === true
+        ? distinctTexts(value, MAX_OPTIONS) &&
+            value.every((item) => item !== '' && bytesOf(item) <= 64)
+        : distinctTexts(value, setting.options.length, setting.options);
     case 'number':
       return fitsNumber(value, setting);
     case 'text':

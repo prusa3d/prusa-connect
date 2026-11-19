@@ -12,6 +12,11 @@ import { formatting } from '../../../i18n';
 import { expectNoViolations } from '../../../test/axe';
 import { fakeDevice } from '../../../test/fakes';
 import { openSurface } from '../../../test/open-surface';
+import {
+  DESCRIBED_BED,
+  DESCRIBED_CHAMBER,
+  DESCRIBED_ENCLOSURE,
+} from '../../../test/readings';
 import type { TelemetrySource } from '../types';
 import { BED_MAX_CELSIUS, NOZZLE_MAX_CELSIUS } from './machine-controls';
 import PrinterControlsPanel from './printer-controls-panel.svelte';
@@ -67,7 +72,13 @@ const printer = (
 ): Device => ({
   ...fakeDevice('printer-1', 'MK4S'),
   capabilities,
-  state: { '/state': state },
+  state: { '/state': state, ...DESCRIBED_BED },
+});
+
+/** The same printer with its chamber described. */
+const withChamber = (device: Device): Device => ({
+  ...device,
+  state: { ...device.state, ...DESCRIBED_CHAMBER },
 });
 
 const props = (
@@ -611,7 +622,7 @@ describe('PrinterControlsPanel', () => {
     const first = await render(PrinterControlsPanel, {
       props: props({
         telemetry: reporting(40, 49),
-        device: printer('IDLE', chamberVerbs),
+        device: withChamber(printer('IDLE', chamberVerbs)),
       }),
     });
 
@@ -636,7 +647,7 @@ describe('PrinterControlsPanel', () => {
     const second = await render(PrinterControlsPanel, {
       props: props({
         telemetry: reporting(-1, 100),
-        device: printer('IDLE', chamberVerbs),
+        device: withChamber(printer('IDLE', chamberVerbs)),
       }),
     });
 
@@ -656,7 +667,7 @@ describe('PrinterControlsPanel', () => {
     await render(PrinterControlsPanel, {
       props: props({
         telemetry: reporting(0, 100, 0),
-        device: printer('IDLE', chamberVerbs),
+        device: withChamber(printer('IDLE', chamberVerbs)),
       }),
     });
 
@@ -757,11 +768,13 @@ describe('PrinterControlsPanel', () => {
     await render(PrinterControlsPanel, {
       props: props({
         telemetry: chamber,
-        device: printer('IDLE', [
-          ...EVERY_VERB,
-          'core.command.set_chamber_target_temp',
-          'core.command.set_chamber_target_temp#chamber.target_temp',
-        ]),
+        device: withChamber(
+          printer('IDLE', [
+            ...EVERY_VERB,
+            'core.command.set_chamber_target_temp',
+            'core.command.set_chamber_target_temp#chamber.target_temp',
+          ]),
+        ),
         commands: { onCommand },
       }),
     });
@@ -784,6 +797,41 @@ describe('PrinterControlsPanel', () => {
 
     await expect
       .element(page.getByRole('button', { name: /^Set chamber target/ }))
+      .not.toBeInTheDocument();
+  });
+
+  it('draws no bed row on a printer that describes no readings', async () => {
+    await render(PrinterControlsPanel, {
+      props: props({
+        device: { ...printer('IDLE'), state: { '/state': 'IDLE' } },
+      }),
+    });
+
+    await expect.element(page.getByText('Extruder')).toBeVisible();
+    await expect
+      .element(page.getByRole('button', { name: /^Set bed target/ }))
+      .not.toBeInTheDocument();
+  });
+
+  // A reading with no role has no verb to set it, so its row only reads.
+  it('draws a reading with no role under its name, with no control', async () => {
+    await render(PrinterControlsPanel, {
+      props: props({
+        device: {
+          ...printer('IDLE'),
+          state: { ...printer('IDLE').state, ...DESCRIBED_ENCLOSURE },
+        },
+        telemetry: {
+          value: (path) => ({ ...READINGS, '/sensors/enclosure': 31 })[path],
+          points: () => [],
+        },
+      }),
+    });
+
+    await expect.element(page.getByText('Enclosure')).toBeVisible();
+    await expect.element(page.getByText(/31\s*°C/).first()).toBeVisible();
+    await expect
+      .element(page.getByRole('button', { name: /^Set Enclosure/ }))
       .not.toBeInTheDocument();
   });
 

@@ -19,14 +19,6 @@ export const STATE_PATH = '/state';
  */
 export const NOZZLE_PATH = '/tools/0/nozzle_temp';
 export const NOZZLE_TARGET_PATH = '/tools/0/nozzle_target_temp';
-export const BED_PATH = '/temperature/bed';
-export const BED_TARGET_PATH = '/temperature/bed_target';
-/**
- * The air inside an enclosed printer and the target it is held to. A printer
- * with no chamber never writes them, and a target of 0 is no target.
- */
-export const CHAMBER_PATH = '/temperature/chamber';
-export const CHAMBER_TARGET_PATH = '/temperature/chamber_target';
 /**
  * The chamber fans' target, as a percentage, with -1 while they run on their
  * own, and the chamber light as a percentage.

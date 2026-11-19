@@ -80,17 +80,25 @@ export {
   type PrincipalGrant,
   readPrincipal,
 } from './principal';
+export {
+  READING_KINDS,
+  READING_ROLES,
+  READING_UNITS,
+  type Reading,
+  type ReadingKind,
+  type ReadingRole,
+  type ReadingUnit,
+  readingName,
+  readingsOf,
+  readingWithRole,
+} from './readings';
 export { mergeSeries, type TelemetryPoint, thinSeries } from './series';
 export {
   AXIS_X_PATH,
   AXIS_Y_PATH,
   AXIS_Z_PATH,
-  BED_PATH,
-  BED_TARGET_PATH,
   CHAMBER_FAN_PATH,
   CHAMBER_LIGHT_PATH,
-  CHAMBER_PATH,
-  CHAMBER_TARGET_PATH,
   DIALOG_BUTTONS_PATH,
   DIALOG_CODE_PATH,
   DIALOG_ID_PATH,

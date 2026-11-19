@@ -29,6 +29,30 @@ describe('LineChart', () => {
       .toBeVisible();
   });
 
+  it('dashes a line past the last colour, in the plot and in the legend', async () => {
+    const series = Array.from({ length: 6 }, (_, at) => ({
+      id: `line-${String(at)}`,
+      label: `Line ${String(at)}`,
+      points,
+    }));
+    const { container } = await render(LineChart, {
+      props: { label: 'Temperatures', series },
+    });
+
+    const paths = [
+      ...container.querySelectorAll('path[data-slot="line-chart-series"]'),
+    ];
+    expect(paths).toHaveLength(6);
+    expect(paths[0]?.getAttribute('stroke-dasharray')).toBeNull();
+    expect(paths[5]?.getAttribute('stroke-dasharray')).toBe('6 4');
+    expect(paths[5]?.getAttribute('class')).toBe(
+      paths[0]?.getAttribute('class'),
+    );
+    expect(
+      container.querySelectorAll('[data-slot="line-chart-dash"]'),
+    ).toHaveLength(1);
+  });
+
   it('draws one path per series', async () => {
     const { container } = await render(LineChart, {
       props: {

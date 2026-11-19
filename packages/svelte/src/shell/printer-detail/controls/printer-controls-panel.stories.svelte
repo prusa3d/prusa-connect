@@ -4,6 +4,11 @@
 
   import type { Device, StateTransition } from '../../../domain';
   import { fakeDevice } from '../../../test/fakes';
+  import {
+    DESCRIBED_BED,
+    DESCRIBED_CHAMBER,
+    DESCRIBED_ENCLOSURE,
+  } from '../../../test/readings';
   import type { TelemetrySource } from '../types';
   import PrinterControlsPanel from './printer-controls-panel.svelte';
 
@@ -46,7 +51,7 @@
     ...fakeDevice('p0', 'MK4S #1042'),
     model: 'MK4S',
     capabilities,
-    state: { '/state': state },
+    state: { '/state': state, ...DESCRIBED_BED },
   });
 
   const readings = (
@@ -106,7 +111,7 @@
       'core.command.set_chamber_target_temp',
       'core.command.set_chamber_target_temp#chamber.target_temp',
     ],
-    state: { '/state': 'PRINTING' },
+    state: { '/state': 'PRINTING', ...DESCRIBED_BED, ...DESCRIBED_CHAMBER },
   };
 
   const chamberWarming = readings({
@@ -115,6 +120,13 @@
     '/chamber/fan_pwm_target': -1,
     '/chamber/led_intensity': 100,
   });
+
+  // A sensor the driver names and gives no role: a row to read, with no
+  // control, under the driver's own name.
+  const withEnclosure: Device = {
+    ...printer('IDLE'),
+    state: { ...printer('IDLE').state, ...DESCRIBED_ENCLOSURE },
+  };
 
   const MATERIAL = 'material_package_instance/package/material/abbreviation';
 
@@ -126,6 +138,7 @@
     capabilities: [...EVERY_VERB, 'core.command.set_nozzle_temperature#tool'],
     state: {
       '/state': 'PRINTING',
+      ...DESCRIBED_BED,
       '/tools/1/active': true,
       '/tools/0/enabled': true,
       '/tools/0/nozzle_temp': 170.2,
@@ -166,6 +179,7 @@
     ...printer('PRINTING'),
     state: {
       '/state': 'PRINTING',
+      ...DESCRIBED_BED,
       '/tools/0/active': true,
       '/tools/0.2/active': true,
       '/tools/0/enabled': true,
@@ -216,6 +230,14 @@
   <PrinterControlsPanel
     device={coreOne}
     telemetry={chamberWarming}
+    {commands}
+  />
+</Story>
+
+<Story name="Enclosure Sensor" asChild>
+  <PrinterControlsPanel
+    device={withEnclosure}
+    telemetry={readings({ '/sensors/enclosure': 31.2 })}
     {commands}
   />
 </Story>

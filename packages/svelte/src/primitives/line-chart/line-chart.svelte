@@ -22,7 +22,7 @@
     xLabel,
   } from './geometry';
   import { timeTicks } from './scale';
-  import { chartPalette } from './palette';
+  import { lineStyleOf } from './palette';
   import type { LineChartProps } from './types';
 
   let {
@@ -41,15 +41,12 @@
     class: className,
   }: LineChartProps = $props();
 
-  // A line takes its colour from its place in `series`, so it keeps the
-  // colour when another line is hidden.
-  const hueOf = $derived((id: string) => {
-    const at = series.findIndex((one) => one.id === id);
-
-    return (
-      chartPalette[(at < 0 ? 0 : at) % chartPalette.length] ?? chartPalette[0]
-    );
-  });
+  // A line takes its colour and dash from its place in `series`, so it keeps
+  // them when another line is hidden.
+  const styleOf = $derived((id: string) =>
+    lineStyleOf(series.findIndex((one) => one.id === id)),
+  );
+  const hueOf = $derived((id: string) => styleOf(id).hue);
 
   const drawn = $derived(drawnOf(series));
 
@@ -83,6 +80,24 @@
     }),
   );
 </script>
+
+{#snippet dashed(id: string)}
+  <!-- A line past the last colour shows its dash in the legend too. -->
+  <svg
+    aria-hidden="true"
+    data-slot="line-chart-dash"
+    class="h-2 w-4 shrink-0 overflow-visible"
+  >
+    <line
+      x1="0"
+      x2="100%"
+      y1="50%"
+      y2="50%"
+      stroke-dasharray={styleOf(id).dash}
+      class={['stroke-2', hueOf(id)?.stroke]}
+    />
+  </svg>
+{/snippet}
 
 <div class={['flex flex-col gap-3', className]}>
   <div
@@ -155,6 +170,7 @@
                   data-slot="line-chart-series"
                   vector-effect="non-scaling-stroke"
                   stroke-linejoin="round"
+                  stroke-dasharray={styleOf(line.id).dash}
                   class={['fill-none stroke-2', hueOf(line.id)?.stroke]}
                 />
               {/if}
@@ -234,23 +250,34 @@
               class="flex min-h-control-height items-center gap-1.5 rounded-sm px-1 py-0.5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none @max-3xl/app-shell:min-h-touch-target pointer-coarse:min-h-touch-target"
               onclick={() => onToggle(one.id)}
             >
-              <span
-                aria-hidden="true"
-                class={[
-                  'size-2 shrink-0 rounded-full',
-                  off ? 'bg-muted-foreground/40' : hueOf(one.id)?.swatch,
-                ]}
-              ></span>
+              {#if !off && styleOf(one.id).dash !== undefined}
+                {@render dashed(one.id)}
+              {:else}
+                <span
+                  aria-hidden="true"
+                  class={[
+                    'size-2 shrink-0 rounded-full',
+                    off ? 'bg-muted-foreground/40' : hueOf(one.id)?.swatch,
+                  ]}
+                ></span>
+              {/if}
               <span class={off ? 'line-through opacity-60' : undefined}>
                 {one.label}
               </span>
             </button>
           {:else}
             <span class="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                class={['size-2 shrink-0 rounded-full', hueOf(one.id)?.swatch]}
-              ></span>
+              {#if styleOf(one.id).dash !== undefined}
+                {@render dashed(one.id)}
+              {:else}
+                <span
+                  aria-hidden="true"
+                  class={[
+                    'size-2 shrink-0 rounded-full',
+                    hueOf(one.id)?.swatch,
+                  ]}
+                ></span>
+              {/if}
               {one.label}
             </span>
           {/if}

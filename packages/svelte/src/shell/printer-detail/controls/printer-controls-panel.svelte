@@ -5,6 +5,7 @@
     activeMaterialOf,
     FLOW_PATH,
     printerStateOf,
+    readingsOf,
     SPEED_PATH,
     toolsOf,
     STATE_PATH,
@@ -93,6 +94,9 @@
     device === undefined ? [] : toolsOf(telemetry, device),
   );
   const slots = $derived(heads.length > 1 ? heads : []);
+  const readings = $derived(
+    device === undefined ? [] : readingsOf(device.state),
+  );
 
   const speed = $derived(resolve(VERBS.speed));
   const flow = $derived(resolve(VERBS.flow));
@@ -276,6 +280,7 @@
               {slots}
               perTool={declaresArgument(device, VERBS.nozzle, 'tool')}
               chamberMax={chamberMaxCelsius(device.model)}
+              {readings}
             />
 
             {#if speed.kind !== 'absent'}
@@ -305,6 +310,7 @@
               {reading}
               {busy}
               onCommand={commands.onCommand}
+              {readings}
             />
 
             <MachineNozzles

@@ -560,6 +560,14 @@ const MaxModelBytes = 128
 
 MaxModelBytes is the longest spelling a declared model may have.
 
+### `MaxReadingNameLen` {#connectorapi-maxreadingnamelen}
+
+```go
+const MaxReadingNameLen = 64
+```
+
+MaxReadingNameLen bounds the name of one reading, in bytes.
+
 ### `NoMaterial` {#connectorapi-nomaterial}
 
 ```go
@@ -1320,6 +1328,14 @@ var ErrInvalidDialect = errors.New("connectorapi: invalid dialect declaration")
 
 ErrInvalidDialect reports a declaration the host could not serve as written.
 
+### `ErrInvalidReading` {#connectorapi-errinvalidreading}
+
+```go
+var ErrInvalidReading = errors.New("connectorapi: invalid reading")
+```
+
+ErrInvalidReading reports a reading description a reader would skip or read in part. Reading.Problems wraps it.
+
 ### `ErrUnknownCode` {#connectorapi-errunknowncode}
 
 ```go
@@ -1394,6 +1410,14 @@ func ProfileTemperatures() []string
 
 ProfileTemperatures returns the names of the temperatures a printer reports from its material profile. Each call returns a new slice.
 
+### `ReadingPath` {#connectorapi-readingpath}
+
+```go
+func ReadingPath(id, member string) string
+```
+
+ReadingPath is the state path of one member of one reading, such as /readings/bed/value\_path.
+
 ### `RefusePathEscape` {#connectorapi-refusepathescape}
 
 ```go
@@ -1433,6 +1457,14 @@ func SplitGCodeToolMapPath(path string) (int, bool)
 ```
 
 SplitGCodeToolMapPath returns the G-code tool number of a GCodeToolMapPath.
+
+### `SplitReadingPath` {#connectorapi-splitreadingpath}
+
+```go
+func SplitReadingPath(path string) (id, member string, ok bool)
+```
+
+SplitReadingPath returns the id and the member of a path under /readings/. It reports false for any other path and for an invalid id.
 
 ### `ToolMembers` {#connectorapi-toolmembers}
 
@@ -2713,6 +2745,102 @@ type Progress struct {
 ```
 
 Progress is one report about a running transfer. Sent counts what the host has sent. Received counts what the device says it has taken, and is valid only when Known is true.
+
+### `Reading` {#connectorapi-reading}
+
+```go
+type Reading struct {
+    // ID is 1 to 64 characters from a-z, 0-9 and _, starting with a letter. It
+    // stays the same for one device.
+    ID   string      `json:"id"`
+    Kind ReadingKind `json:"kind"`
+    // Unit is the unit of the value. It belongs to the kind: UnitCelsius for a
+    // temperature.
+    Unit Unit `json:"unit"`
+    // ValuePath is the state path of the value. TargetPath is the state path
+    // of the value the machine holds it to, empty when it has none.
+    ValuePath  string `json:"value_path"`
+    TargetPath string `json:"target_path,omitempty"`
+    // Name is what the machine or its owner calls the reading. A client shows
+    // it for a reading with no role.
+    Name string      `json:"name,omitempty"`
+    Role ReadingRole `json:"role,omitempty"`
+}
+```
+
+Reading is one reading a driver describes. Build it in a driver and write it with Patches. Read it from a state with ReadReadings.
+
+#### `ReadReadings` {#connectorapi-readreadings}
+
+```go
+func ReadReadings(state map[string]json.RawMessage) []Reading
+```
+
+ReadReadings builds the readings described in one device's state, keyed by path, sorted by id. It skips a reading whose kind, unit or value path is missing or invalid, and drops an optional member that is invalid. Of two readings with one role, the first by id keeps the role.
+
+#### `Reading.Patches` {#connectorapi-reading-patches}
+
+```go
+func (r Reading) Patches() []StatePatch
+```
+
+Patches writes the reading: one patch per member that is set, always in the same order.
+
+#### `Reading.Problems` {#connectorapi-reading-problems}
+
+```go
+func (r Reading) Problems() []error
+```
+
+Problems reports every part of the reading a reader would skip or drop. A driver checks its readings with it in a test.
+
+#### `Reading.Removal` {#connectorapi-reading-removal}
+
+```go
+func (r Reading) Removal() []StatePatch
+```
+
+Removal removes the reading from the state: a null for each member, set or not.
+
+### `ReadingKind` {#connectorapi-readingkind}
+
+```go
+type ReadingKind string
+```
+
+ReadingKind is what a reading measures.
+
+#### `ReadingTemperature` {#connectorapi-readingtemperature}
+
+```go
+const ReadingTemperature ReadingKind = "temperature"
+```
+
+ReadingTemperature is a temperature.
+
+### `ReadingRole` {#connectorapi-readingrole}
+
+```go
+type ReadingRole string
+```
+
+ReadingRole is the part of the machine a reading belongs to. A client translates the label of a reading with a role. One device has at most one reading per role.
+
+#### `RoleBed` {#connectorapi-rolebed}
+
+```go
+const RoleBed ReadingRole = "bed"
+```
+
+RoleBed is the heated bed.
+
+#### `RoleChamber` {#connectorapi-rolechamber}
+
+```go
+const RoleChamber ReadingRole = "chamber"
+```
+
+RoleChamber is the air inside the printer or its enclosure.
 
 ### `Ref` {#connectorapi-ref}
 

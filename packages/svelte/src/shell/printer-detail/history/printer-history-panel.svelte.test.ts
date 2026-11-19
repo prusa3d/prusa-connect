@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
+import { DESCRIBED_BED } from '../../../test/readings';
 import PrinterHistoryPanel from './printer-history-panel.svelte';
 
 const nothing = {
@@ -51,6 +52,7 @@ describe('PrinterHistoryPanel', () => {
   it('says the server keeps no past where the provider refused', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: {
           ...nothing,
           error: {
@@ -77,6 +79,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws the fault where the provider refuses the query, not the empty window', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: {
           ...nothing,
           error: {
@@ -99,7 +102,11 @@ describe('PrinterHistoryPanel', () => {
 
   it('says the window held nothing where the store answered nothing', async () => {
     await render(PrinterHistoryPanel, {
-      props: { facts: nothing, samples: noSeries },
+      props: {
+        reported: DESCRIBED_BED,
+        facts: nothing,
+        samples: noSeries,
+      },
     });
 
     await expect
@@ -112,6 +119,7 @@ describe('PrinterHistoryPanel', () => {
   it('marks a window the server did not see whole', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: {
           ...nothing,
           incomplete: true,
@@ -140,6 +148,7 @@ describe('PrinterHistoryPanel', () => {
     }));
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: { ...noSeries, series: { '/temperature/bed': noisy } },
       },
@@ -156,6 +165,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws a line for every metric the store holds', async () => {
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -177,6 +187,7 @@ describe('PrinterHistoryPanel', () => {
   it('says which part of the window the chart is', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -199,6 +210,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: { ...noSeries, series: { '/tools/0/nozzle_temp': points } },
         live: {
@@ -231,6 +243,7 @@ describe('PrinterHistoryPanel', () => {
 
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: { ...nothing, error: fault },
         samples: { ...noSeries, error: fault },
       },
@@ -244,6 +257,7 @@ describe('PrinterHistoryPanel', () => {
   it('keeps the rows it has beside a failed read', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: {
           ...nothing,
           more: true,
@@ -276,6 +290,7 @@ describe('PrinterHistoryPanel', () => {
   it('says what an event is in the words the server gave', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: {
           ...nothing,
           rows: [
@@ -305,6 +320,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws the usual readings and names the rest in the legend', async () => {
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -331,6 +347,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { getByRole } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -358,6 +375,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { getByRole } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -391,6 +409,7 @@ describe('PrinterHistoryPanel', () => {
         facts: nothing,
         samples: noSeries,
         reported: {
+          ...DESCRIBED_BED,
           '/temperature/bed': 60,
           '/tools/0/nozzle_temp': 215,
           '/job/progress': 42,
@@ -416,7 +435,10 @@ describe('PrinterHistoryPanel', () => {
       props: {
         facts: nothing,
         samples: noSeries,
-        reported: { '/temperature/bed': 60 },
+        reported: {
+          ...DESCRIBED_BED,
+          '/temperature/bed': 60,
+        },
         drawn: ['/temperature/bed', '/job/progress'],
         onOpen: (metrics: readonly string[]) => {
           asked.push([...metrics]);
@@ -435,6 +457,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { getByRole } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -467,6 +490,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { getByRole } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: { ...noSeries, series: { '/temperature/bed': points } },
         drawn: [],
@@ -492,6 +516,7 @@ describe('PrinterHistoryPanel', () => {
         facts: nothing,
         samples: { ...noSeries, series: { '/temperature/bed': points } },
         reported: {
+          ...DESCRIBED_BED,
           '/state': 'IDLE',
           '/temperature/bed': 60,
           '/axis/z': 10,
@@ -525,7 +550,10 @@ describe('PrinterHistoryPanel', () => {
       props: {
         facts: nothing,
         samples: { ...noSeries, series: { '/temperature/bed': points } },
-        reported: { '/temperature/bed': 60 },
+        reported: {
+          ...DESCRIBED_BED,
+          '/temperature/bed': 60,
+        },
         drawn: [
           '/temperature/bed',
           '/job/progress',
@@ -551,7 +579,11 @@ describe('PrinterHistoryPanel', () => {
       props: {
         facts: nothing,
         samples: noSeries,
-        reported: { '/temperature/bed': 60, '/axis/x': 10 },
+        reported: {
+          ...DESCRIBED_BED,
+          '/temperature/bed': 60,
+          '/axis/x': 10,
+        },
         drawn: ['/axis/x'],
         onDrawnChange: () => undefined,
       },
@@ -565,6 +597,7 @@ describe('PrinterHistoryPanel', () => {
   it('says nothing of a truncated window while no line is drawn', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: {
           ...noSeries,
@@ -589,6 +622,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws its own loading shape and neither empty state while a read is in flight', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: { ...nothing, loaded: false },
         samples: noSeries,
       },
@@ -609,6 +643,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws the measurements where only the events were refused', async () => {
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: { ...nothing, error: NOT_CONFIGURED },
         samples: { ...noSeries, series: { '/tools/0/nozzle_temp': points } },
       },
@@ -625,6 +660,7 @@ describe('PrinterHistoryPanel', () => {
   it('draws the events where only the measurements were refused', async () => {
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: { ...nothing, rows: [STATE_ROW] },
         samples: { ...noSeries, error: NOT_CONFIGURED },
         describeType: () => 'A device changed what it is doing.',
@@ -645,6 +681,7 @@ describe('PrinterHistoryPanel', () => {
 
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: noSeries,
         onOpen: (metrics: readonly string[]) => {
@@ -661,6 +698,7 @@ describe('PrinterHistoryPanel', () => {
 
     await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: noSeries,
         drawn: ['/axis/x'],
@@ -681,6 +719,7 @@ describe('PrinterHistoryPanel', () => {
 
     const { container } = await render(PrinterHistoryPanel, {
       props: {
+        reported: DESCRIBED_BED,
         facts: nothing,
         samples: { ...noSeries, series: { '/tools/0/nozzle_temp': points } },
         span: { from, to: from + 10_000 },

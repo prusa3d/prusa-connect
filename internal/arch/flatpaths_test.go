@@ -161,6 +161,7 @@ func TestTheFlatPathPatternCatchesEachSpelling(t *testing.T) {
 		`Pattern: printerTopic("data/slot/active")`,
 		`return Base + "/" + printerPlaceholder + "/data/slot/" + slotPlaceholder`,
 		`"/gcode_tool_map/0": 1`,
+		`"/readings/bed/value_path": "/temperature/bed"`,
 	} {
 		if flatPathPattern.MatchString(line) {
 			t.Errorf("the search takes %s for an old path", line)

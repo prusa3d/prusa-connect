@@ -41,8 +41,11 @@ export type Scope = (typeof SCOPES)[number];
 export const SIZES = ['tile', 'row'] as const;
 export type Size = (typeof SIZES)[number];
 
-/** The heaters a chart can draw. */
-export const HEATERS = ['nozzle', 'bed'] as const;
+/**
+ * What a new chart draws: the nozzle and the readings with a role. The names
+ * a chart may store are read in heaters.ts.
+ */
+export const HEATERS = ['nozzle', 'bed', 'chamber'] as const;
 export type Heater = (typeof HEATERS)[number];
 
 /** How far back a chart reaches, in minutes. */
@@ -103,7 +106,8 @@ export const finishingSettings = (settings: CardSettings) => ({
 
 export const temperatureSettings = (settings: CardSettings) => ({
   device: settings.device as string,
-  heaters: settings.heaters as readonly Heater[],
+  /** `nozzle`, a role or a reading's id, as heaters.ts reads them. */
+  heaters: settings.heaters as readonly string[],
   // The settings form keeps a choice as a word, so the span is one of the
   // words of SPANS.
   minutes: Number(settings.minutes) as Span,

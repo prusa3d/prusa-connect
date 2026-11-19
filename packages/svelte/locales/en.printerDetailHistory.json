@@ -110,5 +110,6 @@
   "printerDetailHistory.eventType.device.job.started": "Print started",
   "printerDetailHistory.eventType.device.job.settled": "Print ended",
   "printerDetailHistory.eventType.dashboard.changed": "Dashboard changed",
-  "printerDetailHistory.eventType.server.upgrade": "Server update advanced"
+  "printerDetailHistory.eventType.server.upgrade": "Server update advanced",
+  "printerDetailHistory.metric.readingTarget": "{name} target"
 }

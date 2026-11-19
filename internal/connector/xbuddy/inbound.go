@@ -90,10 +90,10 @@ var dialogPaths = []string{
 }
 
 // reservedPath reports whether a path reaches the host whatever the backlog is
-// doing: the dialog, what INFO says about the tools, and which tools are
-// active. See Session.report.
+// doing: the dialog, what INFO says about the tools, which tools are active,
+// and the readings. See Session.report.
 func reservedPath(path string) bool {
-	return slices.Contains(dialogPaths, path) || hardwarePath(path) || activityPath(path)
+	return slices.Contains(dialogPaths, path) || hardwarePath(path) || activityPath(path) || readingPath(path)
 }
 
 // The printer states in which a dialog is up, which are the two names the
@@ -145,8 +145,8 @@ const (
 //nolint:gochecknoglobals // a lookup table, read-only after init.
 var telemetryPaths = map[string]string{
 	"state":          "/state",
-	"temp_bed":       "/temperature/bed",
-	"target_bed":     "/temperature/bed_target",
+	"temp_bed":       bedTempPath,
+	"target_bed":     bedTargetPath,
 	"axis_x":         "/axis/x",
 	"axis_y":         "/axis/y",
 	"axis_z":         "/axis/z",
@@ -295,6 +295,7 @@ func (s *Session) dispatchTelemetry(message inboundMessage) {
 		s.report(connectorapi.StatePatch{Path: telemetryPaths[key], Value: value})
 	}
 
+	s.describeBed(message.fields)
 	s.reportToolTelemetry(message.fields)
 	s.reportChamber(message.fields)
 

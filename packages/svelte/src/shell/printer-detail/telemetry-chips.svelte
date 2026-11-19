@@ -4,10 +4,6 @@
   import type { Snippet } from 'svelte';
 
   import {
-    BED_PATH,
-    BED_TARGET_PATH,
-    CHAMBER_PATH,
-    CHAMBER_TARGET_PATH,
     FLOW_PATH,
     currentHeadOf,
     nozzlePath,
@@ -15,6 +11,9 @@
     numberAt,
     PREHEAT_PRESETS,
     activeMaterialOf,
+    readingName,
+    readingsOf,
+    readingWithRole,
     toolsOf,
     toolArgument,
     SPEED_PATH,
@@ -37,6 +36,7 @@
     Popover,
     SpeedIcon,
     SpoolIcon,
+    TemperatureIcon,
     TemperatureReading,
     ValueEditor,
     type ValueChoice,
@@ -160,7 +160,7 @@
     name: string;
     label: string;
     path: string;
-    targetPath: string;
+    targetPath: string | undefined;
     verb: string;
     argument: string;
     max: number;
@@ -173,7 +173,8 @@
       name: spec.name,
       label: spec.label,
       current: number(spec.path),
-      target: number(spec.targetPath),
+      target:
+        spec.targetPath === undefined ? undefined : number(spec.targetPath),
       settable: projection.kind !== 'absent',
       reason:
         projection.kind === 'disabled'
@@ -200,35 +201,61 @@
     }),
   );
 
+  // The readings the printer describes. The bed and the chamber keep the
+  // verbs that set them; every other reading is a chip to read.
+  const readings = $derived(readingsOf(device.state));
+  const bedReading = $derived(readingWithRole(readings, 'bed'));
+  const chamberReading = $derived(readingWithRole(readings, 'chamber'));
+
   const bed = $derived(
-    heater({
-      name: t('printerDetail.chip.bed'),
-      label: t('printerDetailControls.bed.label'),
-      path: BED_PATH,
-      targetPath: BED_TARGET_PATH,
-      verb: VERBS.bed,
-      argument: 'bed_temperature',
-      max: BED_MAX_CELSIUS,
-      column: (preset) => preset.bedCelsius,
-    }),
+    bedReading === undefined
+      ? undefined
+      : heater({
+          name: t('printerDetail.chip.bed'),
+          label: t('printerDetailControls.bed.label'),
+          path: bedReading.valuePath,
+          targetPath: bedReading.targetPath,
+          verb: VERBS.bed,
+          argument: 'bed_temperature',
+          max: BED_MAX_CELSIUS,
+          column: (preset) => preset.bedCelsius,
+        }),
   );
 
   // The air inside an enclosed printer. A CORE One reports it and takes a
   // target; an XL with its enclosure on reports it and takes none.
   const chamber = $derived(
-    heater({
-      name: t('printerDetail.chip.chamber'),
-      label: t('printerDetailControls.chamberTemp.label'),
-      path: CHAMBER_PATH,
-      targetPath: CHAMBER_TARGET_PATH,
-      verb: VERBS.chamberTemp,
-      argument: 'chamber.target_temp',
-      max: chamberMaxCelsius(device.model),
-      chamber: true,
-    }),
+    chamberReading === undefined
+      ? undefined
+      : heater({
+          name: t('printerDetail.chip.chamber'),
+          label: t('printerDetailControls.chamberTemp.label'),
+          path: chamberReading.valuePath,
+          targetPath: chamberReading.targetPath,
+          verb: VERBS.chamberTemp,
+          argument: 'chamber.target_temp',
+          max: chamberMaxCelsius(device.model),
+          chamber: true,
+        }),
   );
-  const hasChamber = $derived(
-    chamber.settable || chamber.current !== undefined,
+
+  const others = $derived<HeaterChip[]>(
+    readings
+      .filter((one) => one.role === undefined)
+      .map((one) => ({
+        name: readingName(one),
+        label: readingName(one),
+        current: number(one.valuePath),
+        target:
+          one.targetPath === undefined ? undefined : number(one.targetPath),
+        settable: false,
+        reason: undefined,
+        presets: [],
+        max: 0,
+        verb: '',
+        argument: '',
+        chamber: true,
+      })),
   );
 
   // A tool changer whose verb takes no tool can only heat the active head,
@@ -260,6 +287,10 @@
 
 {#snippet chamberIcon()}
   <ChamberIcon aria-hidden="true" class="size-3.5" />
+{/snippet}
+
+{#snippet readingIcon()}
+  <TemperatureIcon aria-hidden="true" class="size-3.5" />
 {/snippet}
 
 {#snippet toolRow(choice: ValueChoice)}
@@ -376,10 +407,15 @@
       </dd>
     </div>
   {/if}
-  {@render heaterChip(bed, bedIcon, false)}
-  {#if hasChamber}
+  {#if bed !== undefined}
+    {@render heaterChip(bed, bedIcon, false)}
+  {/if}
+  {#if chamber !== undefined}
     {@render heaterChip(chamber, chamberIcon, false)}
   {/if}
+  {#each others as other, index (index)}
+    {@render heaterChip(other, readingIcon, false)}
+  {/each}
 
   <div
     class={load.kind === 'absent' && unload.kind === 'absent'

@@ -4,8 +4,9 @@
 // catalogue over a real slot registry with the core's cards in it. What is
 // fake is the core at the far end, which keeps its dashboards in a map and
 // answers the way the routes do (ADR-20261008-sww rules 1 to 11).
-import type { Device, ReadonlyFleet } from '../../domain';
+import { type Device, type ReadonlyFleet, readingsOf } from '../../domain';
 import {
+  chartedPaths,
   type Dashboard,
   type DashboardDraftBody,
   DashboardEditor,
@@ -14,6 +15,7 @@ import {
   SharedTelemetry,
   type SharedTelemetryClient,
 } from '../../data';
+import { hubEvent } from '../../data/stubs';
 import { SlotRegistry } from '../../slots';
 import { CardCatalogue, type CardLoader } from './card-catalogue';
 import { CameraFrames, type CameraStore } from './cameras.svelte';
@@ -268,4 +270,47 @@ export const dashboardContextOver = (
       },
     },
   };
+};
+
+/** Where each charted path of a fixture sits once warm. */
+const LEVELS: Readonly<Record<string, number>> = {
+  '/tools/0/nozzle_temp': 215,
+  '/tools/0/nozzle_target_temp': 215,
+  '/temperature/bed': 60,
+  '/temperature/bed_target': 60,
+  '/temperature/chamber': 38,
+  '/temperature/chamber_target': 45,
+  '/sensors/enclosure': 31,
+};
+
+/**
+ * A context holding one printer and a quarter hour of its charted frames,
+ * warming up. The fixture clock stands still, so the frames are stamped on
+ * its time.
+ */
+export const chartedContextOver = (device: Device): DashboardContext => {
+  const { context } = dashboardContextOver(fakeCore().client, [device]);
+  const paths = chartedPaths(readingsOf(device.state));
+  context.telemetry.follow(device.id, paths);
+  const end = STOPPED.now();
+
+  for (let step = 0; step <= 30; step++) {
+    const time = new Date(end - (30 - step) * 30_000).toISOString();
+    for (const path of paths) {
+      const level = LEVELS[path] ?? 25;
+      const warm = path.includes('target') ? 1 : Math.min(1, step / 20);
+      const frame = hubEvent(
+        'com.prusa.connect.device.telemetry.sampled',
+        { path, value: Math.round(20 + (level - 20) * warm) },
+        `device:${device.id}`,
+      );
+      if (frame.envelope === undefined) continue;
+      context.telemetry.apply({
+        ...frame,
+        envelope: { ...frame.envelope, time },
+      });
+    }
+  }
+
+  return context;
 };

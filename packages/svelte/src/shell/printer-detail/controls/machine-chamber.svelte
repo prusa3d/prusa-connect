@@ -3,7 +3,8 @@
   import {
     CHAMBER_FAN_PATH,
     CHAMBER_LIGHT_PATH,
-    CHAMBER_TARGET_PATH,
+    type Reading,
+    readingWithRole,
   } from '../../../domain';
   import { t } from '../../../i18n';
   import {
@@ -26,7 +27,20 @@
 
   type FanMode = 'off' | 'auto' | 'manual';
 
-  let { resolve, reading, busy, onCommand }: SectionProps = $props();
+  let {
+    resolve,
+    reading,
+    busy,
+    onCommand,
+    readings = [],
+  }: SectionProps & {
+    /** The readings the printer describes, where its chamber's target is. */
+    readings?: readonly Reading[];
+  } = $props();
+
+  const chamberTarget = $derived(
+    readingWithRole(readings, 'chamber')?.targetPath,
+  );
 
   const fan = $derived(resolve(VERBS.chamberFan));
   const light = $derived(resolve(VERBS.chamberLight));
@@ -71,7 +85,8 @@
   const targetIgnored = $derived(
     mode !== 'auto' &&
       resolve(VERBS.chamberTemp).kind !== 'absent' &&
-      (reading(CHAMBER_TARGET_PATH) ?? 0) > 0,
+      chamberTarget !== undefined &&
+      (reading(chamberTarget) ?? 0) > 0,
   );
 
   const sendFan = (target: number) =>

@@ -178,6 +178,8 @@ export const CORE_CARDS: readonly CardDeclaration[] = [
         label: 'dashboard.settings.heaters',
         options: options(HEATERS, HEATER),
         default: [...HEATERS],
+        // A printer may describe a reading of its own, kept by its id.
+        open: true,
       },
       {
         key: 'minutes',

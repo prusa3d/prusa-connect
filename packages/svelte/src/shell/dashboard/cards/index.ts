@@ -2,7 +2,7 @@
 // (ADR-20261008-sww rule 17), so the page draws both the same way.
 import type { Component } from 'svelte';
 
-import type { CardProps, SlotRegistry } from '../../../slots';
+import type { CardEditorProps, CardProps, SlotRegistry } from '../../../slots';
 import CameraCard from './camera-tile.svelte';
 import ClockCard from './clock-tile.svelte';
 import { CORE_CARDS } from './declarations';
@@ -12,6 +12,7 @@ import NoteCard from './note-tile.svelte';
 import PrinterCard from './printer-tile.svelte';
 import PrintersCard from './printers-tile.svelte';
 import SummaryCard from './summary-tile.svelte';
+import TemperatureSettings from './temperature-settings.svelte';
 import TemperatureCard from './temperature-tile.svelte';
 
 const COMPONENTS: Readonly<Record<string, Component<CardProps>>> = {
@@ -24,6 +25,11 @@ const COMPONENTS: Readonly<Record<string, Component<CardProps>>> = {
   note: NoteCard,
   clock: ClockCard,
   issues: IssuesCard,
+};
+
+/** The cards whose settings depend on the printer picked. */
+const EDITORS: Readonly<Record<string, Component<CardEditorProps>>> = {
+  temperature: TemperatureSettings,
 };
 
 /** The registries that already hold the core's cards. */
@@ -43,7 +49,12 @@ export const registerCoreCards = (registry: SlotRegistry): void => {
     if (component === undefined) {
       throw new Error(`the core card ${declaration.id} has no component`);
     }
-    registry.registerCoreCard(declaration, component);
+    const editor = EDITORS[declaration.id];
+    registry.registerCoreCard(
+      declaration,
+      component,
+      editor === undefined ? undefined : { editor },
+    );
   }
 };
 

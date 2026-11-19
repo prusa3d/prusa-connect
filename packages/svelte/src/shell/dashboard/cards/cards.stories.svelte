@@ -2,8 +2,18 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
   import type { Device } from '../../../domain';
-  import { dashboardContextOver, fakeCore } from '../fixtures';
+  import {
+    chartedContextOver,
+    dashboardContextOver,
+    fakeCore,
+  } from '../fixtures';
   import { fakeDevice } from '../../../test/fakes';
+  import {
+    DESCRIBED_BED,
+    DESCRIBED_CHAMBER,
+    DESCRIBED_ENCLOSURE,
+  } from '../../../test/readings';
+  import EditorStory from '../editor-story.svelte';
   import TileStory from '../tile-story.svelte';
   import CameraTile from './camera-tile.svelte';
   import ClockTile from './clock-tile.svelte';
@@ -13,6 +23,7 @@
   import PrinterTile from './printer-tile.svelte';
   import PrintersTile from './printers-tile.svelte';
   import SummaryTile from './summary-tile.svelte';
+  import TemperatureSettings from './temperature-settings.svelte';
   import TemperatureTile from './temperature-tile.svelte';
   import UnknownTile from './unknown-tile.svelte';
 
@@ -32,6 +43,7 @@
     state: {
       '/state': 'PRINTING',
       '/tools/0/nozzle_temp': 215,
+      ...DESCRIBED_BED,
       '/temperature/bed': 60,
       '/tools/0/material_package_instance/package/material/abbreviation':
         'PETG',
@@ -87,6 +99,17 @@
   const fleet = contextOf(FLEET);
   const noPrinters = contextOf([]);
   const allIdle = contextOf(FLEET.filter((device) => device.id === 'mk4'));
+
+  const core = printing('core', 'CORE One bench', 64, 42);
+  const bedChart = chartedContextOver(core);
+  const chamberChart = chartedContextOver({
+    ...core,
+    state: { ...core.state, ...DESCRIBED_CHAMBER },
+  });
+  const enclosureChart = chartedContextOver({
+    ...core,
+    state: { ...core.state, ...DESCRIBED_ENCLOSURE },
+  });
 </script>
 
 <!--
@@ -135,6 +158,47 @@
 </Story>
 
 <Story name="Temperature" asChild>
+  <TileStory
+    context={bedChart}
+    tile={TemperatureTile}
+    type="temperature"
+    config={{ device: 'core' }}
+  />
+</Story>
+
+<Story name="Temperature With Chamber" asChild>
+  <TileStory
+    context={chamberChart}
+    tile={TemperatureTile}
+    type="temperature"
+    config={{ device: 'core' }}
+  />
+</Story>
+
+<!-- A reading with no role is drawn under the driver's name for it. -->
+<Story name="Temperature Enclosure Sensor" asChild>
+  <TileStory
+    context={enclosureChart}
+    tile={TemperatureTile}
+    type="temperature"
+    config={{ device: 'core', heaters: ['nozzle', 'bed', 'enclosure'] }}
+  />
+</Story>
+
+<!-- The lines offered are the ones the picked printer describes. -->
+<Story name="Temperature Settings" asChild>
+  <EditorStory
+    context={enclosureChart}
+    editor={TemperatureSettings}
+    config={{ device: 'core', heaters: ['nozzle', 'bed'] }}
+  />
+</Story>
+
+<Story name="Temperature Settings No Printer" asChild>
+  <EditorStory context={fleet} editor={TemperatureSettings} />
+</Story>
+
+<Story name="Temperature Quiet" asChild>
   <TileStory
     context={fleet}
     tile={TemperatureTile}

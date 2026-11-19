@@ -2,11 +2,15 @@ import type { PrusaConnect, StreamEvent } from '@prusa/connect';
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
 
-import { BED_PATH, NOZZLE_PATH } from '../domain';
+import { NOZZLE_PATH, NOZZLE_TARGET_PATH, readingsOf } from '../domain';
+import { DESCRIBED_BED, DESCRIBED_ENCLOSURE } from '../test/readings';
 import {
+  chartedPaths,
   SharedTelemetry,
   type SharedTelemetryClient,
 } from './shared-telemetry.svelte';
+
+const BED = '/temperature/bed';
 import { fakeClock, fakeStream, hubEvent, settled } from './stubs';
 
 const sampled = (deviceId: string, path: string, value: unknown): StreamEvent =>
@@ -28,15 +32,20 @@ const recording = () => {
 
     return stream.subscription;
   }) as unknown as PrusaConnect['events'];
+  const asked: unknown[] = [];
   const empty = () =>
     Promise.resolve({ items: [], next_cursor: '', truncated: false });
   const client = {
     events,
-    listDeviceHistorySamples: empty,
+    listDeviceHistorySamples: (options: unknown) => {
+      asked.push(options);
+
+      return empty();
+    },
     listDeviceHistoryFacts: empty,
   } as unknown as SharedTelemetryClient;
 
-  return { client, opened };
+  return { client, opened, asked };
 };
 
 describe('SharedTelemetry', () => {
@@ -111,6 +120,59 @@ describe('SharedTelemetry', () => {
     expect(hub.points('z', NOZZLE_PATH)).toEqual([]);
   });
 
+  it('charts the nozzle and the value and target of every described reading', () => {
+    expect(
+      chartedPaths(readingsOf({ ...DESCRIBED_BED, ...DESCRIBED_ENCLOSURE })),
+    ).toEqual([
+      NOZZLE_PATH,
+      NOZZLE_TARGET_PATH,
+      BED,
+      '/temperature/bed_target',
+      '/sensors/enclosure',
+    ]);
+    expect(chartedPaths([])).toEqual([NOZZLE_PATH, NOZZLE_TARGET_PATH]);
+  });
+
+  it('reads the history of the paths it was given', async () => {
+    const { client, asked } = recording();
+    const hub = new SharedTelemetry(client, { timers: fakeClock() });
+    hub.follow('a', chartedPaths(readingsOf(DESCRIBED_BED)));
+    await settled();
+
+    expect(JSON.stringify(asked[0])).toContain(
+      JSON.stringify([
+        NOZZLE_PATH,
+        NOZZLE_TARGET_PATH,
+        BED,
+        '/temperature/bed_target',
+      ]),
+    );
+  });
+
+  it('charts a path described after the printer was followed', async () => {
+    const clock = fakeClock();
+    const { client, opened } = recording();
+    const hub = new SharedTelemetry(client, { timers: clock });
+    hub.follow('a', chartedPaths([]));
+    clock.advance(100);
+    await settled();
+
+    const seen: number[][] = [];
+    const stop = $effect.root(() => {
+      $effect(() => {
+        seen.push(
+          hub.points('a', '/sensors/enclosure').map((one) => one.value),
+        );
+      });
+    });
+    flushSync();
+    await opened[0]?.stream.push(sampled('a', '/sensors/enclosure', 31));
+    flushSync();
+
+    expect(seen).toEqual([[], [31]]);
+    stop();
+  });
+
   it('redraws only what reads the series a frame belongs to', () => {
     const { client } = recording();
     const hub = new SharedTelemetry(client, { timers: fakeClock() });
@@ -124,7 +186,7 @@ describe('SharedTelemetry', () => {
         counts.aNozzle += 1;
       });
       $effect(() => {
-        hub.points('a', BED_PATH);
+        hub.points('a', BED);
         counts.aBed += 1;
       });
       $effect(() => {

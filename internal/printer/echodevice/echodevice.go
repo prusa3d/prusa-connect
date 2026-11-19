@@ -334,8 +334,8 @@ func (d *Device) report(ctx context.Context) {
 	})
 }
 
-// facts is what this machine is: one head, enabled and active, and the build
-// volume when the configuration names one.
+// facts is what this machine is: one head, enabled and active, its bed, and
+// the build volume when the configuration names one.
 func (d *Device) facts() []connectorapi.StatePatch {
 	out := []connectorapi.StatePatch{
 		{Path: connectorapi.ToolCountPath, Value: json.RawMessage("1")},
@@ -347,6 +347,8 @@ func (d *Device) facts() []connectorapi.StatePatch {
 		{Path: connectorapi.ToolPath(headID, connectorapi.ToolActive), Value: json.RawMessage("true")},
 	}
 
+	out = append(out, bedReading().Patches()...)
+
 	volume := d.cfg.BuildVolume
 	if volume.X <= 0 || volume.Y <= 0 || volume.Z <= 0 {
 		return out
@@ -357,6 +359,14 @@ func (d *Device) facts() []connectorapi.StatePatch {
 		connectorapi.StatePatch{Path: connectorapi.BuildVolumeYPath, Value: json.RawMessage(millimetres(volume.Y))},
 		connectorapi.StatePatch{Path: connectorapi.BuildVolumeZPath, Value: json.RawMessage(millimetres(volume.Z))},
 	)
+}
+
+// bedReading describes the bed this machine reports.
+func bedReading() connectorapi.Reading {
+	return connectorapi.Reading{
+		ID: "bed", Kind: connectorapi.ReadingTemperature, Unit: connectorapi.UnitCelsius,
+		ValuePath: bedPath, TargetPath: bedTargetPath, Role: connectorapi.RoleBed,
+	}
 }
 
 // post sends each patch and reports whether the server took all of them. The

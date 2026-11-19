@@ -1,7 +1,5 @@
 // The printer as the listing reads it, and the looks a state and a tier pick.
 import {
-  BED_PATH,
-  BED_TARGET_PATH,
   activeMaterialOf,
   activeToolOf,
   materialOf,
@@ -13,6 +11,8 @@ import {
   PRINTER_STATE_SEVERITY_TIER,
   PRINTER_STATE_TONE,
   printerStateOf,
+  readingsOf,
+  readingWithRole,
   toolsOf,
   reportedToolIds,
   STATE_PATH,
@@ -98,6 +98,7 @@ export const printerRowOf = (
   // A print the fleet store invented from a telemetry frame carries an empty
   // name until the record arrives. Empty is no name, as `textAt` reads it.
   const jobName = device.job?.display_name;
+  const bed = readingWithRole(readingsOf(device.state), 'bed');
 
   return {
     id: device.id,
@@ -125,8 +126,11 @@ export const printerRowOf = (
       device,
       nozzleTargetPath(currentHeadOf(SNAPSHOT_ONLY, device)),
     ),
-    bed: numberAt(device, BED_PATH),
-    bedTarget: numberAt(device, BED_TARGET_PATH),
+    bed: bed === undefined ? undefined : numberAt(device, bed.valuePath),
+    bedTarget:
+      bed?.targetPath === undefined
+        ? undefined
+        : numberAt(device, bed.targetPath),
     // One material for the row: the one the printer prints with now.
     material: activeMaterialOf(SNAPSHOT_ONLY, device),
     statusNote: entry?.summary ?? issue?.detail,

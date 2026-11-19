@@ -242,6 +242,33 @@ func TestTelemetryReachesTheStateTree(t *testing.T) {
 	require.Equal(t, `220`, tree["/tools/0/nozzle_target_temp"], "the hotend target never arrived")
 }
 
+// TestTheSensorsOfTheMachineAreDescribed reads a machine with a heated
+// chamber and an enclosure sensor: each is a reading beside the bed.
+func TestTheSensorsOfTheMachineAreDescribed(t *testing.T) {
+	t.Parallel()
+
+	status := moonrakersim.DefaultStatus()
+	status["heater_generic chamber"] = map[string]any{"temperature": 35.5, "target": 40.0}
+	status["temperature_sensor enclosure"] = map[string]any{"temperature": 30.25}
+
+	machine := startMachine(t, moonrakersim.Options{
+		Objects: append(moonrakersim.DefaultObjects(), "heater_generic chamber", "temperature_sensor enclosure"),
+		Status:  status,
+	})
+	session := connect(t, machine)
+
+	collect(t, session, map[string]string{
+		"/readings/bed/role":             `"bed"`,
+		"/readings/chamber/role":         `"chamber"`,
+		"/readings/chamber/target_path":  `"/temperature/chamber_target"`,
+		"/readings/enclosure/value_path": `"/temperature/enclosure"`,
+		"/readings/enclosure/name":       `"enclosure"`,
+		"/temperature/chamber":           `35.5`,
+		"/temperature/chamber_target":    `40`,
+		"/temperature/enclosure":         `30.25`,
+	})
+}
+
 // TestTheVolumeIsTheTravelOfEachAxis reads the build volume out of the
 // stepper sections of the machine's configuration.
 func TestTheVolumeIsTheTravelOfEachAxis(t *testing.T) {

@@ -24,3 +24,25 @@ export const chartPalette = [
     swatch: 'bg-destructive-text',
   },
 ];
+
+/**
+ * The dash a line wears on each pass through the palette: solid on the first,
+ * so a line past the last colour still differs from the line of its colour.
+ */
+export const chartDashes = [undefined, '6 4', '2 3', '8 3 2 3'] as const;
+
+export interface LineStyle {
+  readonly hue: (typeof chartPalette)[number] | undefined;
+  readonly dash: (typeof chartDashes)[number];
+}
+
+/** The colour and dash of the line at one place in a chart's series. */
+export const lineStyleOf = (at: number): LineStyle => {
+  const place = Math.max(0, Math.trunc(at));
+  const lap = Math.floor(place / chartPalette.length);
+
+  return {
+    hue: chartPalette[place % chartPalette.length],
+    dash: chartDashes[lap % chartDashes.length],
+  };
+};

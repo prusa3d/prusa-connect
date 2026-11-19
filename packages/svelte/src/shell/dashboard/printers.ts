@@ -2,8 +2,8 @@
 // time left and the tags a dashboard filters by. Reading the printer through
 // the same row keeps a card and the listing in agreement about every state.
 import type { DeviceIssueEntry } from '../../data';
-import type { Device } from '../../domain';
-import { PRINTER_STATE_SEVERITY } from '../../domain';
+import type { Device, Reading } from '../../domain';
+import { PRINTER_STATE_SEVERITY, readingsOf } from '../../domain';
 import { printerRowOf } from '../printers/presentation';
 import type { PrinterRow } from '../printers/types';
 
@@ -12,6 +12,8 @@ export interface PrinterView extends PrinterRow {
   /** Seconds until the print ends, absent when nothing is printing. */
   readonly remaining: number | undefined;
   readonly tags: readonly string[];
+  /** The readings the printer describes, for a chart of them. */
+  readonly readings: readonly Reading[];
 }
 
 /**
@@ -36,6 +38,7 @@ export const viewOf = (device: Device, issueOf?: IssueWords): PrinterView => {
         ? Math.round(left / 1000)
         : undefined,
     tags: device.tags ?? [],
+    readings: readingsOf(device.state),
   };
 };
 

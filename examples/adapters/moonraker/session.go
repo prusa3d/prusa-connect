@@ -154,7 +154,9 @@ func (s *Session) handshake(ctx context.Context, offered connectorapi.Set) (conn
 	}
 
 	extruders := extrudersOf(listed.Objects)
+	s.reader.sensors = sensorsOf(listed.Objects)
 	s.asked = append(present(subscribed, listed.Objects), furtherExtruders(extruders)...)
+	s.asked = append(s.asked, sensorObjects(s.reader.sensors)...)
 
 	dumped, err := s.readConfig(ctx, listed.Objects)
 	if err != nil {
@@ -170,6 +172,7 @@ func (s *Session) handshake(ctx context.Context, offered connectorapi.Set) (conn
 
 	s.reader.heads.count = len(extruders)
 	s.first = append(toolPatches(dumped, extruders), buildVolumePatches(dumped)...)
+	s.first = append(s.first, readingPatches(listed.Objects, s.reader.sensors)...)
 	s.first = append(s.first, s.reader.patchesFrom(opening.Status, time.Now())...)
 
 	s.probe = probe(listed.Objects, heaters, len(extruders), offered)

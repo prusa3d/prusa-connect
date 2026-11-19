@@ -16,11 +16,10 @@
 import type { EventSubscription, StreamEvent } from '@prusa/connect';
 
 import {
-  BED_PATH,
-  BED_TARGET_PATH,
   mergeSeries,
   NOZZLE_PATH,
   NOZZLE_TARGET_PATH,
+  type Reading,
   type TelemetryPoint,
 } from '../domain';
 import { DeviceSamples, SAMPLES_PAGE_LIMIT } from './device-samples.svelte';
@@ -36,12 +35,18 @@ import { systemTimers, type Timers } from './timers';
 /** The most printers one page follows at once (ADR-20261008-sww rule 26). */
 export const SHARED_TELEMETRY_MAX_DEVICES = 8;
 
-/** The paths a chart draws, and the only ones kept or read from history. */
-export const CHARTED_PATHS: readonly string[] = [
+/**
+ * The paths a chart of one printer draws: the nozzle of the first head, and
+ * the value and target of each reading the printer describes.
+ */
+export const chartedPaths = (readings: readonly Reading[]): string[] => [
   NOZZLE_PATH,
   NOZZLE_TARGET_PATH,
-  BED_PATH,
-  BED_TARGET_PATH,
+  ...readings.flatMap((reading) =>
+    reading.targetPath === undefined
+      ? [reading.valuePath]
+      : [reading.valuePath, reading.targetPath],
+  ),
 ];
 
 /** How many live points each path keeps: an hour of a reading every two seconds. */
@@ -91,12 +96,15 @@ class LivePath {
 interface Followed {
   holders: number;
   readonly stored: DeviceSamples;
-  /** One live series per charted path. A path no chart draws has none. */
-  readonly live: Readonly<Record<string, LivePath>>;
+  /** One live series per path that has a frame or was read from history. */
+  readonly live: Map<string, LivePath>;
+  /** Paths a chart asked for that have no series yet. */
+  readonly awaited: Set<string>;
 }
 
-const livePaths = (): Readonly<Record<string, LivePath>> =>
-  Object.fromEntries(CHARTED_PATHS.map((path) => [path, new LivePath()]));
+// Only frames add to a series; the map only says which paths are kept.
+const livePaths = (paths: readonly string[]): Map<string, LivePath> =>
+  new Map(paths.map((path) => [path, new LivePath()]));
 
 export class SharedTelemetry {
   readonly #client: SharedTelemetryClient;
@@ -112,6 +120,10 @@ export class SharedTelemetry {
   readonly #followed = new Map<string, Followed>();
   /** How many printers are followed, as state, so a card past the limit sees a place free up. */
   #count = $state(0);
+  // A series made inside the effect that reads it is not tracked by that
+  // effect. So the first frame of an awaited path makes the series and moves
+  // this, and the chart reads again.
+  #started = $state(0);
   #error = $state.raw<DataFault | undefined>(undefined);
   #subscription: EventSubscription | undefined;
   #reopen: number | undefined;
@@ -144,9 +156,13 @@ export class SharedTelemetry {
   /**
    * Follows one printer for one more chart, and answers the call that lets it
    * go. A printer past the most a page follows answers undefined, and the
-   * chart says so.
+   * chart says so. `paths` are the ones read from history, once, when the
+   * printer is first followed.
    */
-  follow(deviceId: string): (() => void) | undefined {
+  follow(
+    deviceId: string,
+    paths: readonly string[] = chartedPaths([]),
+  ): (() => void) | undefined {
     let held = this.#followed.get(deviceId);
     if (held === undefined) {
       if (this.#followed.size >= this.#max) return undefined;
@@ -154,9 +170,12 @@ export class SharedTelemetry {
       void stored.load({
         ...windowEndingNow(HISTORY_HOURS),
         limit: SAMPLES_PAGE_LIMIT,
-        metrics: CHARTED_PATHS,
+        metrics: paths,
       });
-      held = { holders: 0, stored, live: livePaths() };
+      // Not reactive: `#started` tells a chart that an awaited path began.
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity
+      const awaited = new Set<string>();
+      held = { holders: 0, stored, live: livePaths(paths), awaited };
       this.#followed.set(deviceId, held);
       this.#count = this.#followed.size;
       this.#schedule();
@@ -172,13 +191,26 @@ export class SharedTelemetry {
     };
   }
 
-  /** Every point of one path of one printer, stored and live, oldest first. */
+  /**
+   * Every point of one path of one printer, stored and live, oldest first.
+   * Asking for a path keeps its frames from then on.
+   */
   points(deviceId: string, path: string): readonly TelemetryPoint[] {
     const held = this.#followed.get(deviceId);
-    const stored = held?.stored.series[path] ?? [];
-    const live = held?.live[path]?.points ?? [];
+    if (held === undefined) return [];
+    const live = held.live.get(path);
+    const stored = held.stored.series[path] ?? [];
+    if (live !== undefined) return mergeSeries(stored, live.points);
 
-    return mergeSeries(stored, live);
+    held.awaited.add(path);
+    this.#awaitFirstFrame();
+
+    return mergeSeries(stored, []);
+  }
+
+  /** Makes the caller read again when an awaited path gets its series. */
+  #awaitFirstFrame(): number {
+    return this.#started;
   }
 
   /** True while the stored readings of one printer are being read. */
@@ -194,8 +226,15 @@ export class SharedTelemetry {
   apply(event: StreamEvent): void {
     const sample = sampleOf(event);
     if (sample === undefined || typeof sample.value !== 'number') return;
-    const live = this.#followed.get(sample.deviceId)?.live[sample.path];
-    if (live === undefined) return;
+    const held = this.#followed.get(sample.deviceId);
+    if (held === undefined) return;
+    let live = held.live.get(sample.path);
+    if (live === undefined) {
+      if (!held.awaited.delete(sample.path)) return;
+      live = new LivePath();
+      held.live.set(sample.path, live);
+      this.#started += 1;
+    }
 
     const at = Date.parse(event.envelope?.time ?? '');
     live.add({ at: Number.isNaN(at) ? Date.now() : at, value: sample.value });

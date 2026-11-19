@@ -1,6 +1,7 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
 
+  import { DESCRIBED_BED } from '../../../test/readings';
   import PrinterHistoryPanel from './printer-history-panel.svelte';
   import type { FactsSource, SamplesSource } from './types';
 
@@ -60,6 +61,9 @@
 
   const span = { from: START, to: START + 24 * 60_000 };
 
+  // The printer describes its bed, which names the line and gives its unit.
+  const reported = { ...DESCRIBED_BED };
+
   const FAULT = {
     code: 'core.transport/NETWORK',
     status: undefined,
@@ -70,11 +74,17 @@
 </script>
 
 <Story name="Past Window" asChild>
-  <PrinterHistoryPanel facts={factsOf()} samples={samplesOf()} {span} />
+  <PrinterHistoryPanel
+    {reported}
+    facts={factsOf()}
+    samples={samplesOf()}
+    {span}
+  />
 </Story>
 
 <Story name="Bed Alone" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf()}
     samples={samplesOf({
       series: {
@@ -91,6 +101,7 @@
 
 <Story name="More Events Wait" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({ more: true })}
     samples={samplesOf()}
     {span}
@@ -100,6 +111,7 @@
 
 <Story name="Server Did Not See It Whole" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({ incomplete: true })}
     samples={samplesOf({ incomplete: true, truncated: true })}
     {span}
@@ -108,6 +120,7 @@
 
 <Story name="Nothing Happened" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({ rows: [] })}
     samples={samplesOf({ series: {} })}
     {span}
@@ -116,6 +129,7 @@
 
 <Story name="Still Reading" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({ rows: [], loaded: false, loading: true })}
     samples={samplesOf({ series: {}, loaded: false, loading: true })}
     {span}
@@ -124,6 +138,7 @@
 
 <Story name="No History Store" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({
       rows: [],
       error: {
@@ -141,6 +156,7 @@
 
 <Story name="Provider Refused The Query" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({
       rows: [],
       error: {
@@ -158,6 +174,7 @@
 
 <Story name="Both Reads Failed" asChild>
   <PrinterHistoryPanel
+    {reported}
     facts={factsOf({ rows: [], error: FAULT })}
     samples={samplesOf({ series: {}, error: FAULT })}
     {span}

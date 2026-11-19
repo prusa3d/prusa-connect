@@ -61,6 +61,11 @@ export type CardSetting =
       readonly kind: 'choices';
       readonly options: readonly SettingOption[];
       readonly default: readonly string[];
+      /**
+       * Also keeps a value no option names, such as the id of a reading one
+       * printer describes. Only a core card sets it: a listing never does.
+       */
+      readonly open?: boolean | undefined;
     })
   | (SettingBase & {
       /** A number between min and max, in steps of step. */

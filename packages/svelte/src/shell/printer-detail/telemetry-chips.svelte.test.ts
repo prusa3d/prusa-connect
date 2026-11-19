@@ -6,6 +6,11 @@ import { formatting } from '../../i18n';
 import { expectNoViolations } from '../../test/axe';
 import { fakeDevice } from '../../test/fakes';
 import { openSurface } from '../../test/open-surface';
+import {
+  DESCRIBED_BED,
+  DESCRIBED_CHAMBER,
+  DESCRIBED_ENCLOSURE,
+} from '../../test/readings';
 import TelemetryChips from './telemetry-chips.svelte';
 import type { TelemetrySource } from './types';
 
@@ -19,6 +24,7 @@ const device = {
   state: {
     '/tools/0/nozzle_temp': 234.6,
     '/tools/0/nozzle_target_temp': 235,
+    ...DESCRIBED_BED,
     '/temperature/bed': 59.8,
     '/temperature/bed_target': 60,
     '/tools/0/material_package_instance/package/material/abbreviation': 'PLA',
@@ -52,6 +58,9 @@ const nozzleChip = () =>
   page.getByRole('button', { name: /^Set extruder target, currently 235°C,/ });
 
 const setButton = () => page.getByRole('button', { name: 'Set', exact: true });
+
+const nozzleChipOff = () =>
+  page.getByRole('button', { name: /^Set extruder target/ });
 
 afterEach(() => {
   formatting.temperature = 'celsius';
@@ -452,6 +461,7 @@ describe('TelemetryChips', () => {
       ],
       state: {
         ...heating.state,
+        ...DESCRIBED_CHAMBER,
         '/temperature/chamber': 38.4,
         '/temperature/chamber_target': 45,
       },
@@ -496,7 +506,11 @@ describe('TelemetryChips', () => {
           telemetry: silent,
           device: {
             ...heating,
-            state: { ...heating.state, '/temperature/chamber': 31 },
+            state: {
+              ...heating.state,
+              ...DESCRIBED_CHAMBER,
+              '/temperature/chamber': 31,
+            },
           },
           commands: { onCommand: vi.fn() },
         },
@@ -505,6 +519,51 @@ describe('TelemetryChips', () => {
       expect(container.textContent).toContain('31°');
       expect(container.querySelectorAll('button')).toHaveLength(2);
     });
+  });
+
+  it('draws no bed chip for a printer that describes no readings', async () => {
+    await render(TelemetryChips, {
+      props: {
+        telemetry: silent,
+        device: {
+          ...heating,
+          state: {
+            '/state': 'IDLE',
+            '/temperature/bed': 59.8,
+            '/temperature/bed_target': 60,
+          },
+        },
+        commands: { onCommand: vi.fn() },
+      },
+    });
+
+    await expect.element(nozzleChipOff()).toBeInTheDocument();
+    await expect
+      .element(page.getByRole('button', { name: /^Set bed target/ }))
+      .not.toBeInTheDocument();
+  });
+
+  it('draws a reading with no role as a reading under its name', async () => {
+    const { container } = await render(TelemetryChips, {
+      props: {
+        telemetry: silent,
+        device: {
+          ...heating,
+          state: {
+            ...heating.state,
+            ...DESCRIBED_ENCLOSURE,
+            '/sensors/enclosure': 29,
+          },
+        },
+        commands: { onCommand: vi.fn() },
+      },
+    });
+
+    await expect
+      .element(page.getByText('Enclosure', { exact: true }))
+      .toBeInTheDocument();
+    expect(container.textContent).toContain('29°');
+    expect(container.querySelectorAll('button')).toHaveLength(2);
   });
 
   it('has nothing axe objects to', async () => {

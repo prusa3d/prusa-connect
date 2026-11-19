@@ -64,7 +64,7 @@ are the reference for. Each carries one pointer to this page instead.
 [namespace](#namespace) · [offset](#offset) · [origin](#origin) ·
 [position](#position) · [principal](#principal) ·
 [profile tier](#profile-tier) · [projection](#projection) ·
-[relation tuple](#relation-tuple) · [resource instance](#resource-instance) ·
+[reading](#reading) · [relation tuple](#relation-tuple) · [resource instance](#resource-instance) ·
 [role](#role) · [sealing](#sealing) · [sink](#sink) · [site](#site) ·
 [standing](#standing) · [supervision plane](#supervision-plane) ·
 [supervisor](#supervisor) · [userset](#userset) · [verb](#verb) ·
@@ -383,6 +383,16 @@ walks the graph, it reads one indexed row that a write already compiled.
 - compiled by `internal/authz/project.go`, inside the transaction that changed a
   tuple
 - the tables are `device_access` and `resource_access`
+
+### reading {#reading}
+
+One measured value of a whole machine, such as the bed or the chamber
+temperature. A driver describes each reading under `/readings/<id>/` in the
+device's state: its kind, its unit and the path of its value. A client finds
+the readings there and holds no list of its own.
+
+- the type is `connectorapi.Reading` in `sdk/connectorapi/readings.go`
+- a value of one tool is not a reading. It stays in the tool tree
 
 ### relation tuple {#relation-tuple}
 

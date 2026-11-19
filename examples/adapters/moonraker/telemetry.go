@@ -114,6 +114,9 @@ const jobStartRounding = time.Minute
 type reader struct {
 	prints prints
 	heads  heads
+	// sensors is every heater_generic and temperature_sensor section the
+	// machine listed. See readings.go.
+	sensors []sensor
 }
 
 // patchesFrom turns one reading of the Klipper objects into patches, in a fixed
@@ -157,6 +160,7 @@ func (r *reader) patchesFrom(status map[string]json.RawMessage, now time.Time) [
 	bed := objects[objectHeaterBed]
 	out = appendVerbatim(out, bed["temperature"], bedPath)
 	out = appendVerbatim(out, bed["target"], bedTargetPath)
+	out = appendSensors(out, r.sensors, objects)
 
 	out = appendPosition(out, objects[objectToolhead]["position"])
 
