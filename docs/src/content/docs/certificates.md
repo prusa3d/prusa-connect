@@ -197,7 +197,7 @@ key with one correct value is a key somebody eventually gets wrong.
 The core reads the certificate it was given and says so at startup:
 
 ```
-level=INFO msg="the printer listener serves TLS" certificate=certs/server/printer.crt
+level=INFO msg="the device listener serves TLS" certificate=certs/server/printer.crt
   min_version=1.2 max_version=1.2 cipher_suite=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
   dns_names="[prusa-connect.local 127.0.0.1]" ip_addresses=[127.0.0.1] not_after=2028-11-28
   issued_by="CN=Your Root CA,O=Your Company,C=CZ"
@@ -254,6 +254,13 @@ arrives before its key does not match that key, and the listener takes the
 pair when the key arrives. The printer listener also refuses a new
 certificate it would refuse at startup, such as an RSA one, and keeps the one
 it had.
+
+The listeners go by modification times. A pair counts as new only when one of
+its files is newer than the pair the listener holds. A copy that keeps the
+source file's time, such as `cp -p` or `rsync -a`, can leave both files
+looking old. The listener then keeps the certificate it had, with no warning.
+Run `touch` on the certificate and the key after such a copy, and the
+next handshake presents the new pair.
 
 ## Configure the printer
 
