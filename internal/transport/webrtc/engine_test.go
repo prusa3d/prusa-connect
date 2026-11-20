@@ -1,6 +1,8 @@
 package webrtc
 
 import (
+	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -42,7 +44,7 @@ func TestABrowserReceivesTheCamerasPicturesAsRTP(t *testing.T) {
 		}
 	})
 
-	answer, err := engine.Offer(t.Context(), offer, frames)
+	answer, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err)
 	require.Contains(t, answer, "m=video", "the answer carries no video, so there is nothing to play")
 
@@ -99,7 +101,7 @@ func TestAViewerGoingAwayClosesTheCameraStream(t *testing.T) {
 }
 
 // watching negotiates one view and returns it once the pictures are arriving.
-func watching(t *testing.T, engine *Engine, frames io.ReadCloser) (*pion.PeerConnection, *pion.TrackRemote) {
+func watching(t *testing.T, engine *Engine, frames *camera) (*pion.PeerConnection, *pion.TrackRemote) {
 	t.Helper()
 
 	viewer, offer := newViewer(t)
@@ -112,7 +114,7 @@ func watching(t *testing.T, engine *Engine, frames io.ReadCloser) (*pion.PeerCon
 		}
 	})
 
-	answer, err := engine.Offer(t.Context(), offer, frames)
+	answer, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err)
 	require.NoError(t, viewer.SetRemoteDescription(
 		pion.SessionDescription{Type: pion.SDPTypeAnswer, SDP: answer}))
@@ -127,10 +129,11 @@ func watching(t *testing.T, engine *Engine, frames io.ReadCloser) (*pion.PeerCon
 	return nil, nil
 }
 
-// A client that asks for an answer and never dials holds a camera's bulkhead
-// slot and a device socket for as long as the process runs. The connect
-// deadline is what takes them back.
-func TestAViewerThatNeverDialsGivesTheCameraBackAtTheDeadline(t *testing.T) {
+// A client that asks for an answer and never dials never opens the camera. A
+// browser that cannot reach any candidate falls back to the live socket, and
+// a stream opened for the attempt would hold the camera's stream slot against
+// it until the deadline.
+func TestAViewerThatNeverDialsNeverOpensTheCamera(t *testing.T) {
 	t.Parallel()
 
 	engine := newEngineWithTimeout(t, 200*time.Millisecond)
@@ -138,11 +141,46 @@ func TestAViewerThatNeverDialsGivesTheCameraBackAtTheDeadline(t *testing.T) {
 
 	_, offer := newViewer(t)
 
-	_, err := engine.Offer(t.Context(), offer, frames)
+	_, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err)
 
-	require.Eventually(t, frames.isClosed, settle, 20*time.Millisecond,
-		"the answer was never dialled and the camera stream is still open")
+	require.Never(t, frames.wasOpened, time.Second, 20*time.Millisecond,
+		"the answer was never dialled and the camera was opened for it anyway")
+}
+
+// A camera that does not open once the browser has connected ends the view,
+// so the browser sees the connection close rather than a picture that never
+// comes.
+func TestACameraThatDoesNotOpenEndsTheConnectedView(t *testing.T) {
+	t.Parallel()
+
+	engine := newEngine(t)
+	viewer, offer := newViewer(t)
+
+	ended := make(chan struct{})
+	viewer.OnConnectionStateChange(func(state pion.PeerConnectionState) {
+		if state == pion.PeerConnectionStateClosed || state == pion.PeerConnectionStateFailed ||
+			state == pion.PeerConnectionStateDisconnected {
+			select {
+			case <-ended:
+			default:
+				close(ended)
+			}
+		}
+	})
+
+	refused := func(context.Context) (io.ReadCloser, error) { return nil, errors.New("no answer") }
+
+	answer, err := engine.Offer(t.Context(), offer, refused)
+	require.NoError(t, err)
+	require.NoError(t, viewer.SetRemoteDescription(
+		pion.SessionDescription{Type: pion.SDPTypeAnswer, SDP: answer}))
+
+	select {
+	case <-ended:
+	case <-time.After(settle):
+		t.Fatal("the camera did not open and the browser's connection stayed up")
+	}
 }
 
 // The deadline bounds the wait for the browser and never the negotiation.
@@ -150,8 +188,7 @@ func TestAViewerThatNeverDialsGivesTheCameraBackAtTheDeadline(t *testing.T) {
 // A deadline of one millisecond is shorter than any negotiation, which is what
 // a loaded runner makes of a longer one. A clock started before the answer
 // existed closed the peer connection the negotiation was still building, and
-// the caller was told its offer was not an offer. The deadline still runs once
-// the answer is out, so the stream comes back as it always did.
+// the caller was told its offer was not an offer.
 func TestADeadlineShorterThanTheNegotiationStillAnswers(t *testing.T) {
 	t.Parallel()
 
@@ -160,13 +197,11 @@ func TestADeadlineShorterThanTheNegotiationStillAnswers(t *testing.T) {
 
 	_, offer := newViewer(t)
 
-	answer, err := engine.Offer(t.Context(), offer, frames)
+	answer, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err,
 		"the connect deadline closed the connection it was still negotiating")
 	require.Contains(t, answer, "m=video")
-
-	require.Eventually(t, frames.isClosed, settle, 20*time.Millisecond,
-		"the answer was never dialled and the camera stream is still open")
+	require.False(t, frames.wasOpened(), "the answer was never dialled and the camera was opened for it")
 }
 
 // Every address either half puts in its SDP is a loopback one.
@@ -182,7 +217,7 @@ func TestEveryCandidateTheseTestsGatherIsOnTheLoopback(t *testing.T) {
 
 	viewer, offer := newViewer(t)
 
-	answer, err := engine.Offer(t.Context(), offer, frames)
+	answer, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err)
 	require.NoError(t, viewer.SetRemoteDescription(
 		pion.SessionDescription{Type: pion.SDPTypeAnswer, SDP: answer}))
@@ -214,9 +249,8 @@ func TestEveryCandidateTheseTestsGatherIsOnTheLoopback(t *testing.T) {
 }
 
 // A body that is not an offer is the caller's own request and it is refused
-// before a peer connection is built for it. The camera stream goes back either
-// way, because it was opened before the offer was read.
-func TestABodyThatIsNotAnOfferIsRefusedAndTheCameraGoesBack(t *testing.T) {
+// before a peer connection is built for it, and before the camera is opened.
+func TestABodyThatIsNotAnOfferIsRefusedAndTheCameraIsNeverOpened(t *testing.T) {
 	t.Parallel()
 
 	for name, body := range map[string]struct {
@@ -236,11 +270,10 @@ func TestABodyThatIsNotAnOfferIsRefusedAndTheCameraGoesBack(t *testing.T) {
 
 			frames := newCamera(t, time.Hour)
 
-			_, err := newEngine(t).Offer(t.Context(), body.offer, frames)
+			_, err := newEngine(t).Offer(t.Context(), body.offer, frames.opener())
 			require.ErrorIs(t, err, body.want,
 				"a body this server cannot answer was reported as something else")
-			require.True(t, frames.isClosed(),
-				"the offer was refused and the camera stream stayed open")
+			require.False(t, frames.wasOpened(), "the offer was refused and the camera was opened for it")
 		})
 	}
 }
@@ -254,10 +287,12 @@ func TestAStreamThatIsNotH264EndsTheViewRatherThanReachingTheBrowser(t *testing.
 	frames := &camera{body: io.NopCloser(strings.NewReader(
 		"--prusaframe\r\nContent-Type: image/jpeg\r\n\r\n\xff\xd8\xff"))}
 
-	_, offer := newViewer(t)
+	viewer, offer := newViewer(t)
 
-	_, err := engine.Offer(t.Context(), offer, frames)
+	answer, err := engine.Offer(t.Context(), offer, frames.opener())
 	require.NoError(t, err, "the negotiation is answered; it is the relay that then finds the bytes wrong")
+	require.NoError(t, viewer.SetRemoteDescription(
+		pion.SessionDescription{Type: pion.SDPTypeAnswer, SDP: answer}))
 
 	require.Eventually(t, frames.isClosed, settle, 20*time.Millisecond,
 		"the driver framed something that is not H.264 and the view stayed open")
@@ -276,7 +311,7 @@ func newEngineWithTimeout(t *testing.T, timeout time.Duration) *Engine {
 	// Loopback only, here and on the viewer below. Gathering on every
 	// interface binds a UDP socket on each one, and on Windows the firewall
 	// then asks the person at the keyboard to allow the test binary every run.
-	engine, err := New(Config{
+	engine, err := New(t.Context(), Config{
 		Logger:         discard(),
 		ConnectTimeout: timeout,
 		LoopbackOnly:   true,
@@ -328,6 +363,7 @@ func newViewer(t *testing.T) (*pion.PeerConnection, string) {
 type camera struct {
 	body   io.ReadCloser
 	closed atomic.Bool
+	opened atomic.Bool
 }
 
 // newCamera is an endless H.264 stream. The pause between pictures is what
@@ -375,6 +411,17 @@ func (c *camera) Close() error {
 }
 
 func (c *camera) isClosed() bool { return c.closed.Load() }
+
+// opener is how the engine opens this camera. It records that it was asked.
+func (c *camera) opener() Opener {
+	return func(context.Context) (io.ReadCloser, error) {
+		c.opened.Store(true)
+
+		return c, nil
+	}
+}
+
+func (c *camera) wasOpened() bool { return c.opened.Load() }
 
 // discard is a logger nothing reads, so a case's output is its assertions.
 func discard() *slog.Logger {

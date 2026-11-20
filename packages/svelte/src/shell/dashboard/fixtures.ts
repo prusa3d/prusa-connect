@@ -189,6 +189,9 @@ const NO_CAMERAS: CameraStore = {
   stillUrl: () => '',
   streamUrl: () => '',
   watch: () => Promise.resolve(''),
+  socket: () => {
+    throw new Error('no live socket in a fixture');
+  },
 };
 
 /** A telemetry client whose stream never says anything. */

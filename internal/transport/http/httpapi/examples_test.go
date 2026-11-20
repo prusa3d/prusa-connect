@@ -502,6 +502,12 @@ func (exampleCameras) Watch(context.Context, string, string, string) (CameraAnsw
 	return CameraAnswer{}, nil
 }
 
+// Live refuses, because a published example is a request a plain HTTP client
+// sends, and the live view is a socket only a websocket client opens.
+func (exampleCameras) Live(_ context.Context, _ string, name string) (CameraLive, error) {
+	return nil, CameraNotFound(name)
+}
+
 func (exampleCameras) Push(context.Context, string, string, CameraFrame) error { return nil }
 
 func (exampleCameras) CameraTypes(context.Context, string) ([]CameraType, error) { return nil, nil }

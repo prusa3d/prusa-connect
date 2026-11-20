@@ -130,12 +130,22 @@
   let expandedPlayingName = $state<string | undefined>(undefined);
   let expandedPanel = $state<HTMLElement | null>(null);
   // The enlarged picture opens on the live view when there is one, and takes
-  // it over from the column, so the camera is never streamed twice.
+  // it over from the column, so the camera is never streamed twice. The
+  // column gives it back on close only when it was playing: a stop the person
+  // pressed holds (ADR-20261119-pxn rule 2).
+  let resumeName: string | undefined;
   const expand = (): void => {
     if (camera === undefined) return;
+    resumeName = playingName;
     expandedPlayingName = streams ? camera.camera.name : undefined;
     playingName = undefined;
     expandedName = camera.camera.name;
+  };
+  const collapse = (): void => {
+    expandedName = undefined;
+    expandedPlayingName = undefined;
+    playingName = resumeName;
+    resumeName = undefined;
   };
 
   // Counted from when the time left arrived. A default taken when the panel
@@ -541,37 +551,44 @@
                     </Button>
                   {/if}
                 </div>
-                <CameraPicture
-                  {...camera}
-                  alt={t('printerDetailStatus.camera.alt')}
-                  bind:playing={
-                    () => playing,
-                    (on: boolean) => {
-                      playingName = on ? cameraName() : undefined;
+                <!-- Keyed, so another camera starts as a new picture: playing
+                     while it is seen, and never held by a stop the last one
+                     was given. -->
+                {#key cameraName()}
+                  <CameraPicture
+                    {...camera}
+                    alt={t('printerDetailStatus.camera.alt')}
+                    autoplay
+                    bind:playing={
+                      () => playing,
+                      (on: boolean) => {
+                        playingName = on ? cameraName() : undefined;
+                      }
                     }
-                  }
-                  class="rounded-sm"
-                >
-                  {#if playing}
-                    <Badge
-                      variant="secondary"
-                      class="absolute start-2 top-2 gap-1.5 uppercase"
-                    >
-                      <span
-                        class="size-1.5 rounded-full bg-destructive"
-                        aria-hidden="true"
-                      ></span>
-                      {t('printerDetailStatus.camera.live')}
-                    </Badge>
-                  {/if}
-                </CameraPicture>
+                    class="rounded-sm"
+                  >
+                    {#if playing}
+                      <Badge
+                        variant="secondary"
+                        class="absolute start-2 top-2 gap-1.5 uppercase"
+                      >
+                        <span
+                          class="size-1.5 rounded-full bg-destructive"
+                          aria-hidden="true"
+                        ></span>
+                        {t('printerDetailStatus.camera.live')}
+                      </Badge>
+                    {/if}
+                  </CameraPicture>
+                {/key}
                 <Dialog
                   bind:open={
                     () =>
                       expandedName !== undefined &&
                       expandedName === cameraName(),
                     (on: boolean) => {
-                      expandedName = on ? cameraName() : undefined;
+                      if (on) expandedName = cameraName();
+                      else collapse();
                     }
                   }
                 >

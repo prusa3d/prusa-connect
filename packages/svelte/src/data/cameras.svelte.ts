@@ -6,6 +6,7 @@ import {
   watchCamera,
   readCameras,
   snapshotUrl,
+  openSocket,
   streamUrl,
 } from './services/cameras';
 import { type DataFault, faultOf } from './fault';
@@ -209,6 +210,11 @@ export class Cameras {
   /** The address of one camera's live view. */
   streamUrl(camera: string): string {
     return streamUrl(this.#client, camera);
+  }
+
+  /** Opens the live socket that carries one camera's H.264 live view. */
+  socket(camera: string): WebSocket {
+    return openSocket(this.#client, camera, document.baseURI);
   }
 
   /** A second call while one read is in flight is given that read. */

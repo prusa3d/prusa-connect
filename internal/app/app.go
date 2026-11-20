@@ -248,6 +248,14 @@ func serve(
 	return errors.Join(served, supervision.shutdown(ctx, logger, core.ShutdownTimeout))
 }
 
+// closeRelay releases the camera relay's UDP port once the HTTP surface that
+// opens views has stopped.
+func closeRelay(ctx context.Context, relay *webrtc.Engine, logger *slog.Logger) {
+	if err := relay.Close(); err != nil {
+		logger.WarnContext(ctx, "the media relay did not close", "error", err.Error())
+	}
+}
+
 // serveOver builds everything that reads or writes the configured inventory and
 // serves it. The plane is already running, so the first Reload reconciles. A
 // Reload against a plane that is not running would block.
@@ -446,10 +454,17 @@ func serveOver(
 	// The camera plane, which an HTTP push and a module's camera.accept both
 	// go through, so both take one permission check and land in one driver.
 	// It is built here, before the first reconcile starts a module.
-	relay, err := webrtc.New(webrtc.Config{Logger: logger, LoopbackOnly: opts.LoopbackOnly})
+	relay, err := webrtc.New(ctx, webrtc.Config{
+		Logger:       logger,
+		LoopbackOnly: opts.LoopbackOnly,
+		UDPPort:      core.WebRTC.UDPPort,
+		Addresses:    core.WebRTC.Addresses,
+	})
 	if err != nil {
 		return fmt.Errorf("build the media relay: %w", err)
 	}
+
+	defer closeRelay(ctx, relay, logger)
 
 	cameraPlane := newCameras(graph, supervision.host, relay, logger)
 	cameraPlane.hub = hub

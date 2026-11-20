@@ -26,6 +26,7 @@ type stubCameras struct {
 	shot   CameraSnapshot
 	view   CameraStream
 	answer CameraAnswer
+	live   CameraLive
 	types  []CameraType
 	err    error
 
@@ -82,6 +83,16 @@ func (c *stubCameras) Watch(_ context.Context, principal, _, offer string) (Came
 	c.mu.Unlock()
 
 	return c.answer, c.err
+}
+
+func (c *stubCameras) Live(_ context.Context, principal, _ string) (CameraLive, error) {
+	c.record(principal)
+
+	if c.err != nil {
+		return nil, c.err
+	}
+
+	return c.live, nil
 }
 
 func (c *stubCameras) Push(_ context.Context, principal, _ string, frame CameraFrame) error {

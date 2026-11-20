@@ -372,16 +372,13 @@ describe('PrinterStatusPanel', () => {
     await expect.poll(() => container.querySelector('img')).not.toBeNull();
   });
 
-  // The picture is the still frame until a person plays it, and only then
-  // says it is live; stop brings the still back.
-  it('plays the camera only when a person presses play, and says live only then', async () => {
+  // The picture plays while it is seen, and only then says it is live; stop
+  // brings the still back (ADR-20261119-pxn).
+  it('plays the camera while it is seen, and says live only then', async () => {
     const { container } = await render(PrinterStatusPanel, {
       props: props({ camera: FEED }),
     });
 
-    expect(container.textContent).not.toContain('Live');
-
-    await page.getByRole('button', { name: 'Play bed-cam live' }).click();
     await expect.element(page.getByText('Live')).toBeVisible();
 
     await page.getByRole('button', { name: 'Stop bed-cam' }).click();
@@ -410,12 +407,11 @@ describe('PrinterStatusPanel', () => {
 
   // The camera opens at the page's size, on its live view when it has one,
   // and takes that view over from the column, so the camera streams once.
-  // One Escape closes it.
+  // One Escape closes it, and the column plays again.
   it('enlarges the camera in a dialog on its live view, and closes on Escape', async () => {
     const { container } = await render(PrinterStatusPanel, {
       props: props({ camera: FEED }),
     });
-    await page.getByRole('button', { name: 'Play bed-cam live' }).click();
     await expect.element(page.getByText('Live')).toBeVisible();
 
     const open = page.getByRole('button', {
@@ -439,6 +435,26 @@ describe('PrinterStatusPanel', () => {
     await userEvent.keyboard('{Escape}');
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     await expect.element(open).toHaveFocus();
+    await expect
+      .element(page.getByRole('button', { name: 'Stop bed-cam' }))
+      .toBeVisible();
+  });
+
+  // ADR-20261119-pxn rule 2: a stop the person pressed outlasts the dialog.
+  it('keeps a camera the person stopped on its still frame after the dialog closes', async () => {
+    await render(PrinterStatusPanel, { props: props({ camera: FEED }) });
+    await page.getByRole('button', { name: 'Stop bed-cam' }).click();
+
+    await page
+      .getByRole('button', { name: 'Open camera stream on MK4S #1042' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Camera on MK4S #1042' });
+    await expect
+      .element(dialog.getByRole('button', { name: 'Stop bed-cam' }))
+      .toBeVisible();
+
+    await userEvent.keyboard('{Escape}');
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     await expect
       .element(page.getByRole('button', { name: 'Play bed-cam live' }))
       .toBeVisible();
@@ -465,21 +481,23 @@ describe('PrinterStatusPanel', () => {
     await expectNoViolations(dialog.element());
   });
 
-  it('starts another camera on its still frame', async () => {
+  it('plays another camera on its own, whatever the person did to the last one', async () => {
     const { rerender } = await render(PrinterStatusPanel, {
       props: props({ camera: FEED }),
     });
-    await page.getByRole('button', { name: 'Play bed-cam live' }).click();
-    await expect.element(page.getByText('Live')).toBeVisible();
+    await page.getByRole('button', { name: 'Stop bed-cam' }).click();
+    await expect
+      .element(page.getByRole('button', { name: 'Play bed-cam live' }))
+      .toBeVisible();
 
     await rerender({
       camera: { ...FEED, camera: { ...FEED.camera, name: 'side-cam' } },
     });
 
     await expect
-      .element(page.getByRole('button', { name: 'Play side-cam live' }))
+      .element(page.getByRole('button', { name: 'Stop side-cam' }))
       .toBeVisible();
-    expect(page.getByText('Live').query()).toBe(null);
+    await expect.element(page.getByText('Live')).toBeVisible();
   });
 
   // A file still going up to this server shows beside the drop target, not

@@ -138,6 +138,7 @@ export const operationTable = {
   "list-subject-direct-grants": { id: "list-subject-direct-grants", method: "GET", path: "/api/v1/grants/subject/{subject}/direct", response: "json", anonymous: false },
   "list-subject-grants": { id: "list-subject-grants", method: "GET", path: "/api/v1/grants/subject/{subject}", response: "json", anonymous: false },
   "list-vocabularies": { id: "list-vocabularies", method: "GET", path: "/api/v1/vocabularies", response: "json", anonymous: true },
+  "live-camera": { id: "live-camera", method: "GET", path: "/api/v1/cameras/{camera}/live", response: "none", anonymous: false, longRunning: true },
   "logout": { id: "logout", method: "POST", path: "/api/v1/auth/logout", response: "none", anonymous: false },
   "move-storage-entry": { id: "move-storage-entry", method: "POST", path: "/api/v1/storages/{storage}/moves", body: "application/json", response: "json", anonymous: false },
   "password-login": { id: "password-login", method: "POST", path: "/api/v1/auth/login", body: "application/json", response: "json", anonymous: true },
@@ -1759,6 +1760,18 @@ export interface Operations {
   ): Promise<operations["list-vocabularies"]["responses"][200]["content"]["application/json"]>;
 
   /**
+   * GET /api/v1/cameras/{camera}/live
+   *
+   * One camera's live view over a websocket
+   */
+  liveCamera(
+    request: {
+      path: operations["live-camera"]["parameters"]["path"];
+    },
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
    * POST /api/v1/auth/logout
    *
    * End this session
@@ -2569,6 +2582,7 @@ export function bindOperations(transport: Transport): Operations {
     listSubjectDirectGrants: (request, signal) => transport.call(operationTable["list-subject-direct-grants"], request, signal),
     listSubjectGrants: (request, signal) => transport.call(operationTable["list-subject-grants"], request, signal),
     listVocabularies: (request = {}, signal) => transport.call(operationTable["list-vocabularies"], request, signal),
+    liveCamera: (request, signal) => transport.call(operationTable["live-camera"], request, signal),
     logout: (request = {}, signal) => transport.call(operationTable["logout"], request, signal),
     moveStorageEntry: (request, signal) => transport.call(operationTable["move-storage-entry"], request, signal),
     passwordLogin: (request, signal) => transport.call(operationTable["password-login"], request, signal),

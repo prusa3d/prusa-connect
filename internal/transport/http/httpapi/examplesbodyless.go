@@ -25,6 +25,7 @@ var bodylessOperations = map[string]string{
 	"get-camera-snapshot":        "one JPEG or PNG frame. A worked example of an image is the image, and it does not belong in a contract document",
 	"put-camera-snapshot":        "204, and the body it takes is one JPEG. A worked example of an image is the image, and it does not belong in a contract document",
 	"stream-camera":              "a multipart stream of those frames, for as long as the viewer holds it",
+	"live-camera":                "a websocket of binary pictures, which no example in a document can show",
 	"get-developer-view":         "one self-contained HTML page. It is read in a browser rather than parsed",
 	"delete-device-file":         "204, for the same reason the resource delete is",
 	"delete-device-folder":       "204, for the same reason the resource delete is",

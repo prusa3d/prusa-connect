@@ -48,6 +48,15 @@ const STREAM: Operation = {
   anonymous: false,
 };
 
+const LIVE: Operation = {
+  id: 'live-camera',
+  method: 'GET',
+  path: '/api/v1/cameras/{camera}/live',
+  response: 'none',
+  anonymous: false,
+  longRunning: true,
+};
+
 const PUSH: Operation = {
   id: 'put-camera-snapshot',
   method: 'PUT',
@@ -97,6 +106,40 @@ export const watchCamera = (
 /** The address of the live view. The browser reads it as a multipart stream. */
 export const streamUrl = (client: CamerasClient, camera: string): string =>
   client.transport.urlOf(STREAM, { path: { camera } });
+
+/**
+ * The address of the live socket a browser falls back to when WebRTC does not
+ * connect. It is the page's own origin with a websocket scheme, because a
+ * websocket takes no relative address.
+ */
+export const socketUrl = (
+  client: CamerasClient,
+  camera: string,
+  base: string,
+): string => {
+  const url = new URL(client.transport.urlOf(LIVE, { path: { camera } }), base);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  return url.href;
+};
+
+/**
+ * Opens one camera's live socket. The SDK builds the address, as it does for
+ * the still frame and the MJPEG stream an element loads. The SDK speaks HTTP
+ * and has no socket of its own, so the browser's is opened here, in the one
+ * place that may, and with the page's own cookie.
+ */
+export const openSocket = (
+  client: CamerasClient,
+  camera: string,
+  base: string,
+): WebSocket => {
+  // eslint-disable-next-line no-restricted-globals
+  const socket = new WebSocket(socketUrl(client, camera, base));
+  socket.binaryType = 'arraybuffer';
+
+  return socket;
+};
 
 // How long a camera says it waits between two frames.
 //

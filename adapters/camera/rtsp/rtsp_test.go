@@ -312,6 +312,13 @@ type fake struct {
 	// early makes the device send an RTCP report and an RTP packet before it
 	// answers PLAY, as a Buddy3D's LIVE555 server does.
 	early bool
+	// stray makes the device send bytes that are neither a packet nor a
+	// response between two packets, as a camera whose server names itself
+	// rtsp_demo does every few seconds.
+	stray bool
+	// broken is how many malformed RTP packets the device sends each round:
+	// the extension bit set and no extension after the header.
+	broken int
 
 	url        string
 	authorized atomic.Bool
@@ -478,6 +485,20 @@ func (f *fake) play(conn net.Conn) {
 			return
 		}
 
+		for range f.broken {
+			if !interleaveRaw(conn, []byte{0x90, 0x60, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1}) {
+				return
+			}
+		}
+
+		// The stray run holds a dollar sign on another channel, which is not a
+		// packet of this session's either.
+		if f.stray {
+			if _, err := conn.Write([]byte{0x3f, 0xdf, '$', 0x07, 0x13, 0x00, 0xde}); err != nil {
+				return
+			}
+		}
+
 		// The keyframe over three fragments, which is what a camera does with
 		// a unit larger than the path MTU.
 		for at, chunk := 1, 100; at < len(frame); at += chunk {
@@ -513,8 +534,11 @@ func (f *fake) play(conn net.Conn) {
 
 // interleave writes one RTP packet inside the RTSP connection.
 func interleave(conn net.Conn, payload []byte) bool {
-	packet := append([]byte{0x80, 0x60, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1}, payload...)
+	return interleaveRaw(conn, append([]byte{0x80, 0x60, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1}, payload...))
+}
 
+// interleaveRaw writes bytes as one packet, whatever they hold.
+func interleaveRaw(conn net.Conn, packet []byte) bool {
 	frame := []byte{'$', 0, 0, 0}
 	binary.BigEndian.PutUint16(frame[2:], uint16(len(packet)))
 
@@ -622,4 +646,89 @@ func TestAStreamSurvivesTheKeepaliveOnTheMediaConnection(t *testing.T) {
 
 	require.Positive(t, device.keepalives.Load(),
 		"the session declared a timeout and the driver never refreshed it")
+}
+
+func TestAStreamSurvivesStrayBytesBetweenPackets(t *testing.T) {
+	t.Parallel()
+
+	device := serve(t, &fake{codec: "H264", endless: true, stray: true})
+
+	camera, err := rtsp.New(cameraapi.ProviderSpec{
+		ID: "watch", Type: rtsp.Type, Printer: "p1",
+		Config: map[string]any{"url": device.url},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, camera.Close()) })
+
+	stream, err := camera.Open(t.Context(), cameraapi.FormatH264AnnexB)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = stream.Body.Close() })
+
+	// Each round of the fake carries one stray run, so a few kilobytes is many
+	// of them. The keyframe after each run still arrives whole.
+	var seen []byte
+	for len(seen) < 8<<10 {
+		seen = append(seen, read(t, stream.Body, 512)...)
+	}
+
+	require.Greater(t, bytes.Count(seen, keyframe()), 2,
+		"the keyframes after the stray bytes did not arrive whole")
+}
+
+func TestAStreamDropsAMalformedPacketAndGoesOn(t *testing.T) {
+	t.Parallel()
+
+	stream := openEndless(t, &fake{codec: "H264", endless: true, broken: 1})
+
+	var seen []byte
+	for len(seen) < 8<<10 {
+		seen = append(seen, read(t, stream, 512)...)
+	}
+
+	require.Greater(t, bytes.Count(seen, keyframe()), 2,
+		"the keyframes after the malformed packets did not arrive whole")
+}
+
+func TestAStreamOfOnlyMalformedPacketsEnds(t *testing.T) {
+	t.Parallel()
+
+	stream := openEndless(t, &fake{codec: "H264", endless: true, broken: 200})
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := io.Copy(io.Discard, stream)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, rtsp.ErrHandshake)
+	case <-time.After(10 * time.Second):
+		t.Fatal("a camera that sends only malformed packets held the view open")
+	}
+}
+
+// openEndless opens the stream of a fake device that keeps sending.
+func openEndless(t *testing.T, device *fake) io.Reader {
+	t.Helper()
+
+	serve(t, device)
+
+	camera, err := rtsp.New(cameraapi.ProviderSpec{
+		ID: "watch", Type: rtsp.Type, Printer: "p1",
+		Config: map[string]any{"url": device.url},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, camera.Close()) })
+
+	stream, err := camera.Open(t.Context(), cameraapi.FormatH264AnnexB)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = stream.Body.Close() })
+
+	return stream.Body
 }

@@ -160,6 +160,13 @@ type depacketizer struct {
 
 func newDepacketizer(limit int) *depacketizer { return &depacketizer{limit: limit} }
 
+// drop abandons the unit being reassembled, so the fragments that follow a
+// malformed packet are not joined to the ones before it.
+func (d *depacketizer) drop() {
+	d.inFU = false
+	d.unit = d.unit[:0]
+}
+
 // append reads one RTP packet and appends the NAL units it completed to out,
 // Annex-B framed. A fragment that completes no unit appends nothing.
 func (d *depacketizer) append(out []byte, packet []byte) ([]byte, error) {

@@ -41,6 +41,11 @@ type pictures struct {
 	seenIDR  bool
 	opened   bool
 
+	// everyKey puts the parameter sets in front of every keyframe and not
+	// only the first. A decoder in a browser that skipped to a keyframe after
+	// falling behind then configures itself from that keyframe alone.
+	everyKey bool
+
 	// dropping is set when an access unit passed the ceiling. Every unit after
 	// it is discarded until one arrives that can only begin an access unit,
 	// which is how the assembler rejoins the stream at a boundary rather than
@@ -250,7 +255,7 @@ func (p *pictures) flush() []byte {
 		return nil
 	}
 
-	if !p.opened {
+	if !p.opened || (p.everyKey && carries(assembled, unitIDR)) {
 		p.opened = true
 		assembled = p.lead(assembled)
 	}
