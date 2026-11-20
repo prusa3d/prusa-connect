@@ -8,14 +8,21 @@ const jsonrpcVersion = "2.0"
 // The JSON-RPC methods this dialect calls. Moonraker serves the same names over
 // the websocket and over HTTP, so these are the API and not a framing of it.
 const (
-	methodPrinterInfo      = "printer.info"
-	methodObjectsList      = "printer.objects.list"
-	methodObjectsQuery     = "printer.objects.query"
-	methodObjectsSubscribe = "printer.objects.subscribe"
-	methodPrintPause       = "printer.print.pause"
-	methodPrintResume      = "printer.print.resume"
-	methodPrintCancel      = "printer.print.cancel"
-	methodGcodeScript      = "printer.gcode.script"
+	methodPrinterInfo          = "printer.info"
+	methodObjectsList          = "printer.objects.list"
+	methodObjectsQuery         = "printer.objects.query"
+	methodObjectsSubscribe     = "printer.objects.subscribe"
+	methodPrintStart           = "printer.print.start"
+	methodPrintPause           = "printer.print.pause"
+	methodPrintResume          = "printer.print.resume"
+	methodPrintCancel          = "printer.print.cancel"
+	methodGcodeScript          = "printer.gcode.script"
+	methodFilesRoots           = "server.files.roots"
+	methodFilesGetDirectory    = "server.files.get_directory"
+	methodFilesMetadata        = "server.files.metadata"
+	methodFilesPostDirectory   = "server.files.post_directory"
+	methodFilesDeleteFile      = "server.files.delete_file"
+	methodFilesDeleteDirectory = "server.files.delete_directory"
 )
 
 // notifyStatusUpdate is the notification a subscription arrives as. Its params
@@ -34,6 +41,7 @@ const (
 	objectGcodeMove     = "gcode_move"
 	objectPauseResume   = "pause_resume"
 	objectConfigFile    = "configfile"
+	objectVirtualSDCard = "virtual_sdcard"
 )
 
 // subscribed is every object whose readings become state patches, in the order
@@ -104,6 +112,61 @@ type configDump struct {
 type heaterConfig struct {
 	MinTemp *float64 `json:"min_temp"`
 	MaxTemp *float64 `json:"max_temp"`
+}
+
+// fileRoot is one entry returned by server.files.roots.
+type fileRoot struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Permissions string `json:"permissions"`
+}
+
+// diskUsage is the storage space summary returned by server.files.get_directory.
+type diskUsage struct {
+	Total int64 `json:"total"`
+	Used  int64 `json:"used"`
+	Free  int64 `json:"free"`
+}
+
+// moonrakerDir is one subdirectory returned by server.files.get_directory.
+type moonrakerDir struct {
+	Dirname     string  `json:"dirname"`
+	Modified    float64 `json:"modified"`
+	Size        int64   `json:"size"`
+	Permissions string  `json:"permissions"`
+}
+
+// moonrakerThumbnail is one preview image entry returned by Moonraker.
+type moonrakerThumbnail struct {
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	Size         int64  `json:"size"`
+	RelativePath string `json:"relative_path"`
+}
+
+// moonrakerFile is one file entry returned by server.files.get_directory.
+type moonrakerFile struct {
+	Filename    string               `json:"filename"`
+	Modified    float64              `json:"modified"`
+	Size        int64                `json:"size"`
+	Permissions string               `json:"permissions"`
+	Thumbnails  []moonrakerThumbnail `json:"thumbnails"`
+}
+
+// directoryReply is what server.files.get_directory answers.
+type directoryReply struct {
+	Dirs      []moonrakerDir  `json:"dirs"`
+	Files     []moonrakerFile `json:"files"`
+	DiskUsage *diskUsage      `json:"disk_usage"`
+	RootInfo  *fileRoot       `json:"root_info"`
+}
+
+// fileMetadataReply is what server.files.metadata answers for one file.
+type fileMetadataReply struct {
+	Size        int64                `json:"size"`
+	Modified    float64              `json:"modified"`
+	Permissions string               `json:"permissions"`
+	Thumbnails  []moonrakerThumbnail `json:"thumbnails"`
 }
 
 // objectsParam is the params both query and subscribe take. A nil value asks
