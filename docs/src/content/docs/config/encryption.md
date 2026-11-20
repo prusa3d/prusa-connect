@@ -31,6 +31,8 @@ line, and offer `connect.der` for download beside the settings file. It matters
 only when the printers connect over HTTPS.
 
 To make the certificates yourself, read [Certificates](../certificates.md).
+Both listeners read a replaced certificate and key without a restart, see
+[Replace a certificate without a restart](../certificates.md#replace-a-certificate-without-a-restart).
 
 ## Keys
 

@@ -8,6 +8,8 @@ rewrite:
     - scripts/generate_certificates.sh
     - internal/connector/xbuddy/listener.go
     - internal/app/config/tls.go
+    - internal/app/apitls.go
+    - internal/kernel/certfile
 ---
 
 This guide covers generating a certificate chain that works with Prusa printers and the Prusa Connect xBuddy listener.
@@ -233,6 +235,25 @@ rather than starting and serving every printer a refusal.
 
 A certificate inside 30 days of expiry still serves, and warns at startup with
 the date and what is left.
+
+## Replace a certificate without a restart
+
+Both listeners read their certificate and key again when either file
+changes. A renewal tool such as certbot can write the new files in place.
+Within about a second, the next handshake presents the new certificate.
+Connections that are already open keep the certificate they started with, and
+no printer is disconnected.
+
+| what happens | what the log says |
+|---|---|
+| the new pair loads | the line `the API listener serves TLS` or `the device listener serves TLS` again, with the new expiry date |
+| the new pair does not load | one warning that the listener kept the certificate it had, with the reason |
+
+A renewal writes two files, so each listener watches both. A certificate that
+arrives before its key does not match that key, and the listener takes the
+pair when the key arrives. The printer listener also refuses a new
+certificate it would refuse at startup, such as an RSA one, and keeps the one
+it had.
 
 ## Configure the printer
 

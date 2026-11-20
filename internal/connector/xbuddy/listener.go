@@ -11,9 +11,9 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"sync"
 	"time"
 
+	"github.com/prusa3d/prusa-connect/internal/kernel/certfile"
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
 
@@ -206,7 +206,7 @@ func firmwareTLS(cfg ListenerTLS, log *slog.Logger) (*tls.Config, error) {
 	// filling both would serve the certificate read at startup to every
 	// printer that dials by address and sends no name.
 	return &tls.Config{ //nolint:gosec // xBuddy firmware speaks TLS 1.2 and nothing else.
-		GetCertificate:     source.present,
+		GetCertificate:     source.GetCertificate,
 		MinVersion:         tls.VersionTLS12,
 		MaxVersion:         tls.VersionTLS12,
 		CipherSuites:       []uint16{firmwareCipherSuite},
@@ -214,157 +214,47 @@ func firmwareTLS(cfg ListenerTLS, log *slog.Logger) (*tls.Config, error) {
 	}, nil
 }
 
-// certificateSource holds the keypair this listener presents and reads it again
-// when a file behind it changes.
+// newCertificateSource reads the keypair a listener starts with, refusing the
+// same certificates parseListener refused before a port is bound, and reads it
+// again when a file behind it changes.
 //
 // A deployment mounts the keypair from a secret that something outside the
-// process rotates, and the file is replaced under a running server. Reading
-// once at start meant a rotated certificate reached the process only through a
-// restart, and a restart drops every printer's connection to pick up a file the
-// process can read itself.
-type certificateSource struct {
-	cfg ListenerTLS
-	log *slog.Logger
-
-	// mu guards the fields below. A handshake reads them and a handshake is
-	// what replaces them, so the read and the re-read are the same critical
-	// section. No file is touched while it is held, because a mount that has
-	// stopped answering would then hold up every printer dialing in rather
-	// than the one handshake that went looking.
-	mu     sync.Mutex
-	looked time.Time
-	stamp  time.Time
-	pair   tls.Certificate
-	leaf   *x509.Certificate
-}
-
-// newCertificateSource reads the keypair a listener starts with, and refuses
-// the same certificates parseListener refused before a port is bound.
-func newCertificateSource(cfg ListenerTLS, log *slog.Logger) (*certificateSource, error) {
-	source := &certificateSource{cfg: cfg, log: log, stamp: newestChange(cfg)}
-	if err := source.read(); err != nil {
-		return nil, err
-	}
-
-	return source, nil
-}
-
-// present is the certificate a ClientHello is answered with.
-func (s *certificateSource) present(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	pair, _ := s.current()
-
-	return &pair, nil
-}
-
-// current is the keypair to present now, read again first when either file
-// behind it has changed since the last look.
+// process rotates, and the file is replaced under a running server. A restart
+// to pick it up would drop every printer's connection.
 //
-// A file that cannot be read is not a reason to stop presenting the keypair
-// already held: the process refused to start without one, and the printers
-// still verify what it holds. So a stat that fails and a read that fails both
-// leave the working keypair in place, and the listener carries on.
-func (s *certificateSource) current() (tls.Certificate, *x509.Certificate) {
-	if !s.lookDue() {
-		return s.held()
-	}
+// connectorapi.Spec carries no context, so the load at startup starts from an
+// empty one. A reload gets the context of the handshake that caused it.
+func newCertificateSource(cfg ListenerTLS, log *slog.Logger) (*certfile.Keypair, error) {
+	return certfile.New(context.Background(), certfile.Options{
+		Certificate: cfg.Certificate,
+		Key:         cfg.Key,
+		Poll:        certificatePoll,
+		Load: func(ctx context.Context) (tls.Certificate, *x509.Certificate, error) {
+			pair, leaf, err := loadKeypair(cfg)
+			if err != nil {
+				return tls.Certificate{}, nil, err
+			}
 
-	stamp := newestChange(s.cfg)
+			if err = refuseCertificateFirmwareRejects(cfg, leaf, time.Now()); err != nil {
+				return tls.Certificate{}, nil, err
+			}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+			report(ctx, log, cfg, leaf)
 
-	if stamp.IsZero() || !stamp.After(s.stamp) {
-		return s.pair, s.leaf
-	}
+			return pair, leaf, nil
+		},
+		Refused: func(ctx context.Context, err error) {
+			if log == nil {
+				return
+			}
 
-	// Recorded whether or not the read below succeeds, so a replacement no
-	// printer could verify is reported once and not once per handshake. It
-	// covers both files, so a rotation that lands the certificate first and
-	// the key a moment later is read again when the key arrives, rather than
-	// held at the mismatch the first read found.
-	s.stamp = stamp
-
-	if err := s.read(); err != nil && s.log != nil {
-		s.log.WarnContext(context.Background(),
-			"the certificate file changed and the listener kept the one it had, so every printer "+
-				"still verifies the previous certificate",
-			"certificate", s.cfg.Certificate,
-			"reason", err.Error())
-	}
-
-	return s.pair, s.leaf
-}
-
-// lookDue reports whether certificatePoll has passed since the files were last
-// looked at, and records the look when it has.
-func (s *certificateSource) lookDue() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-	if now.Sub(s.looked) < certificatePoll {
-		return false
-	}
-
-	s.looked = now
-
-	return true
-}
-
-// held is the keypair already read, for a handshake with no reason to look at
-// the files.
-func (s *certificateSource) held() (tls.Certificate, *x509.Certificate) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.pair, s.leaf
-}
-
-// read replaces the held keypair with what is on disk now.
-//
-// A failed read returns before the keypair is assigned, and that is what leaves
-// the working one in place.
-//
-// The caller holds s.mu, or is the constructor, where nothing else has the
-// value yet.
-func (s *certificateSource) read() error {
-	pair, leaf, err := loadKeypair(s.cfg)
-	if err != nil {
-		return err
-	}
-
-	if err = refuseCertificateFirmwareRejects(s.cfg, leaf, time.Now()); err != nil {
-		return err
-	}
-
-	s.pair, s.leaf = pair, leaf
-
-	report(s.log, s.cfg, leaf)
-
-	return nil
-}
-
-// newestChange is the later of the two files' modification times, or the zero
-// time when either cannot be read at all.
-//
-// Both are watched because a rotation is two writes. A certificate that lands
-// ahead of its key parses as a pair that does not match, and the key's own
-// arrival is then the only thing left to say the pair is worth reading again.
-func newestChange(cfg ListenerTLS) time.Time {
-	var newest time.Time
-
-	for _, path := range []string{cfg.Certificate, cfg.Key} {
-		info, err := os.Stat(path)
-		if err != nil {
-			return time.Time{}
-		}
-
-		if info.ModTime().After(newest) {
-			newest = info.ModTime()
-		}
-	}
-
-	return newest
+			log.WarnContext(ctx,
+				"the certificate file changed and the listener kept the one it had, so every printer "+
+					"still verifies the previous certificate",
+				"certificate", cfg.Certificate,
+				"reason", err.Error())
+		},
+	})
 }
 
 // loadKeypair reads both halves and parses the leaf a client is shown.
@@ -455,12 +345,10 @@ func stamp(at time.Time) string { return at.UTC().Format(time.RFC3339) }
 // report writes the one startup line an operator reads the socket's profile
 // off, and the two warnings that name a certificate which is valid today and
 // will not serve every printer.
-func report(log *slog.Logger, cfg ListenerTLS, leaf *x509.Certificate) {
+func report(ctx context.Context, log *slog.Logger, cfg ListenerTLS, leaf *x509.Certificate) {
 	if log == nil {
 		return
 	}
-
-	ctx := context.Background()
 
 	log.InfoContext(ctx, "the device listener serves TLS",
 		"certificate", cfg.Certificate,
@@ -541,14 +429,14 @@ func warnAboutAddressNames(
 // Config will be used"). It observes and refuses nothing, because what the
 // printer will accept is the printer's verdict and not this listener's.
 func reportUnanswerableHellos(
-	log *slog.Logger, cfg ListenerTLS, source *certificateSource,
+	log *slog.Logger, cfg ListenerTLS, source *certfile.Keypair,
 ) func(*tls.ClientHelloInfo) (*tls.Config, error) {
 	if log == nil {
 		return nil
 	}
 
 	return func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
-		pair, leaf := source.current()
+		pair, leaf := source.Current(hello.Context())
 
 		if err := hello.SupportsCertificate(&pair); err != nil {
 			log.WarnContext(hello.Context(),
