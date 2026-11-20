@@ -627,7 +627,7 @@ describe('PrinterControlsPanel', () => {
     await expect
       .element(
         page.getByText(
-          'The chamber target applies only while the fans run on Auto.',
+          'The printer takes a new chamber target, or Cool down, only while the fans run on Auto.',
         ),
       )
       .toBeVisible();
@@ -646,7 +646,7 @@ describe('PrinterControlsPanel', () => {
     await expect
       .element(
         page.getByText(
-          'The chamber target applies only while the fans run on Auto.',
+          'The printer takes a new chamber target, or Cool down, only while the fans run on Auto.',
         ),
       )
       .not.toBeInTheDocument();
@@ -666,7 +666,7 @@ describe('PrinterControlsPanel', () => {
     await expect
       .element(
         page.getByText(
-          'The chamber target applies only while the fans run on Auto.',
+          'The printer takes a new chamber target, or Cool down, only while the fans run on Auto.',
         ),
       )
       .not.toBeInTheDocument();

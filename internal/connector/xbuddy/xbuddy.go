@@ -28,7 +28,10 @@
 // 33 of the 57 verbs never reach the socket under the name the capability
 // vocabulary gives them: twenty-one become G frames of gcode and twelve become a
 // single SET_VALUE. That mapping is in verbs.go, and it is the one thing a
-// driver generated from internal/printer/profile alone would get wrong.
+// driver generated from internal/printer/profile alone would get wrong. One
+// command can also travel in another form than its row: a chamber target of
+// 0 goes as M141 S0 when the printer reports IDLE, READY, STOPPED or FINISHED.
+// See chamberOffForm.
 package xbuddy
 
 import (

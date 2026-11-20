@@ -30,6 +30,10 @@ type link struct {
 	// an answer on it stops waiting.
 	gone chan struct{}
 	once sync.Once
+	// stateIn is closed once the printer has reported its state on this
+	// connection. See Session.awaitState.
+	stateIn   chan struct{}
+	stateOnce sync.Once
 	// writeMu serialises writes. gorilla permits one concurrent writer, and the
 	// pump is not the only one: a pong answers a ping from the read goroutine.
 	writeMu sync.Mutex
@@ -62,7 +66,7 @@ func (s *Session) waitLink() (*link, bool) {
 // attach adopts a freshly upgraded connection and starts reading it. It reports
 // false when the session has already closed, and the caller hangs up.
 func (s *Session) attach(ctx context.Context, conn *websocket.Conn) bool {
-	current := &link{conn: conn, gone: make(chan struct{})}
+	current := &link{conn: conn, gone: make(chan struct{}), stateIn: make(chan struct{})}
 
 	// Nothing here allocates in proportion to what a printer sends. The largest
 	// legitimate frame is an INFO event listing storage devices, which is

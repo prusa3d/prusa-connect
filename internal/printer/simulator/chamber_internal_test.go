@@ -117,3 +117,31 @@ func TestTheChamberBlockIsSentWhenItChanges(t *testing.T) {
 		t.Error("the first frame of a new connection carries no chamber block")
 	}
 }
+
+// Only an M141 line sets the target, its S counts on its own line, and a line
+// with two S words is skipped.
+func TestAnM141LineSetsOnlyItsOwnTarget(t *testing.T) {
+	t.Parallel()
+
+	for payload, want := range map[string]int{
+		"M141 S30":            30,
+		"M141 S30\nM140 S60":  30,
+		"M140 S60\r\nM141 S0": 0,
+		"M141 S30 S0":         40,
+	} {
+		printer, err := New(Config{Model: "CoreOne", Serial: "SIM-1", BaseURL: "http://127.0.0.1:1"})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		printer.mu.Lock()
+		printer.setChamberTarget(40)
+		printer.mu.Unlock()
+
+		printer.noteChamberTarget([]byte(payload))
+
+		if got := printer.chamberFields(false)["target_temp"]; got != want {
+			t.Errorf("%q leaves the target at %v, want %d", payload, got, want)
+		}
+	}
+}

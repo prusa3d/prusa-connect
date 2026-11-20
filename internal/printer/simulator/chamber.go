@@ -3,6 +3,8 @@ package simulator
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 )
 
 // The chamber of an enclosed machine, as its telemetry reports it.
@@ -13,7 +15,8 @@ import (
 // machine with a chamber here, and no model is named.
 
 const (
-	// chamberSetter is the wire verb that sets the chamber's target.
+	// chamberSetter is the profile's name for the chamber target setter. The
+	// driver sends a target as SET_VALUE, and a target of 0 as M141 S0.
 	chamberSetter = "SET_CHAMBER_TARGET_TEMP"
 	// printingChamberTemp is the air a print with no chamber target warms the
 	// enclosure to. Like every reading here it is fixed.
@@ -72,8 +75,12 @@ func (p *Printer) setChamber(command string, kwargs map[string]any) {
 
 	switch command {
 	case chamberSetter:
-		if target, ok := number("chamber.target_temp"); ok && p.chamber.fan == chamberFanAutomatic {
-			p.chamber.target = min(max(target, 0), p.chamberCeiling())
+		// A CORE One on firmware 8.0.0 was seen to ignore a SET_VALUE
+		// target of 0 and still answer that it finished, while M141 S0
+		// turned the target off. Its source treats 0 like any other target,
+		// so this copies one printer's behaviour, not a firmware rule.
+		if target, ok := number("chamber.target_temp"); ok && target != 0 {
+			p.setChamberTarget(target)
 		}
 	case "SET_CHAMBER_FAN_TARGET":
 		if fan, ok := number("chamber.fan_pwm_target"); ok {
@@ -86,6 +93,48 @@ func (p *Printer) setChamber(command string, kwargs map[string]any) {
 		if light, ok := number("chamber.led_intensity"); ok {
 			p.chamber.light = light * pwmTop / chamberLightFull * chamberLightFull / pwmTop
 		}
+	}
+}
+
+// setChamberTarget holds a target the way M141 does (M141_M191.cpp): only
+// fans on auto take one, and the ceiling cuts a higher one down. The caller
+// holds the lock.
+func (p *Printer) setChamberTarget(target int) {
+	if p.chamber.fan == chamberFanAutomatic {
+		p.chamber.target = min(max(target, 0), p.chamberCeiling())
+	}
+}
+
+// noteChamberTarget applies each M141 line of a G-code payload on a machine
+// with a chamber. The driver turns a chamber target off with M141 S0. A line
+// with more than one S is skipped, as the firmware rejects it.
+func (p *Printer) noteChamberTarget(payload []byte) {
+	if !p.hasChamber() {
+		return
+	}
+
+	for line := range strings.Lines(strings.ToUpper(string(payload))) {
+		words := strings.Fields(line)
+		if len(words) == 0 || words[0] != "M141" {
+			continue
+		}
+
+		var targets []float64
+
+		for _, word := range words[1:] {
+			value, isS := strings.CutPrefix(word, "S")
+			if v, err := strconv.ParseFloat(value, 64); isS && err == nil {
+				targets = append(targets, v)
+			}
+		}
+
+		if len(targets) != 1 || targets[0] < 0 {
+			continue
+		}
+
+		p.mu.Lock()
+		p.setChamberTarget(int(targets[0]))
+		p.mu.Unlock()
 	}
 }
 

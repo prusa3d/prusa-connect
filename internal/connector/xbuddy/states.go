@@ -25,6 +25,7 @@ package xbuddy
 
 import (
 	"slices"
+	"time"
 
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
@@ -150,4 +151,56 @@ func acceptedIn(verb connectorapi.Capability, state connectorapi.StateName) bool
 	}
 
 	return state != stateError
+}
+
+// frameNow is the frame pending goes out as on this attempt on current. A
+// chamber target of 0 takes its M141 S0 frame only if the printer is quiescent
+// now, not when the command was queued: a printer that was away may be
+// printing. Right after a reconnection it waits for the printer's state first,
+// so an idle printer is not taken for UNKNOWN.
+func (s *Session) frameNow(pending *call, current *link) []byte {
+	if pending.chamberOff == nil {
+		return pending.frame
+	}
+
+	s.awaitState(current)
+
+	pending.gcode = s.quiescent()
+	if pending.gcode {
+		return pending.chamberOff
+	}
+
+	return pending.frame
+}
+
+// heardState is the state the printer reported on its current connection, and
+// UNKNOWN before it has reported one there.
+func (s *Session) heardState() connectorapi.StateName {
+	if now := s.machineState.Load(); now != nil && s.stateHeard.Load() {
+		return connectorapi.StateName(*now)
+	}
+
+	return stateUnknown
+}
+
+// quiescent reports whether the printer is in a state Start print is accepted
+// in: IDLE, READY, STOPPED or FINISHED. No print, load, selftest or recovery
+// runs then, so a G-code line does not wait behind one.
+func (s *Session) quiescent() bool {
+	return acceptedIn(VerbStartPrint, s.heardState())
+}
+
+// awaitState waits until the printer has reported its state on current, for
+// at most the command deadline. A printer sends one in its first telemetry
+// frame, within seconds of connecting.
+func (s *Session) awaitState(current *link) {
+	overdue := time.NewTimer(s.commandDeadline)
+	defer overdue.Stop()
+
+	select {
+	case <-current.stateIn:
+	case <-current.gone:
+	case <-s.done:
+	case <-overdue.C:
+	}
 }

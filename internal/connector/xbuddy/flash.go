@@ -141,11 +141,7 @@ func (s *Session) refuseInState(verb connectorapi.Capability) error {
 		return nil
 	}
 
-	state := connectorapi.StateName(stateUnknown)
-	if now := s.machineState.Load(); now != nil && s.stateHeard.Load() {
-		state = connectorapi.StateName(*now)
-	}
-
+	state := s.heardState()
 	if acceptedIn(verb, state) {
 		return nil
 	}

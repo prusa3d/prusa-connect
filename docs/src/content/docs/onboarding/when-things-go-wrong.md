@@ -252,7 +252,7 @@ does not carry.
 
 Only the first refusal on a connection is logged and the rest are counted, with
 the total written once as the connection ends
-(`summariseRefusals`, `internal/connector/xbuddy/inbound.go:461`). A firmware
+(`summariseRefusals`, `internal/connector/xbuddy/inbound.go:467`). A firmware
 speaking something else refuses every frame, and one record each is an
 operator's disk spent saying the same sentence.
 
@@ -262,7 +262,7 @@ connected, is counting up there and is reporting no telemetry is one whose
 frames are all being refused, and no other observation separates that from a
 printer with nothing to say.
 
-`Dropped()` (`internal/connector/xbuddy/session.go:1031`) is the other counter:
+`Dropped()` (`internal/connector/xbuddy/session.go:1049`) is the other counter:
 state patches discarded because the host was not reading them. A dialog is never
 among them, because each dialog path holds a slot the backlog cannot evict, so
 this number counts the paths a later frame repeats and nothing else. Both are

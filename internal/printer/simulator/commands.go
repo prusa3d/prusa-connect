@@ -260,6 +260,7 @@ func (p *Printer) serveGCode(conn *websocket.Conn, f frame) error {
 
 	p.beginBusy(f.payload)
 	p.noteToolTarget(f.payload)
+	p.noteChamberTarget(f.payload)
 	p.noteMetricsConfig(f.payload)
 
 	answer := map[string]any{AnswerKey: p.gcodeAnswer(f.payload)}

@@ -296,6 +296,10 @@ type call struct {
 	// base is the tool numbering a tool setter's key was built with, and
 	// toolBaseUnknown for every other verb. See toolBaseMoved.
 	base toolBase
+	// chamberOff is the M141 S0 frame a chamber target of 0 goes as instead of
+	// frame when the printer is quiescent as it is sent, and nil for every
+	// other command. See chamberOffForm.
+	chamberOff []byte
 	// heard closes when the printer's event for this command arrives, whether
 	// or not its caller is still waiting.
 	heard chan struct{}
@@ -660,16 +664,24 @@ func (s *Session) build(cmd connectorapi.Command, form verb) (*call, error) {
 		return nil, err
 	}
 
+	var chamberOff []byte
+	if off, is := chamberOffForm(cmd.Verb, form, values); is {
+		if chamberOff, err = encodeCommand(id, off, args, base); err != nil {
+			return nil, err
+		}
+	}
+
 	return &call{
-		id:      id,
-		verb:    cmd.Verb,
-		frame:   frame,
-		dropped: suppliedButDropped(form.dropped, cmd.Args),
-		gcode:   form.frame == frameGCode || form.frame == frameForced,
-		base:    base,
-		heard:   make(chan struct{}),
-		result:  make(chan outcome, 1),
-		settled: make(chan struct{}),
+		id:         id,
+		verb:       cmd.Verb,
+		frame:      frame,
+		dropped:    suppliedButDropped(form.dropped, cmd.Args),
+		gcode:      form.frame == frameGCode || form.frame == frameForced,
+		base:       base,
+		chamberOff: chamberOff,
+		heard:      make(chan struct{}),
+		result:     make(chan outcome, 1),
+		settled:    make(chan struct{}),
 	}, nil
 }
 
@@ -718,9 +730,11 @@ func (s *Session) deliver(pending *call) {
 			return
 		}
 
+		frame := s.frameNow(pending, current)
+
 		s.track(pending)
 
-		if err := current.write(pending.frame); err != nil {
+		if err := current.write(frame); err != nil {
 			// It never reached the printer, so the next connection gets it.
 			s.forget(pending.id)
 			current.close()

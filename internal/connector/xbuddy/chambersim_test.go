@@ -3,6 +3,7 @@ package xbuddy_test
 import (
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/prusa3d/prusa-connect/internal/connector/xbuddy"
 	"github.com/prusa3d/prusa-connect/internal/printer/simulator"
@@ -19,9 +20,12 @@ type stateWatch struct {
 	seen map[string]string
 }
 
-// await reads patches until path reads want.
+// await reads patches until path reads want, and fails if it does not within
+// a minute of the bubble's clock, so a lost setter fails rather than hangs.
 func (w *stateWatch) await(t *testing.T, path, want string) {
 	t.Helper()
+
+	deadline := time.After(time.Minute)
 
 	for w.seen[path] != want {
 		select {
@@ -31,6 +35,8 @@ func (w *stateWatch) await(t *testing.T, path, want string) {
 			}
 
 			w.seen[patch.Path] = string(patch.Value)
+		case <-deadline:
+			t.Fatalf("%s never read %s; it reads %q", path, want, w.seen[path])
 		case <-w.rig.ctx.Done():
 			t.Fatalf("%s never read %s; it reads %q", path, want, w.seen[path])
 		}
@@ -59,6 +65,9 @@ func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 			arg, value string
 			path, want string
 		}{
+			{xbuddy.VerbSetChamberTemp, "chamber.target_temp", "45", "/temperature/chamber_target", "45"},
+			// A target of 0 turns the target off.
+			{xbuddy.VerbSetChamberTemp, "chamber.target_temp", "0", "/temperature/chamber_target", "0"},
 			{xbuddy.VerbSetChamberTemp, "chamber.target_temp", "45", "/temperature/chamber_target", "45"},
 			{xbuddy.VerbSetChamberFan, "chamber.fan_pwm_target", "40", "/chamber/fan_pwm_target", "40"},
 			// The firmware keeps the light on a 0 to 255 scale, so 50 comes
@@ -102,6 +111,71 @@ func TestACoreOneReportsItsChamberAndTakesItsSetters(t *testing.T) {
 		// where it is.
 		watch.await(t, "/temperature/chamber", "25")
 	})
+}
+
+// Off pressed while the printer is away goes as the printer is when it comes
+// back, not as it was when it went. One that came back idle takes M141 S0, and
+// one that came back with a dialog up takes SET_VALUE, which holds no Stop.
+func TestAChamberOffQueuedWhileAwayFollowsTheStateItComesBackIn(t *testing.T) {
+	t.Parallel()
+
+	for _, dialog := range []bool{false, true} {
+		synctest.Test(t, func(t *testing.T) {
+			rig := start(t, "CoreOne", withAutoRegistration)
+			defer rig.stop(t)
+
+			session := rig.connect(t)
+			watch := &stateWatch{rig: rig, session: session, seen: map[string]string{}}
+			watch.await(t, "/state", `"IDLE"`)
+
+			if result, err := session.Do(rig.ctx, connectorapi.Command{
+				Verb: xbuddy.VerbSetChamberTemp, Args: map[string]string{"chamber.target_temp": "45"},
+			}); err != nil || !result.OK {
+				t.Fatalf("the CORE One refused a target of 45: %v", err)
+			}
+
+			watch.await(t, "/temperature/chamber_target", "45")
+
+			rig.printer.GoOffline()
+			synctest.Wait()
+
+			done := make(chan error, 1)
+
+			go func() {
+				_, err := session.Do(rig.ctx, connectorapi.Command{
+					Verb: xbuddy.VerbSetChamberTemp, Args: map[string]string{"chamber.target_temp": "0"},
+				})
+				done <- err
+			}()
+
+			synctest.Wait()
+
+			if dialog {
+				rig.printer.RaiseDialog(simulator.Dialog{ID: 1, Text: "Check the nozzle"})
+			}
+
+			setValues := rig.printer.Asked("SET_CHAMBER_TARGET_TEMP")
+
+			rig.printer.GoOnline()
+
+			if err := <-done; err != nil {
+				t.Fatalf("Off after the printer came back: %v", err)
+			}
+
+			want := 0
+			if dialog {
+				want = 1
+			}
+
+			if sent := rig.printer.Asked("SET_CHAMBER_TARGET_TEMP") - setValues; sent != want {
+				t.Errorf("dialog up %v: %d SET_VALUE sent, want %d", dialog, sent, want)
+			}
+
+			if !dialog {
+				watch.await(t, "/temperature/chamber_target", "0")
+			}
+		})
+	}
 }
 
 // An XL with its enclosure on reports the enclosure's air at the chamber

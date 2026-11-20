@@ -497,6 +497,24 @@ a 0 to 255 scale, so a light of 50 is reported as 49. A value outside 0 to 100
 wraps around in the firmware, so the host refuses it. An XL takes the light
 and never reports it. It has no chamber target and no chamber fan setter.
 
+The host sends a chamber target as `SET_VALUE`, and a target of 0 as the
+G-code `M141 S0` when the printer is quiescent. Quiescent means it reports
+IDLE, READY, STOPPED or FINISHED on its current connection as the command is
+sent. Right after a reconnection the host waits for the printer's first
+state report, up to the command deadline, before it decides. Firmware
+since 6.6.0 runs a `SET_VALUE` target as `M141` itself, and 6.4 and 6.5 set it
+directly. The firmware source treats 0 like any other target. Yet a CORE One on
+8.0.0, with its fans on auto, took a target of 30 as `SET_VALUE` and ignored a
+target of 0. It still answered that the command finished. `M141 S0` sent as
+G-code turned the target off. Nobody has found why yet, so this is an
+observation on one printer, not a rule.
+
+A G-code command holds the queue until the printer has run it. Until then the
+printer refuses every other command, Stop included. In any other state a print,
+a filament load, a selftest or a heating wait such as `M191` may be running,
+and `M141 S0` would wait behind it. So there a target of 0 goes as `SET_VALUE`,
+and the printer may keep the old target.
+
 The fan speeds are part of what makes the firmware send a full frame, and from
 7.0.0 so are the target, the fan target and the light. A setter shows in
 telemetry within seconds on that firmware. Older firmware reports a new target

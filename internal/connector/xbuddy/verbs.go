@@ -1,6 +1,7 @@
 package xbuddy
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
@@ -193,7 +194,8 @@ type verb struct {
 	stateChecked bool
 }
 
-// wireTable is the whole of what this port can send.
+// wireTable is the whole of what this port can send, but for the one
+// alternative chamberOffForm gives.
 //
 // It is one table rather than a capability list beside a rewrite list, because
 // the two disagreeing is the defect earlier research records: 31 of the 57
@@ -540,4 +542,23 @@ func text(required bool, limit float64) connectorapi.Value {
 		Flag: true, Kind: connectorapi.KindString, Required: required,
 		Limit: limit, HasLimit: limit > 0,
 	}
+}
+
+// chamberOffForm is the G-code form a chamber target of 0 can take, and
+// whether this command is one. A CORE One on 8.0.0, fans on auto, ignored a
+// SET_VALUE of 0 that M141 S0 as G-code obeyed. Its source treats 0 like any
+// other target, so this is an observation on one printer, not a firmware rule.
+//
+// A G frame holds the queue, and the firmware refuses every command, Stop
+// included, until the line has run. So the session sends this form only when
+// the printer is quiescent. See Session.quiescent. It carries only the table's
+// arguments, so it must need none of the table's flags.
+func chamberOffForm(capability connectorapi.Capability, form verb, values map[string]string) (verb, bool) {
+	if capability != VerbSetChamberTemp {
+		return verb{}, false
+	}
+
+	target, err := strconv.ParseFloat(values["chamber.target_temp"], 64)
+
+	return verb{frame: frameGCode, gcode: fixedGCode("M141 S0"), args: form.args}, err == nil && target == 0
 }

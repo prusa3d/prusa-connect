@@ -218,6 +218,10 @@ func (s *Session) dispatch(ctx context.Context, current *link, message inboundMe
 	case inboundBlockRequest:
 		s.serveBlockRequest(ctx, current, message)
 	}
+
+	if s.stateHeard.Load() {
+		current.stateOnce.Do(func() { close(current.stateIn) })
+	}
 }
 
 // dispatchEvent matches an event to the command in flight.
