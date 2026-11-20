@@ -8,8 +8,16 @@
 // ADR-20260911-4p6 rule 33). Vite's dev server answers the same way, because the app
 // is a single-page app to it.
 
+import {
+  basePath,
+  keepLinksUnderBase,
+  withBase,
+  withoutBase,
+} from './base-path';
+
 /** What the router needs of `location`. Nothing else of it is read. */
 export interface RouterLocation {
+  /** The path inside the app, with the prefix the app is served under taken off. */
   readonly pathname: string;
   /** The query, `?` included, or empty. */
   readonly search: string;
@@ -17,6 +25,11 @@ export interface RouterLocation {
   readonly hash: string;
   /** The page's own origin, which is what tells an in-app link from any other. */
   readonly origin: string;
+  /**
+   * The path prefix the app is served under, from the document's `<base>`
+   * (base-path.ts), or `''` at the root.
+   */
+  readonly base?: string;
 }
 
 /** What the router needs of `history`. */
@@ -64,11 +77,14 @@ const browserNavigation = (): RouterNavigation | null => {
   const history = browser.history;
   if (!address || !history) return null;
   if (typeof browser.addEventListener !== 'function') return null;
+  const base = basePath();
 
+  // The router holds paths inside the app. The address bar holds them under
+  // the prefix, so both are converted here and nowhere else.
   return {
     // A getter: the address changes under the router on every navigation.
     get pathname(): string {
-      return address.pathname;
+      return withoutBase(address.pathname, base);
     },
     get search(): string {
       return address.search;
@@ -77,11 +93,12 @@ const browserNavigation = (): RouterNavigation | null => {
       return address.hash;
     },
     origin: address.origin,
+    base,
     pushState: (data, unused, url) => {
-      history.pushState(data, unused, url);
+      history.pushState(data, unused, withBase(url, base));
     },
     replaceState: (data, unused, url) => {
-      history.replaceState(data, unused, url);
+      history.replaceState(data, unused, withBase(url, base));
     },
     scrollToTop: () => {
       globalThis.scrollTo(0, 0);
@@ -190,7 +207,11 @@ const anchorOf = (target: EventTarget | null): HTMLAnchorElement | null => {
  * shows. Every one of those is a person asking for the browser's behaviour.
  * A link with a `?query` is taken, and the screen reads the query.
  */
-const pathOfClick = (event: MouseEvent, origin: string): string | undefined => {
+const pathOfClick = (
+  event: MouseEvent,
+  origin: string,
+  base: string,
+): string | undefined => {
   if (event.defaultPrevented || event.button !== 0) return undefined;
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
     return undefined;
@@ -202,7 +223,7 @@ const pathOfClick = (event: MouseEvent, origin: string): string | undefined => {
   if (anchor.origin !== origin) return undefined;
   if (anchor.hash !== '') return undefined;
 
-  return anchor.pathname + anchor.search;
+  return withoutBase(anchor.pathname, base) + anchor.search;
 };
 
 /**
@@ -420,7 +441,11 @@ export class Router {
 
     const onClick = (event: Event): void => {
       if (!(event instanceof MouseEvent)) return;
-      const asked = pathOfClick(event, navigation.origin);
+      const asked = pathOfClick(
+        event,
+        navigation.origin,
+        navigation.base ?? '',
+      );
       if (asked === undefined || !this.serves(asked)) return;
 
       event.preventDefault();
@@ -429,10 +454,17 @@ export class Router {
 
     navigation.addEventListener('popstate', onPopState);
     navigation.addEventListener('click', onClick);
+    const stopMovingLinks =
+      navigation.base === undefined ||
+      navigation.base === '' ||
+      typeof document === 'undefined'
+        ? () => undefined
+        : keepLinksUnderBase(document, navigation.base);
 
     return () => {
       navigation.removeEventListener('popstate', onPopState);
       navigation.removeEventListener('click', onClick);
+      stopMovingLinks();
     };
   }
 }

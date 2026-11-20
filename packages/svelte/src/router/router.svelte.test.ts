@@ -345,3 +345,25 @@ test('a leave check keeps the person on the page the back button would leave', (
   stop();
   listening();
 });
+
+/** An address bar under a path prefix, as a reverse proxy serves the app. */
+class PrefixedNavigation extends FakeNavigation {
+  readonly base = '/ingress/t1';
+}
+
+test('under a prefix a link written from the root and one carrying the prefix are both taken', () => {
+  const bar = new PrefixedNavigation('/');
+  const router = new Router({ known: KNOWN, navigation: bar });
+  const stop = router.listen();
+
+  expect(clickOn('/settings')).toBe(true);
+  flushSync();
+  expect(router.path).toBe('/settings');
+
+  expect(clickOn('/ingress/t1/devices/p1')).toBe(true);
+  flushSync();
+  expect(router.path).toBe('/devices/p1');
+  expect(router.params).toEqual({ id: 'p1' });
+
+  stop();
+});

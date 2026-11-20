@@ -14,6 +14,7 @@
 -->
 <script lang="ts">
   import { t } from '../../i18n';
+  import { withBase } from '../../router/base-path';
   import type { ArtProps } from './types';
   import { ART_ALT_KEY, ART_FILE, ART_RATIO } from './variants';
 
@@ -26,7 +27,9 @@
     class: className,
   }: ArtProps = $props();
 
-  const source = $derived(`url('${base}/${ART_FILE[name]}')`);
+  // A path from the root, moved under the prefix a reverse proxy serves the
+  // app under (base-path.ts).
+  const source = $derived(`url('${withBase(`${base}/${ART_FILE[name]}`)}')`);
   const label = $derived(alt ?? t(ART_ALT_KEY[name]));
 </script>
 

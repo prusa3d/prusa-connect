@@ -26,6 +26,7 @@ import {
 } from '../i18n';
 import { hiddenEntries } from '../module-hidden';
 import { modulePageHref } from '../module-href';
+import { withBase } from '../router/base-path';
 import { LIBRARY_VERSION } from '../version';
 import { buildRegister } from './generated';
 import {
@@ -473,7 +474,7 @@ export class ModuleLoader {
       for (const language of wanted) {
         try {
           const messages = await catalogueOf(
-            catalogueUrl(ui.entry_url, language),
+            catalogueUrl(withBase(ui.entry_url), language),
             signal,
           );
           // A run a reset ended registers nothing, so it cannot put its
@@ -506,11 +507,13 @@ export class ModuleLoader {
 
         let imported: unknown;
         try {
-          imported = await importModule(importUrl(ui.entry_url, version));
+          imported = await importModule(
+            importUrl(withBase(ui.entry_url), version),
+          );
         } catch {
           if (stale()) return;
           imported = await importModule(
-            importUrl(ui.entry_url, version, Date.now()),
+            importUrl(withBase(ui.entry_url), version, Date.now()),
           );
         }
         const setup = setupOf(imported);

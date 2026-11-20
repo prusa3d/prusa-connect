@@ -20,7 +20,11 @@
     startPrint,
   } from '@prusa/connect-ui/data';
   import { translateFor } from '@prusa/connect-ui/i18n';
-  import { Router, type RouterNavigation } from '@prusa/connect-ui/router';
+  import {
+    Router,
+    type RouterNavigation,
+    withBase,
+  } from '@prusa/connect-ui/router';
   import { homeOn } from '@prusa/connect-ui/domain';
   import {
     Alert,
@@ -506,7 +510,7 @@
     } catch {
       // Storage refused: the person lands on the home page instead.
     }
-    globalThis.location.assign(operationTable['begin-login'].path);
+    globalThis.location.assign(withBase(operationTable['begin-login'].path));
   };
 
   // Back to the address the sign-in was carrying, once the pages exist to

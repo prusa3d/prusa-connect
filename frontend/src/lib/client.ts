@@ -1,4 +1,5 @@
 import { ApiError, PrusaConnect } from '@prusa/connect';
+import { basePath } from '@prusa/connect-ui/router';
 
 import { log } from './log';
 
@@ -96,6 +97,9 @@ export const onRefusal = (handler: () => void): void => {
  */
 export const client = new PrusaConnect({
   auth: { kind: 'session' },
+  // The path prefix a reverse proxy serves the app under, or nothing at the
+  // root. Every request then goes through the same proxy.
+  url: basePath(),
   timeoutMs: REQUEST_TIMEOUT_MS,
   shareEvents: true,
   onUnauthorized: () => {

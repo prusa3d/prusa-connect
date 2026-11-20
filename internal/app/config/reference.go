@@ -347,7 +347,7 @@ var Keys = map[string]Key{
 	},
 	"core.trusted_proxies": {
 		Doc: "The networks a reverse proxy reaches this server from, as CIDR blocks or single addresses. " +
-			"X-Forwarded-For is read only from those.",
+			"X-Forwarded-For, X-Forwarded-Prefix and X-Ingress-Path are read only from those.",
 	},
 	"core.site": {
 		Doc: "This node's name in every event this server publishes. Give each node of a federation its own.",

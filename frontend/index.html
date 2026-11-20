@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- Every address on this page is read from here. The core answers this
+         document at every route, and writes the path prefix a reverse proxy
+         serves the app under into it (internal/transport/http/httpapi/appprefix.go).
+         The import map comes right after it, so its addresses are read from
+         it too. -->
+    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Prusa Connect</title>
     <!-- What a browser needs to install the app: a phone or a handheld

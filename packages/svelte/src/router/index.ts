@@ -1,4 +1,11 @@
 export {
+  basePath,
+  basePathOf,
+  keepLinksUnderBase,
+  withBase,
+  withoutBase,
+} from './base-path';
+export {
   type LeaveCheck,
   matchesPattern,
   paramsOf,

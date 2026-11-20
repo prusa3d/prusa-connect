@@ -145,16 +145,6 @@ export const importMap = ({ page = 'index.html' } = {}): Plugin => {
     configResolved: (resolved) => {
       config = resolved;
 
-      // The app's one fallback document answers at every path (ADR-20260911-4p6 rule
-      // 33), so a relative address in its map would name a different file on
-      // each route. Storybook's preview is served at one address only, where
-      // its relative base names the same file every time.
-      if (page === 'index.html' && resolved.base.startsWith('.')) {
-        throw new Error(
-          `the import map needs an absolute base, and this build has "${resolved.base}".`,
-        );
-      }
-
       // Pre-bundled Svelte in the dev server means the app loads the runtime
       // from `.vite/deps` while the map still names the source module: two
       // runtimes, and `effect_orphan` the first time a module renders. The
@@ -263,11 +253,22 @@ export const importMap = ({ page = 'index.html' } = {}): Plugin => {
         const head = html.indexOf('<head>');
         if (head === -1) throw new Error(`${page} has no <head>`);
 
+        // The app's one fallback document answers at every path (ADR-20260911-4p6
+        // rule 33), so a relative address in its map names the same file on
+        // every route only when the document's `<base>` element names the
+        // root, and the map is read after it. The core writes a reverse
+        // proxy's path prefix into that element. Storybook's preview is served
+        // at one address only and needs no element.
+        const base = /<base\s[^>]*>/u.exec(html);
+        if (page === 'index.html' && config.base.startsWith('.') && !base) {
+          throw new Error(
+            `a relative base ("${config.base}") needs a <base> element in ${page}, and it has none.`,
+          );
+        }
+        const at = base ? base.index + base[0].length : head + '<head>'.length;
+
         const tag = `<script type="importmap">${tagFor(imports)}</script>`;
-        document.source =
-          html.slice(0, head + '<head>'.length) +
-          tag +
-          html.slice(head + '<head>'.length);
+        document.source = html.slice(0, at) + tag + html.slice(at);
       },
     },
   };

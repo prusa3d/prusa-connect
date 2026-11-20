@@ -24,6 +24,15 @@ yourself, may call the API only when its origin is listed in
 nginx or Traefik, belongs in `core.trusted_proxies`. The server then reads the
 real address of each visitor from the header the proxy adds.
 
+Such a proxy can also serve the web app under a path, such as
+`https://home.example/connect/`. It removes the path before it forwards the
+request, and names it in the `X-Forwarded-Prefix` header. The Home Assistant
+Supervisor does the same for an app it shows in its sidebar, with the
+`X-Ingress-Path` header. The server reads either header only from a network in
+`core.trusted_proxies`. The web app then loads its files and calls the API
+under that path. The API and the printers' addresses stay where they are.
+A printer and a program still dial the server's own address and port.
+
 `core.time_server.enabled` starts a time server on UDP port 123, for a
 camera or another device on a network with no internet. The switch under
 Settings, Server, Network wins once a person uses it. On Linux outside a
@@ -47,7 +56,7 @@ Every key has a working default, so a file with no `core:` block starts a server
 | <a id="key-core-api-request-timeout"></a>`core.api.request_timeout` | duration | `30s` | no | How long one request may take before the server stops waiting for its own handler and answers 504. |
 | <a id="key-core-api-stream-timeout"></a>`core.api.stream_timeout` | duration | `6h` | no | The same limit for the routes that stream events or transfer a file. It may not be shorter than request_timeout. |
 | <a id="key-core-time-server-enabled"></a>`core.time_server.enabled` | true or false | `false` | no | Answer SNTP requests on UDP port 123 with this machine's clock, for devices on a network with no internet. The web app's switch wins once a person uses it. |
-| <a id="key-core-trusted-proxies"></a>`core.trusted_proxies` | list of text | empty | no | The networks a reverse proxy reaches this server from, as CIDR blocks or single addresses. X-Forwarded-For is read only from those. |
+| <a id="key-core-trusted-proxies"></a>`core.trusted_proxies` | list of text | empty | no | The networks a reverse proxy reaches this server from, as CIDR blocks or single addresses. X-Forwarded-For, X-Forwarded-Prefix and X-Ingress-Path are read only from those. |
 | <a id="key-core-events-heartbeat"></a>`core.events.heartbeat` | duration | `15s` | no | How often an idle event stream writes a keep-alive frame. Keep it under whatever closes idle connections on the way to the reader. |
 | <a id="key-core-events-retry"></a>`core.events.retry` | duration | `2s` | no | How long a reader is told to wait before reconnecting after the event stream drops. |
 | <a id="key-core-events-max-streams-per-principal"></a>`core.events.max_streams_per_principal` | number | `64` | no | How many event streams one user or module may have open at once. A request over the limit is answered 429. |

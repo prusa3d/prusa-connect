@@ -414,7 +414,7 @@ func announceOrSpend(
 		return func() {}, nil
 	}
 
-	_, carried := httpapi.AppMount()
+	_, carried := httpapi.AppMount(httpapi.AppOptions{})
 
 	return func() {
 		announcePending(ctx, logger, opts.stderr(), shown, first.Pending(), browserAddresses(core.API),

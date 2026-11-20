@@ -67,10 +67,22 @@ test('the map comes before the first module script', () => {
   expect(module).toBeGreaterThan(map);
 });
 
+// The addresses are relative, and the document's `<base>` element says what to:
+// the root, or the prefix a reverse proxy serves the app under, which the core
+// writes into it. The element has to come before the map, or the map's
+// addresses are read against the route the document answered at.
+test('the base element names the root and comes before the map', () => {
+  const base = html.indexOf('<base href="/" />');
+  const map = html.indexOf('<script type="importmap">');
+
+  expect(base).toBeGreaterThanOrEqual(0);
+  expect(map).toBeGreaterThan(base);
+});
+
 test('every address in the map is a file this build wrote', async () => {
   for (const [specifier, address] of Object.entries(mapOf(html))) {
-    expect(address, specifier).toMatch(/^\/[\w./-]+\.js$/);
-    const found = await stat(join(out, address.slice(1)));
+    expect(address, specifier).toMatch(/^\.\/[\w./-]+\.js$/);
+    const found = await stat(join(out, address.slice(2)));
     expect(found.isFile(), `${specifier} at ${address}`).toBe(true);
   }
 });

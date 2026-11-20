@@ -14,6 +14,7 @@
   picture leaves a screen reader with nothing to read.
 -->
 <script lang="ts">
+  import { withBase } from '../../router/base-path';
   import { declaredModels } from './declared';
   import { printerModelName } from './names';
   import { printerArtworkFile, type PrinterIconProps } from './types';
@@ -48,7 +49,11 @@
 
   // `artwork.test.ts` reads the folder and fails when a model's file is
   // missing.
-  const source = $derived(drawing ?? `${base}/${printerArtworkFile(model)}`);
+  // Both are paths from the root, moved under the prefix a reverse proxy
+  // serves the app under (base-path.ts).
+  const source = $derived(
+    withBase(drawing ?? `${base}/${printerArtworkFile(model)}`),
+  );
 </script>
 
 <img

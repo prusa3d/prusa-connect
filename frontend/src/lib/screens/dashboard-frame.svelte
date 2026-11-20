@@ -10,6 +10,7 @@
 <script lang="ts">
   import { DashboardEditor, SharedTelemetry } from '@prusa/connect-ui/data';
   import type * as Dashboard from '@prusa/connect-ui/dashboard';
+  import { withBase } from '@prusa/connect-ui/router';
   import { onDestroy, onMount } from 'svelte';
 
   import { client } from '../client';
@@ -74,7 +75,7 @@
         ctx.go(on ? `${ctx.path}?kiosk=1` : ctx.path, { replace: true });
       },
       link: (next, wall) =>
-        `${window.location.origin}${dashboardHref(next)}${wall ? '?kiosk=1' : ''}`,
+        `${window.location.origin}${withBase(dashboardHref(next))}${wall ? '?kiosk=1' : ''}`,
       home: () => {
         homeVisits += 1;
         ctx.go(PATHS.dashboards, { replace: true });

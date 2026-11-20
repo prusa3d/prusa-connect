@@ -20,7 +20,7 @@ import (
 func TestTheAppIsMountedOnlyWhereTheConfigurationAsksForIt(t *testing.T) {
 	t.Parallel()
 
-	_, carried := httpapi.AppMount()
+	_, carried := httpapi.AppMount(httpapi.AppOptions{})
 
 	beside := []httpapi.Mount{{Pattern: "/p/ws", Handler: nil, Reason: "a device wire"}}
 
@@ -28,8 +28,8 @@ func TestTheAppIsMountedOnlyWhereTheConfigurationAsksForIt(t *testing.T) {
 	off := on
 	off.Enabled = new(false)
 
-	mountedOn, stateOn := withCoreApp(beside, on)
-	mountedOff, stateOff := withCoreApp(beside, off)
+	mountedOn, stateOn := withCoreApp(beside, on, nil)
+	mountedOff, stateOff := withCoreApp(beside, off, nil)
 
 	require.Len(t, mountedOff, len(beside), "the app was mounted on a deployment that switched it off")
 

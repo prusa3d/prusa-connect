@@ -13,6 +13,12 @@ import { importMap } from './vite/import-map.ts';
 export default defineConfig({
   plugins: [importMap(), tailwindcss(), svelte()],
 
+  // The build writes every address relative, and the entry document's
+  // `<base>` element says what they are relative to: the root, or the path
+  // prefix a reverse proxy serves the app under. Vite's dev server reads a
+  // relative base as the root.
+  base: './',
+
   // The component library's built entry points are scanned as well as the
   // document, so the dependency optimizer sees what the library imports before
   // anything runs. `importMap()` excludes the library from pre-bundling, and

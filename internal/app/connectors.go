@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"slices"
 	"strings"
 
@@ -805,8 +806,10 @@ func withPrinterAdmission(settings httpapi.AppSettings, tables []admissionTable)
 // and then to this server's own refusal, which is also what a build carrying
 // no app answers there. A deployment that puts its own page in front of this
 // API needs that.
-func withCoreApp(mounts []httpapi.Mount, frontend config.Frontend) ([]httpapi.Mount, string) {
-	app, carried := httpapi.AppMount()
+func withCoreApp(
+	mounts []httpapi.Mount, frontend config.Frontend, trusted []netip.Prefix,
+) ([]httpapi.Mount, string) {
+	app, carried := httpapi.AppMount(httpapi.AppOptions{TrustedProxies: trusted})
 	if !carried {
 		return mounts, httpapi.AppAbsent
 	}

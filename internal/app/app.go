@@ -534,7 +534,16 @@ func serveOver(
 	// Where the web app stands, decided once: this build either carries it or
 	// does not, and core.frontend.enabled was read from the file at load. The
 	// readiness report and the startup line below both say the same word.
-	mounts, appState := withCoreApp(built.mounts, core.Frontend)
+	// The networks a reverse proxy reaches this server from. The login limit
+	// reads the client's address through them, and the web app takes the path
+	// prefix a proxy serves it under only from them. Validate has already
+	// refused a value this cannot read.
+	trusted, err := core.TrustedPrefixes()
+	if err != nil {
+		return err
+	}
+
+	mounts, appState := withCoreApp(built.mounts, core.Frontend, trusted)
 
 	// What this server tells the local network about itself. It is built here
 	// and started in listen, because the record names the port bind was
@@ -571,15 +580,6 @@ func serveOver(
 	defer clock.stop()
 
 	probes := readiness{store: store, host: supervision.host, app: appState, announcer: announcer}
-
-	// The limit on login attempts, which the credential store cannot enforce for
-	// itself: it is handed a username and a password, and a limit that counts
-	// needs to know who is asking. Validate has already refused a value this
-	// cannot read.
-	trusted, err := core.TrustedPrefixes()
-	if err != nil {
-		return err
-	}
 
 	// The periodic capture, so a job can be replayed with pictures later. It
 	// records nothing unless a camera's declaration switches it on. Its

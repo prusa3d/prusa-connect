@@ -57,7 +57,7 @@ const appMountReason = "the core's own app, compiled into the full build and ser
 // A build without the app returns false and not a mount that answers 404.
 // With no mount the root falls through to a module's root mount and then to
 // this server's own refusal.
-func AppMount() (Mount, bool) {
+func AppMount(opts AppOptions) (Mount, bool) {
 	files, ok := appBundle()
 	if !ok {
 		return Mount{}, false
@@ -65,7 +65,7 @@ func AppMount() (Mount, bool) {
 
 	return Mount{
 		Pattern: rootCatchAll,
-		Handler: AppHandler(files),
+		Handler: AppHandlerWith(files, opts),
 		Reason:  appMountReason,
 	}, true
 }
@@ -82,8 +82,20 @@ func AppMount() (Mount, bool) {
 // it reaches the router. That wrapper refuses a request that is not a
 // navigation, and this handler is reached only through it.
 func AppHandler(files fs.FS) http.Handler {
-	etags := sync.OnceValue(func() appETags { return appETagsOf(appDigest(files)) })
+	return AppHandlerWith(files, AppOptions{})
+}
+
+// AppHandlerWith is AppHandler with the options of a deployment. A declared
+// proxy may then serve the app under a path prefix (appprefix.go).
+func AppHandlerWith(files fs.FS, opts AppOptions) http.Handler {
+	digest := sync.OnceValue(func() string { return appDigest(files) })
+	etags := sync.OnceValue(func() appETags { return appETagsOf(digest()) })
 	slots := make(chan struct{}, appDecompressSlots)
+
+	var entry func() ([]byte, error)
+	if found, err := appFileStored(files, appEntry); err == nil && found.name != "" {
+		entry = appEntryDocument(files, found)
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// A trailing slash is how a browser writes a route's directory form,
@@ -115,6 +127,10 @@ func AppHandler(files fs.FS) http.Handler {
 		if served.name == "" {
 			notFound(w, r)
 
+			return
+		}
+
+		if served.name == appEntry && entry != nil && servedUnderPrefix(w, r, opts, entry, digest) {
 			return
 		}
 
