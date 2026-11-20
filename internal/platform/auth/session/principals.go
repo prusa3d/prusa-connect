@@ -156,9 +156,19 @@ func Require(
 	return cred, nil
 }
 
+// APIKeyHeader carries a credential this server minted, for a client that
+// cannot send an Authorization header with a bearer token. PrusaSlicer 2 sends
+// the API key of a PrusaLink printer in it (ADR-20261119-w4q). A browser sends
+// it to another site only after a CORS preflight, so a page on another site
+// cannot make a browser send it.
+const APIKeyHeader = "X-Api-Key" //nolint:gosec // a header name, not a credential
+
 // TokenFrom reads the credential a request carries. A Bearer header wins over
-// a cookie, so a caller holding both says which one it means, and the session
-// cookie wins over the Prusa Account one.
+// the API key header, and both win over a cookie, so a caller holding several
+// says which one it means. The session cookie wins over the Prusa Account one.
+//
+// The API key header is read only for a credential this server minted, with
+// its prefix. A token another issuer signed travels as a bearer token only.
 //
 // The Prusa Account cookie is admitted only for text shaped like a bearer
 // token. This server never sets that cookie, so a minted token found in it was
@@ -170,6 +180,10 @@ func TokenFrom(r *http.Request) auth.Token {
 		return auth.Token(strings.TrimSpace(header[len(bearerPrefix):]))
 	}
 
+	if key := auth.Token(strings.TrimSpace(r.Header.Get(APIKeyHeader))); isMinted(key) {
+		return key
+	}
+
 	if cookie, err := r.Cookie(CookieName); err == nil {
 		return auth.Token(cookie.Value)
 	}
@@ -179,6 +193,12 @@ func TokenFrom(r *http.Request) auth.Token {
 	}
 
 	return ""
+}
+
+// isMinted reports whether text is shaped like a credential this server
+// minted: it carries the token prefix.
+func isMinted(token auth.Token) bool {
+	return strings.HasPrefix(string(token), auth.Prefix)
 }
 
 // TransportOf reports which transport a request is.

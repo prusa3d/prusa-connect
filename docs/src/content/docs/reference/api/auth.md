@@ -28,6 +28,13 @@ accounts and other people's credentials takes `configure_resource` on the
 An app can ask a person for a token with a short code instead. See
 [scoped credentials and app pairing](../../scoped-credentials-and-app-pairing.md).
 
+A program sends its token as `Authorization: Bearer <token>`. A program
+that cannot set that header, such as PrusaSlicer 2 talking to a PrusaLink
+printer, sends the same token as `X-Api-Key: <token>`. The server reads it
+only for a token it minted itself, and a bearer header wins when a request
+carries both
+([ADR-20261119-w4q](../../../../../decisions/20261119-w4q-a-credential-this-server-minted-also-travels-in-x-api-key.md)).
+
 ## Which operation to call {#which-operation}
 
 | you want to | call |

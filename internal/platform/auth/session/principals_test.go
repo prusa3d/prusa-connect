@@ -78,6 +78,47 @@ func TestPrincipalResolvesASessionAndRefusesABrokerCredential(t *testing.T) {
 	}
 }
 
+// TestAnAPIKeyResolvesAsTheSameCredentialAsItsBearerToken is the API key
+// header of ADR-20261119-w4q: a client that cannot send a bearer token is
+// the same caller with the same credential, and a revoked or invented key is
+// refused as a bearer token is.
+func TestAnAPIKeyResolvesAsTheSameCredentialAsItsBearerToken(t *testing.T) {
+	t.Parallel()
+
+	store := auth.NewMemoryStore()
+	principals := NewPrincipals(auth.NewVerifier(store, nil), nil, streamPath)
+
+	apiToken, _, err := auth.IssueAPI(
+		t.Context(),
+		store,
+		auth.APISpec{Subject: "operator", Name: "slicer", Scopes: []string{"read"}},
+		time.Now(),
+	)
+	require.NoError(t, err)
+
+	invalid, _, _, err := auth.Mint()
+	require.NoError(t, err)
+
+	keyed := func(token auth.Token) *http.Request {
+		request := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
+		request.Header.Set(APIKeyHeader, string(token))
+
+		return request
+	}
+
+	byKey, err := principals.Resolve(keyed(apiToken))
+	require.NoError(t, err)
+
+	byBearer, err := principals.Resolve(requestWith(t, apiToken, false))
+	require.NoError(t, err)
+	require.Equal(t, byBearer.PublicID, byKey.PublicID)
+	require.Equal(t, byBearer.Subject, byKey.Subject)
+	require.Equal(t, byBearer.Scopes, byKey.Scopes)
+
+	_, err = principals.Resolve(keyed(invalid))
+	require.True(t, auth.Refused(err))
+}
+
 // TestABrokerCredentialIsRefusedInTheSameWordsAsRubbish compares the two
 // refusals field by field, which is the only way to know they are the same.
 func TestABrokerCredentialIsRefusedInTheSameWordsAsRubbish(t *testing.T) {
@@ -171,10 +212,17 @@ func TestRequireIsFailClosed(t *testing.T) {
 	})
 }
 
-// TestTokenFromReadsBothCarriers is the wire contract: a Bearer header for an
-// api credential and an HttpOnly cookie for a session one.
-func TestTokenFromReadsBothCarriers(t *testing.T) {
+// TestTokenFromReadsEveryCarrier is the wire contract: a Bearer header for an
+// api credential, the X-Api-Key header for a client that cannot send one, and
+// an HttpOnly cookie for a session one.
+func TestTokenFromReadsEveryCarrier(t *testing.T) {
 	t.Parallel()
+
+	// A token another issuer signed, and text of no credential's shape.
+	const (
+		signedJWT = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln"
+		shapeless = "0123456789abcdef"
+	)
 
 	cases := []struct {
 		name   string
@@ -204,6 +252,37 @@ func TestTokenFromReadsBothCarriers(t *testing.T) {
 				r.AddCookie(&http.Cookie{Name: CookieName, Value: "pcl_cookie"})
 			},
 			expect: "pcl_header",
+		},
+		{
+			name:   "api key",
+			set:    func(r *http.Request) { r.Header.Set(APIKeyHeader, "pcl_key") },
+			expect: "pcl_key",
+		},
+		{
+			name: "bearer wins over api key",
+			set: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer pcl_header")
+				r.Header.Set(APIKeyHeader, "pcl_key")
+			},
+			expect: "pcl_header",
+		},
+		{
+			name: "api key wins over cookie",
+			set: func(r *http.Request) {
+				r.Header.Set(APIKeyHeader, "pcl_key")
+				r.AddCookie(&http.Cookie{Name: CookieName, Value: "pcl_cookie"})
+			},
+			expect: "pcl_key",
+		},
+		{
+			name:   "an api key another issuer signed is not read",
+			set:    func(r *http.Request) { r.Header.Set(APIKeyHeader, signedJWT) },
+			expect: "",
+		},
+		{
+			name:   "an api key of another shape is not read",
+			set:    func(r *http.Request) { r.Header.Set(APIKeyHeader, shapeless) },
+			expect: "",
 		},
 		{
 			name:   "another scheme is not a token",
