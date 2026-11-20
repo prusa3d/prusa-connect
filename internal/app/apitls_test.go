@@ -1,7 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
+	"log/slog"
 	"os"
 	"testing"
 	"testing/synctest"
@@ -51,6 +54,34 @@ func TestARenewedAPICertificateIsServedWithoutARestart(t *testing.T) {
 		require.NotEqual(t, before, servedLeaf(t, api),
 			"the listener presents the renewed certificate once the poll has passed")
 	})
+}
+
+// TestTheAPIListenerNamesTheCertificateItServes reads the line an operator
+// checks after a renewal: which names the certificate covers and who issued
+// it, so a leftover self-signed certificate is told apart from the renewed one.
+func TestTheAPIListenerNamesTheCertificateItServes(t *testing.T) {
+	t.Parallel()
+
+	pki := issue(t, t.TempDir())
+
+	var out bytes.Buffer
+
+	_, err := apiTLS(t.Context(), slog.New(slog.NewJSONHandler(&out, nil)),
+		config.TLS{Certificate: pki.certificate, Key: pki.key})
+	require.NoError(t, err)
+
+	var line struct {
+		Msg         string   `json:"msg"`
+		DNSNames    []string `json:"dns_names"`
+		IPAddresses []string `json:"ip_addresses"`
+		IssuedBy    string   `json:"issued_by"`
+	}
+
+	require.NoError(t, json.Unmarshal(bytes.SplitN(out.Bytes(), []byte("\n"), 2)[0], &line))
+	require.Equal(t, "the API listener serves TLS", line.Msg)
+	require.Equal(t, []string{printerName, "127.0.0.1"}, line.DNSNames)
+	require.Equal(t, []string{"127.0.0.1"}, line.IPAddresses)
+	require.Equal(t, "CN=Prusa Connect Test Root CA", line.IssuedBy)
 }
 
 // servedLeaf is the DER of the leaf the listener answers a ClientHello with.

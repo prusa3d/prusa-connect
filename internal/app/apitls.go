@@ -67,9 +67,14 @@ func loadAPIKeypair(
 		return tls.Certificate{}, nil, fmt.Errorf("%w: core.api.tls.certificate is %q", err, cfg.Certificate)
 	}
 
+	// The names and the issuer tell a renewal apart from a leftover
+	// certificate. The keys are the ones the device listener's line uses.
 	logger.InfoContext(ctx, "the API listener serves TLS",
 		"certificate", cfg.Certificate, "min_version", "1.3",
-		"not_after", leaf.NotAfter.Format("2006-01-02"))
+		"dns_names", leaf.DNSNames,
+		"ip_addresses", leaf.IPAddresses,
+		"not_after", leaf.NotAfter.Format("2006-01-02"),
+		"issued_by", leaf.Issuer.String())
 
 	warnAboutExpiry(ctx, logger, "core.api.tls.certificate", cfg.Certificate, leaf)
 
