@@ -10,8 +10,10 @@
   A row says what the module is, how far the marketplace vouches for it, who
   publishes it, which release is on offer and which one runs here, where it
   comes from and what state it is in. The act its state calls for sits at the
-  end of the row. The trust badge sits beside the name, so it is read at every
-  width, in the table and in the stacked rows alike.
+  end of the row. The trust mark is an icon in a column of its own before the
+  name, and its tooltip says what the mark means. In the stacked rows it sits
+  with the other values. The source badges are all as wide as the widest one,
+  so the column reads as one straight line.
 
   The words of a row's switch, such as what the module does now and why the
   switch is locked, sit beside the switch when the state column holds it, and
@@ -46,6 +48,10 @@
     TableHead,
     TableHeader,
     TableRow,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
   } from '@prusa/connect-ui/primitives';
 
   import { APP_NAMESPACE } from '../../i18n';
@@ -97,16 +103,11 @@
     community: 'app.settings.extensions.offer.trust.community',
   };
 
-  // The colour says how far the page vouches for a module: green for Prusa
-  // Research's own, blue for a reviewed one, red for one nobody reviewed. The
-  // brand fill stays with Install, the one thing to press on a row. Each
-  // level has its own icon too, so the colour is never the only sign.
-  const TRUST_VARIANT: Readonly<
-    Record<string, 'success' | 'info' | 'destructive'>
-  > = {
-    official: 'success',
-    verified: 'info',
-    community: 'destructive',
+  // What each mark means, said in the tooltip of the trust icon.
+  const TRUST_NOTE_KEY: Readonly<Record<string, string>> = {
+    official: 'app.settings.extensions.offer.trust.officialNote',
+    verified: 'app.settings.extensions.offer.trust.verifiedNote',
+    community: 'app.settings.extensions.offer.trust.communityNote',
   };
 
   // Only an installed module has a detail page to open.
@@ -207,7 +208,7 @@
 {/snippet}
 
 {#snippet sourceBadge(row: ExtensionRow)}
-  <Badge variant="outline" size="plain">
+  <Badge variant="outline" size="plain" class="w-full">
     {#if row.source === 'marketplace'}
       <StoreIcon aria-hidden="true" />
     {:else if row.source === 'local'}
@@ -227,23 +228,52 @@
   {/if}
 {/snippet}
 
+<!-- The mark is a bare icon. Its colour says how far the page vouches for a
+     module: green for Prusa Research's own, blue for a reviewed one, red for
+     one nobody reviewed. Each level has its own icon too, so the colour is
+     never the only sign. Its name is the accessible label, and the tooltip
+     says what the mark means. The icon takes focus, so a keyboard reader can
+     open the tooltip too. -->
 {#snippet trustBadge(row: ExtensionRow)}
   {@const trust = trustOf(row)}
+  {@const noteKey = TRUST_NOTE_KEY[row.trust ?? '']}
   {#if trust !== undefined}
-    <Badge
-      variant={TRUST_VARIANT[row.trust ?? ''] ?? 'info'}
-      data-part="trust"
-      data-trust={row.trust}
-    >
-      {#if row.trust === 'official'}
-        <BadgeCheckIcon aria-hidden="true" />
-      {:else if row.trust === 'verified'}
-        <ShieldCheckIcon aria-hidden="true" />
-      {:else if row.trust === 'community'}
-        <ShieldAlertIcon aria-hidden="true" />
-      {/if}
-      {trust}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger>
+        {#snippet child({ props })}
+          <!-- Nothing happens on a press, so the mark is an image and not a
+               button. It still takes focus, so the tooltip opens from the
+               keyboard. -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <span
+            {...props}
+            tabindex={0}
+            role="img"
+            class="inline-flex rounded-sm align-middle focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+            aria-label={trust}
+            data-part="trust"
+            data-trust={row.trust}
+          >
+            {#if row.trust === 'official'}
+              <BadgeCheckIcon aria-hidden="true" class="size-4 text-success" />
+            {:else if row.trust === 'verified'}
+              <ShieldCheckIcon aria-hidden="true" class="size-4 text-info" />
+            {:else if row.trust === 'community'}
+              <ShieldAlertIcon
+                aria-hidden="true"
+                class="size-4 text-destructive"
+              />
+            {/if}
+          </span>
+        {/snippet}
+      </TooltipTrigger>
+      <TooltipContent>
+        <span class="font-medium">{trust}</span>
+        {#if noteKey !== undefined}
+          <span class="block">{t(noteKey)}</span>
+        {/if}
+      </TooltipContent>
+    </Tooltip>
   {/if}
 {/snippet}
 
@@ -296,6 +326,10 @@
     </TableCaption>
     <TableHeader>
       <TableRow>
+        <TableHead class="w-px pe-0">
+          <span class="sr-only">{t('app.settings.extensions.facet.trust')}</span
+          >
+        </TableHead>
         {@render heading(
           t('app.settings.extensions.column.module'),
           'title',
@@ -319,7 +353,7 @@
           {@render heading(
             t('app.settings.extensions.column.source'),
             'source',
-            'table-cell w-1/8',
+            'table-cell w-px',
           )}
         {/if}
         {#if shows('state')}
@@ -351,6 +385,9 @@
           class="data-highlighted:bg-accent"
           aria-busy={catalogue.acting === row.module}
         >
+          <TableCell class="w-px pe-0" data-part="trust-cell">
+            {@render trustBadge(row)}
+          </TableCell>
           <TableCell class="max-w-md">
             <!-- A table cell keeps to one line, and white-space is inherited,
                  so the content says it may wrap. The summary keeps to one line. -->
@@ -370,7 +407,6 @@
                     data-part="module-title">{row.title}</span
                   >
                 {/if}
-                {@render trustBadge(row)}
                 {@render betaBadge(row)}
                 {@render marketplaceLink(row)}
               </span>
@@ -418,7 +454,7 @@
             </TableCell>
           {/if}
           {#if shows('source')}
-            <TableCell class="table-cell">
+            <TableCell class="table-cell w-px">
               {@render sourceBadge(row)}
             </TableCell>
           {/if}
@@ -491,11 +527,13 @@
   </RowList>
 {/snippet}
 
-<div class="@container/extensions">
-  {#if view === 'table'}
-    <div class="hidden @3xl/extensions:block">{@render table()}</div>
-    <div class="@3xl/extensions:hidden">{@render stacked()}</div>
-  {:else}
-    {@render stacked()}
-  {/if}
-</div>
+<TooltipProvider delayDuration={300}>
+  <div class="@container/extensions">
+    {#if view === 'table'}
+      <div class="hidden @3xl/extensions:block">{@render table()}</div>
+      <div class="@3xl/extensions:hidden">{@render stacked()}</div>
+    {:else}
+      {@render stacked()}
+    {/if}
+  </div>
+</TooltipProvider>
