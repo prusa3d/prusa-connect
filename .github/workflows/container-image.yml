@@ -112,7 +112,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # The same values the release binaries are built with.
+      # The same values the release binaries are built with. EXTRA_BUILD_TAGS
+      # is the tag list of the full binary in release.yml, without `full`,
+      # which the Dockerfile adds itself. The image then reads every
+      # configuration that binary reads, and a Postgres database is one of them.
       - name: Gather the build arguments
         id: args
         env:
@@ -127,6 +130,7 @@ jobs:
             echo "BUILD_VERSION=$VERSION"
             echo "DOCS_URL=$DOCS_URL"
             echo "UPGRADE_PUBLIC_KEYS=$UPGRADE_PUBLIC_KEYS"
+            echo "EXTRA_BUILD_TAGS=diagnostics observability postgres"
             echo "ARGS"
           } >> "$GITHUB_OUTPUT"
 

@@ -34,11 +34,11 @@ import (
 // TagSets is every tag set the build recipes compile under, by name.
 //
 //	untagged       no tags at all: plain code, and the only set that is not built
-//	build          what `make build` computes from CONFIG_FILE, which is the image
+//	build          what `make build` computes from CONFIG_FILE, and a plain `docker build` of the image
 //	build-minimal  the minimal variant of the same
 //	build-ci       FULL_TAGS, the widest set, which `make build-ci` and the tests use
 //	build-printer  what `make build-printer` compiles, from PRINTER_TAGS and PRINTER_CONFIG
-//	release        the list the cross-architecture release binaries are built with
+//	release        the list the cross-architecture release binaries are built with, and the published image
 //
 // The answer is computed once per process: it shells out to the project's own
 // detector, and several gates ask for it.
@@ -98,6 +98,23 @@ func readTagSets(root string) (map[string]string, error) {
 // assignmentFields is the variable name and the operator that start a Makefile
 // assignment.
 const assignmentFields = 2
+
+// ImageTags is the tag set the published image compiles under. The Dockerfile
+// builds with `full` plus what detect-build-tags reports for the shipping
+// configuration with the extra tags the workflow passes in, so this runs that
+// same detector over those same inputs.
+func ImageTags(root, extra string) (string, error) {
+	cmd := exec.CommandContext(context.Background(), "go", "run", "./cmd/detect-build-tags",
+		"--config", "config/config.yaml", "--variant", "full", "--extra", extra)
+	cmd.Dir = root
+
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("detect-build-tags --variant full --extra %q: %w%s", extra, err, StderrOf(err))
+	}
+
+	return withVariant("full", strings.TrimSpace(string(out))), nil
+}
 
 // printerTags is the tag set `make build-printer` compiles under: full,
 // printer, every tag the Makefile adds to PRINTER_TAGS, and the tags the
