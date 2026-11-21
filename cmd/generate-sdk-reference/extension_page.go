@@ -445,6 +445,11 @@ func approvals(m manifest.Manifest) []string {
 		lines = append(lines, "asking what a person may do while that person is not using it")
 	}
 
+	if len(m.AllowedOrigins) > 0 {
+		lines = append(lines, "pages of "+codeList(m.AllowedOrigins)+
+			" to call the API from a browser while it is switched on, approved at install")
+	}
+
 	if len(m.Calls) > 0 {
 		lines = append(lines, "calls to the routes of "+codeList(m.Calls))
 	}

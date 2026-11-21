@@ -95,6 +95,7 @@ type marketplaceRelease struct {
 	CheckAbsentPeople bool                `json:"check_absent_people"`
 	ListPeople        bool                `json:"list_people"`
 	Calls             []string            `json:"calls"`
+	AllowedOrigins    []string            `json:"allowed_origins"`
 	Listen            []install.ListenAsk `json:"listen"`
 	Data              bool                `json:"data"`
 	Database          bool                `json:"database"`
@@ -211,6 +212,7 @@ func (r marketplaceRelease) asks() install.ModuleAsks {
 		Listen:            slices.Clone(r.Listen),
 		Data:              r.Data,
 		Database:          r.Database,
+		AllowedOrigins:    slices.Clone(r.AllowedOrigins),
 	}
 }
 
@@ -582,6 +584,7 @@ func (c *marketplaceCatalogue) offerOf(row marketplaceModule) (httpapi.ModuleOff
 		CheckAbsentPeople: row.Latest.CheckAbsentPeople,
 		ListPeople:        row.Latest.ListPeople,
 		Calls:             row.Latest.Calls,
+		AllowedOrigins:    row.Latest.AllowedOrigins,
 		Listen:            resource.RequestsOf(row.Latest.asks()).Listen,
 		Data:              row.Latest.Data,
 		Database:          row.Latest.Database,

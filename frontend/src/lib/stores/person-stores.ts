@@ -7,6 +7,7 @@
 // with the rest.
 import type { PrusaConnect } from '@prusa/connect';
 import {
+  AllowedOrigins,
   Accounts,
   AppPairingReview,
   Cameras,
@@ -88,6 +89,8 @@ export interface PersonStores {
   readonly discovery: DiscoveryVisibility;
   /** Whether this server answers the time on the local network. */
   readonly timeServer: TimeServerSwitch;
+  /** The browser origins that may call this server. */
+  readonly allowedOrigins: AllowedOrigins;
   /** Whether this server is ready, as far as this person may see. */
   readonly health: ServerHealth;
   /** What the bell lists while the app is open. */
@@ -155,6 +158,7 @@ export const personStores = (
     nearby: new NearbyPrinters(client),
     discovery: new DiscoveryVisibility(client),
     timeServer: new TimeServerSwitch(client),
+    allowedOrigins: new AllowedOrigins(client),
     health: new ServerHealth(client),
     notices: new Notices({ onNotice: announceNotice, ...notices }),
   };

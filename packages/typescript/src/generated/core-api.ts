@@ -32,6 +32,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/allowed-origins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The browser origins that may call this API
+         * @description Every origin a page may call this API from, other than this server's own, with where each comes from: core.api.allowed_origins in the configuration file, the list stored through set-allowed-origins, and each extension that is switched on and was granted an origin. It takes view_resource on the link resource kind, which every org viewer holds.
+         */
+        get: operations["list-allowed-origins"];
+        /**
+         * Replace the stored list of browser origins that may call this API
+         * @description Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
+         */
+        put: operations["set-allowed-origins"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/accounts": {
         parameters: {
             query?: never;
@@ -3456,6 +3480,23 @@ export interface components {
             /** @description The name this person logs in with, compared case-folded. */
             username: string;
         };
+        AllowedOrigin: {
+            /** @description The namespace of the extension the origin comes from. Absent unless the source is extension. The origin stays allowed while that extension is switched on, and leaves when it is switched off or removed. */
+            extension?: string;
+            /** @description The origin, as a browser writes it in its Origin header: a scheme and a host, with a port only when it is not the scheme's default. */
+            origin: string;
+            /**
+             * @description Where the origin comes from: file for core.api.allowed_origins in the configuration file, settings for the list this API stores, and extension for an extension that is switched on. Only a settings origin is changed through this API.
+             * @enum {string}
+             */
+            source: "file" | "settings" | "extension";
+            /** @description The name a person reads for that extension. Absent unless the source is extension. */
+            title?: string;
+        };
+        AllowedOriginsOutputBody: {
+            /** @description Every browser origin this server answers, sorted by source and then by origin. */
+            items: components["schemas"]["AllowedOrigin"][] | null;
+        };
         AppPairing: {
             /** @description The name the app gave itself. Nothing checks it, so the person decides whether to believe it. */
             app_name: string;
@@ -6062,6 +6103,8 @@ export interface components {
             source?: "detected" | "configured";
         };
         ModuleOffer: {
+            /** @description The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row. */
             author?: string;
             /** @description The namespaces of the other modules whose routes the release's manifest asks to call. */
@@ -6198,6 +6241,8 @@ export interface components {
             dependencies: components["schemas"]["ModulePlanned"][] | null;
         };
         ModulePlanned: {
+            /** @description The browser origins the release's manifest asks this server to answer, each an exact https origin. An install with approve lets a page served from one call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description Who answers for the module, where the index names one. It is the manifest's codeowner, copied into the index row. */
             author?: string;
             /** @description The namespaces of the other modules whose routes the release's manifest asks to call. */
@@ -6377,6 +6422,8 @@ export interface components {
             unused: components["schemas"]["ModuleUnused"][] | null;
         };
         ModuleRequests: {
+            /** @description The browser origins the module asks this server to answer, each an exact https origin. A page served from one may call the API from a browser while the module is switched on. */
+            allowed_origins?: string[];
             /** @description The namespaces of the other modules whose routes the module calls. */
             calls?: string[] | null;
             /** @description Whether the module may ask about a person it is not serving. */
@@ -7328,6 +7375,8 @@ export interface components {
             stops: components["schemas"]["ResourceStop"][];
         };
         ResourceModule: {
+            /** @description The browser origins this module adds to the ones the API answers. A page served from one may call the API from a browser while this instance is switched on. Absent when none is granted. */
+            allowed_origins?: string[];
             /** @description What the install granted: the permissions, events and records room the release asked for when an operator approved it. Absent for an install without approval, which leaves the module switched off; switching such a module on starts it with nothing granted. */
             asked?: components["schemas"]["ModuleRequests"];
             /**
@@ -7785,6 +7834,10 @@ export interface components {
             postgres_backup_ack_required?: boolean;
             /** @description The semantic version reported by this core binary. */
             version: string;
+        };
+        SetAllowedOriginsInputBody: {
+            /** @description The whole settings list, which replaces the stored one. Each entry is an exact origin such as https://slicer.example: a lowercase scheme and host, a port only when it is not the scheme's default, and nothing after the host. A wildcard is refused. An empty list stores none. */
+            origins: string[];
         };
         SetDefaultDashboardOutputBody: {
             /**
@@ -8431,6 +8484,161 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "list-allowed-origins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "origin": "https://dashboard.workshop.example",
+                     *           "source": "settings"
+                     *         },
+                     *         {
+                     *           "extension": "com.github.acme.slicer",
+                     *           "origin": "https://slicer.example",
+                     *           "source": "extension",
+                     *           "title": "Web slicer"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AllowedOriginsOutputBody"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "set-allowed-origins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "origins": [
+                 *         "https://dashboard.workshop.example"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["SetAllowedOriginsInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "origin": "https://dashboard.workshop.example",
+                     *           "source": "settings"
+                     *         },
+                     *         {
+                     *           "extension": "com.github.acme.slicer",
+                     *           "origin": "https://slicer.example",
+                     *           "source": "extension",
+                     *           "title": "Web slicer"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AllowedOriginsOutputBody"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

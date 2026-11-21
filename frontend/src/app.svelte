@@ -333,6 +333,9 @@
     get timeServer() {
       return person.timeServer;
     },
+    get allowedOrigins() {
+      return person.allowedOrigins;
+    },
     get health() {
       return person.health;
     },

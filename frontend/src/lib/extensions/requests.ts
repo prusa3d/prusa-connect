@@ -3,7 +3,7 @@
 // An index row and an install's `expect` carry the requests as fields. An
 // install's answer and a refusal carry them as lines in the server's own
 // words: `permission operate`, `check operate`, `permission check_absent_people`,
-// `permission list_people`, `call <namespace>`,
+// `permission list_people`, `call <namespace>`, `origin <origin>`,
 // `records 128 MiB`, `memory 192 MiB`, `event <endpoint> as <namespace>.<name>`,
 // `data directory`, `database of its own` and
 // `listen udp 13514 as <name> (<why>)`. A page reads
@@ -35,6 +35,8 @@ export type ModuleRequest =
   | { readonly kind: 'listPeople' }
   // A module whose routes this one calls (ADR-20261027-pq5).
   | { readonly kind: 'call'; readonly namespace: string }
+  // A site whose pages may call the server from a browser (ADR-20261119-6be).
+  | { readonly kind: 'origin'; readonly origin: string }
   | { readonly kind: 'records'; readonly mib: number }
   | { readonly kind: 'memory'; readonly mib: number }
   | { readonly kind: 'data' }
@@ -65,6 +67,7 @@ export const requestsOfOffer = (
         check_absent_people: offer.check_absent_people ?? false,
         ...listingPeople(offer.list_people),
         ...callsOf(offer.calls),
+        ...originsOf(offer.allowed_origins),
         records_mib: offer.records_mib ?? 0,
         ...memory(offer.memory_mib),
         ...portsAndData(offer.data, offer.listen, offer.database),
@@ -91,6 +94,13 @@ const callsOf = (
   calls: readonly string[] | null | undefined,
 ): Pick<ModuleRequests, 'calls'> =>
   (calls ?? []).length > 0 ? { calls: [...(calls ?? [])] } : {};
+
+// The origins asked for, written only when there are some, so a release that
+// asks for none sends the same expect it always did.
+const originsOf = (
+  origins: readonly string[] | null | undefined,
+): Pick<ModuleRequests, 'allowed_origins'> =>
+  (origins ?? []).length > 0 ? { allowed_origins: [...(origins ?? [])] } : {};
 
 // The memory recommendation, written only when there is one, so a release
 // that makes none sends the same expect it always did.
@@ -200,6 +210,7 @@ const MEMORY = /^memory (\d+) MiB$/u;
 const LISTEN = /^listen (udp|tcp) (\d+) as (\S+) \((.*)\)$/u;
 const EVENT = /^event (\S+) as (\S+)$/u;
 const CALL = /^call (\S+)$/u;
+const ORIGIN = /^origin (\S+)$/u;
 const CHECK = /^check (\S+)$/u;
 
 /** One line of the server's, read back into a request. */
@@ -223,6 +234,9 @@ export const requestOfLine = (
 
   const call = CALL.exec(text);
   if (call?.[1] !== undefined) return { kind: 'call', namespace: call[1] };
+
+  const origin = ORIGIN.exec(text);
+  if (origin?.[1] !== undefined) return { kind: 'origin', origin: origin[1] };
 
   if (text === DATA) return { kind: 'data' };
   if (text === DATABASE) return { kind: 'database' };
@@ -284,6 +298,7 @@ export const requestsOfLines = (
       | 'calls'
       | 'checks'
       | 'memory_mib'
+      | 'allowed_origins'
     >
   > = {
     permissions: [],
@@ -295,6 +310,7 @@ export const requestsOfLines = (
   let listPeople = false;
   let database = false;
   const calls: string[] = [];
+  const origins: string[] = [];
   const checks: string[] = [];
   let memoryMiB = 0;
   const listen: ModuleListen[] = [];
@@ -321,6 +337,9 @@ export const requestsOfLines = (
         break;
       case 'call':
         if (!calls.includes(request.namespace)) calls.push(request.namespace);
+        break;
+      case 'origin':
+        if (!origins.includes(request.origin)) origins.push(request.origin);
         break;
       case 'records':
         out.records_mib = Math.max(out.records_mib, request.mib);
@@ -354,6 +373,7 @@ export const requestsOfLines = (
     ...checksOf(checks),
     ...listingPeople(listPeople),
     ...callsOf(calls),
+    ...originsOf(origins),
     ...memory(memoryMiB),
     ...portsAndData(data, listen, database),
   };
@@ -373,6 +393,9 @@ export const mergeRequests = (
     (a.check_absent_people ?? false) || (b.check_absent_people ?? false),
   ...listingPeople((a.list_people ?? false) || (b.list_people ?? false)),
   ...callsOf([...new Set([...(a.calls ?? []), ...(b.calls ?? [])])]),
+  ...originsOf([
+    ...new Set([...(a.allowed_origins ?? []), ...(b.allowed_origins ?? [])]),
+  ]),
   records_mib: Math.max(a.records_mib ?? 0, b.records_mib ?? 0),
   ...memory(Math.max(a.memory_mib ?? 0, b.memory_mib ?? 0)),
   ...portsAndData(
@@ -387,7 +410,7 @@ export const mergeRequests = (
   ),
 });
 
-/** The requests as a list to draw, in a fixed order: permissions, checks, events, people, the list of people, room, memory, directory, database, ports. */
+/** The requests as a list to draw, in a fixed order: permissions, checks, events, people, the list of people, calls, origins, room, memory, directory, database, ports. */
 export const listRequests = (requests: ModuleRequests): ModuleRequest[] => [
   ...(requests.permissions ?? []).map((permission): ModuleRequest => ({
     kind: 'permission',
@@ -409,6 +432,10 @@ export const listRequests = (requests: ModuleRequests): ModuleRequest[] => [
   ...(requests.calls ?? []).map((namespace): ModuleRequest => ({
     kind: 'call',
     namespace,
+  })),
+  ...(requests.allowed_origins ?? []).map((origin): ModuleRequest => ({
+    kind: 'origin',
+    origin,
   })),
   ...((requests.records_mib ?? 0) > 0
     ? [

@@ -139,6 +139,27 @@ describe('a call to another module', () => {
   });
 });
 
+describe('a site whose pages may call the server', () => {
+  it('reads from its line, is sent back as expect and draws as one request', () => {
+    const requests = requestsOfLines(
+      ['origin https://slicer.example', 'origin https://slicer.example'],
+      undefined,
+    );
+
+    expect(requests.allowed_origins).toEqual(['https://slicer.example']);
+    expect(listRequests(requests)).toContainEqual({
+      kind: 'origin',
+      origin: 'https://slicer.example',
+    });
+  });
+
+  it('is left out of the expect of a release that asks for none', () => {
+    expect(
+      requestsOfLines(['permission observe'], undefined),
+    ).not.toHaveProperty('allowed_origins');
+  });
+});
+
 describe('two sets of requests together', () => {
   it('hold everything either holds, once', () => {
     expect(
@@ -325,6 +346,7 @@ describe('every kind of ask', () => {
     check_absent_people: true,
     list_people: true,
     calls: ['com.github.aux.other'],
+    allowed_origins: ['https://slicer.example'],
     records_mib: 16,
     memory_mib: 256,
     data: true,
@@ -350,6 +372,7 @@ describe('every kind of ask', () => {
       'permission check_absent_people',
       'permission list_people',
       'call com.github.aux.other',
+      'origin https://slicer.example',
       'records 16 MiB',
       'memory 256 MiB',
       'data directory',

@@ -178,6 +178,7 @@ func registerOperations(api huma.API, cfg Config, closing <-chan struct{}) {
 	registerLinks(api, cfg.Links)
 	registerDiscovery(api, cfg)
 	registerTimeServer(api, cfg)
+	registerAllowedOrigins(api, cfg)
 	registerGrants(api, cfg.Grants)
 	registerVerbGrants(api, cfg.Verbs)
 

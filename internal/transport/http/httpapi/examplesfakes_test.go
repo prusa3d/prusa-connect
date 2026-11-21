@@ -43,6 +43,10 @@ func exampleDataServer(t *testing.T) *Server {
 		described: hiddenWorkshopServer(),
 	}
 	cfg.TimeServer = &fakeTimeServer{enabled: true}
+	cfg.Origins = &fakeOrigins{
+		stored: []string{"https://dashboard.workshop.example"},
+		fixed:  workshopOrigins()[1:],
+	}
 	cfg.Grants = &exampleGrants{
 		fakeGrantStore: &fakeGrantStore{},
 		held:           tuplesOf(t, sampled[[]Grant](t, "list-grants", "items")),

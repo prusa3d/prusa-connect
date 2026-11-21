@@ -184,6 +184,7 @@ func TestEveryAskSurvivesEveryHop(t *testing.T) {
 		Listen:            []install.ListenAsk{{Name: "web", Network: "tcp", Port: 8080, Why: "serves the page"}},
 		Data:              true,
 		Database:          true,
+		AllowedOrigins:    []string{"https://slicer.example"},
 	}
 
 	allType := reflect.TypeOf(all)

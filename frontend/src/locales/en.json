@@ -250,6 +250,7 @@
   "app.settings.extensions.request.listPeople": "May list the people this server holds, with their names.",
   "app.settings.extensions.request.check": "May ask whether a person may {permission}, and never does it itself.",
   "app.settings.extensions.request.call": "May call the routes of the module {namespace}.",
+  "app.settings.extensions.request.origin": "Pages of {origin} may call this server from a browser, with the rights of the person who opens them, while the extension is switched on.",
   "app.settings.extensions.request.data": "Its own data folder on this server: module-data/{instance}, beside the modules folder. Removing the extension keeps this folder.",
   "app.settings.extensions.request.database": "A database of its own, for the data it keeps.",
   "app.settings.extensions.request.event": "Publishes {name}",

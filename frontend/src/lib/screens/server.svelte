@@ -19,7 +19,7 @@
 
   import { restartAllowed } from '../restart-access';
   import { APP_NAMESPACE } from '../i18n';
-  import { PATHS } from '../routes';
+  import { extensionDetailHref, PATHS } from '../routes';
   import type { AppContext } from '../screens';
   import NotFound from './not-found.svelte';
 
@@ -31,6 +31,7 @@
   const maintenance = $derived(ctx.maintenance);
   const discovery = $derived(ctx.discovery);
   const timeServer = $derived(ctx.timeServer);
+  const allowedOrigins = $derived(ctx.allowedOrigins);
   const restart = $derived(ctx.restart);
   let confirming = $state(false);
   const tabOf = (path: string): ServerSettingsTab => {
@@ -74,6 +75,10 @@
 
   $effect(() => {
     if (active === 'network') void timeServer.load();
+  });
+
+  $effect(() => {
+    if (active === 'network') void allowedOrigins.load();
   });
 </script>
 
@@ -127,6 +132,10 @@
         <SettingsNetworkScreen
           source={discovery}
           {timeServer}
+          origins={allowedOrigins}
+          extensionHref={ctx.settings.modules
+            ? (namespace: string) => extensionDetailHref(namespace)
+            : undefined}
           docsHref={ctx.settings.documentation}
         />
       {:else}

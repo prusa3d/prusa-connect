@@ -50,6 +50,7 @@ export {
 } from './device-detail.svelte';
 export { DiscoveryVisibility } from './discovery-visibility.svelte';
 export { TimeServerSwitch } from './time-server.svelte';
+export { AllowedOrigins } from './allowed-origins.svelte';
 export { DeviceFacts, FACTS_PAGE_LIMIT } from './device-facts.svelte';
 export {
   DeviceHistory,
@@ -250,6 +251,10 @@ export {
   readDeviceGrants,
   readSubjectGrants,
 } from './services/grants';
+export {
+  type AllowedOrigin,
+  type AllowedOriginsClient,
+} from './services/origins';
 export {
   type DiscoveryClient,
   type NearbyPrinter,

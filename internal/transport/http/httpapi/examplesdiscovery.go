@@ -35,6 +35,13 @@ func discoveryExamples() map[string]operationExample {
 			Response: workshopTimeServer(),
 		},
 
+		"list-allowed-origins": {Response: map[string]any{"items": workshopOrigins()}},
+
+		"set-allowed-origins": {
+			Request:  map[string]any{"origins": []string{"https://dashboard.workshop.example"}},
+			Response: map[string]any{"items": workshopOrigins()},
+		},
+
 		"set-discovery-visibility": {
 			Request:  map[string]any{"hidden": true},
 			Response: hiddenWorkshopServer(),
@@ -53,6 +60,19 @@ func hiddenWorkshopServer() Visibility {
 		Port:         8080,
 		Services:     []string{"_prusalink._tcp", "_prusa-connect._tcp"},
 		Addresses:    []string{"192.168.1.10", "fe80::1c2b:3aff:fe4d:5e6f"},
+	}
+}
+
+// workshopOrigins is the pages the workshop lets call this server: its own
+// dashboard, which a person added in Settings, and the site of a slicer
+// extension that is switched on.
+func workshopOrigins() []AllowedOrigin {
+	return []AllowedOrigin{
+		{Origin: "https://dashboard.workshop.example", Source: OriginFromSettings},
+		{
+			Origin: "https://slicer.example", Source: OriginFromExtension,
+			Extension: "com.github.acme.slicer", Title: "Web slicer",
+		},
 	}
 }
 

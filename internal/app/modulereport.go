@@ -8,6 +8,7 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/app/resource"
 	"github.com/prusa3d/prusa-connect/internal/authz"
 	"github.com/prusa3d/prusa-connect/internal/kernel/ref"
+	"github.com/prusa3d/prusa-connect/sdk/manifest"
 )
 
 // moduleReport is what one install prints: where the files landed, what the
@@ -61,6 +62,9 @@ type moduleReport struct {
 	// checks is each action the install lets this one ask about for a person
 	// without taking it as itself.
 	checks []string
+	// origins is each browser origin the install lets this one add to the
+	// origins the API answers.
+	origins []string
 	// recordsMiB is the room an approved install granted the module's records,
 	// in mebibytes, and zero for one that kept the default.
 	recordsMiB int
@@ -143,6 +147,7 @@ func reportOf(
 	if approve {
 		out.calls = held.manifest.Calls
 		out.checks = held.manifest.Checks
+		out.origins = held.manifest.AllowedOrigins
 	}
 
 	if approve {
@@ -158,49 +163,63 @@ func reportOf(
 		return out
 	}
 
-	if held.manifest.Needs.Data {
-		out.requests = append(out.requests, dataRequest)
-	}
-
-	if held.manifest.Needs.Database {
-		out.requests = append(out.requests, databaseRequest)
-	}
-
-	for _, action := range held.manifest.Permissions {
-		out.requests = append(out.requests, "permission "+action)
-	}
-
-	for _, action := range held.manifest.Checks {
-		out.requests = append(out.requests, checkRequest(action))
-	}
-
-	if held.manifest.CheckAbsentPeople {
-		out.requests = append(out.requests, "permission "+checkAbsentPeople)
-	}
-
-	if held.manifest.ListPeople {
-		out.requests = append(out.requests, "permission "+listPeople)
-	}
-
-	for _, namespace := range held.manifest.Calls {
-		out.requests = append(out.requests, callRequest(namespace))
-	}
-
-	if held.manifest.RecordsMiB > 0 {
-		out.requests = append(out.requests, recordsRequest(held.manifest.RecordsMiB))
-	}
-
-	if held.manifest.Needs.MemoryMiB > 0 {
-		out.requests = append(out.requests, memoryRequest(held.manifest.Needs.MemoryMiB))
-	}
-
-	for endpoint, name := range held.manifest.Events {
-		out.requests = append(out.requests, "event "+endpoint+" as "+namespace+"."+name)
-	}
-
-	slices.Sort(out.requests)
+	out.requests = requestLines(held.manifest, namespace)
 
 	return out
+}
+
+// requestLines is every request of a manifest nobody approved, one line each
+// in the words requests uses, sorted.
+func requestLines(asking manifest.Manifest, namespace string) []string {
+	var lines []string
+
+	if asking.Needs.Data {
+		lines = append(lines, dataRequest)
+	}
+
+	if asking.Needs.Database {
+		lines = append(lines, databaseRequest)
+	}
+
+	for _, action := range asking.Permissions {
+		lines = append(lines, "permission "+action)
+	}
+
+	for _, action := range asking.Checks {
+		lines = append(lines, checkRequest(action))
+	}
+
+	if asking.CheckAbsentPeople {
+		lines = append(lines, "permission "+checkAbsentPeople)
+	}
+
+	if asking.ListPeople {
+		lines = append(lines, "permission "+listPeople)
+	}
+
+	for _, namespace := range asking.Calls {
+		lines = append(lines, callRequest(namespace))
+	}
+
+	for _, origin := range asking.AllowedOrigins {
+		lines = append(lines, originRequest(origin))
+	}
+
+	if asking.RecordsMiB > 0 {
+		lines = append(lines, recordsRequest(asking.RecordsMiB))
+	}
+
+	if asking.Needs.MemoryMiB > 0 {
+		lines = append(lines, memoryRequest(asking.Needs.MemoryMiB))
+	}
+
+	for endpoint, name := range asking.Events {
+		lines = append(lines, "event "+endpoint+" as "+namespace+"."+name)
+	}
+
+	slices.Sort(lines)
+
+	return lines
 }
 
 // memoryGranted is what `module add -approve` prints for the module's memory
@@ -273,6 +292,10 @@ func report(out io.Writer, held moduleReport) {
 
 	for _, namespace := range held.calls {
 		fmt.Fprintf(out, "  may call    the routes of %s (calls)\n", namespace)
+	}
+
+	for _, origin := range held.origins {
+		fmt.Fprintf(out, "  answers     pages of %s that call the API from a browser (allowed_origins)\n", origin)
 	}
 
 	if held.recordsMiB > 0 {

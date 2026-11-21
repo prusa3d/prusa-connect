@@ -474,6 +474,11 @@ type ModuleEntry struct {
 	// permission the operator took away stays away. Nil is a declaration
 	// installed without approve, or one that records no ask.
 	Asked *ModuleAsks `json:"asked,omitempty" yaml:"asked"`
+	// AllowedOrigins is the browser origins the operator let this module add
+	// to the ones the API answers, from its manifest's allowed_origins. The
+	// server answers them while the module is switched on, and they leave
+	// with the declaration. An approved install writes it.
+	AllowedOrigins []string `json:"allowed_origins,omitempty" yaml:"allowed_origins"`
 	// Channel is the marketplace channel the release came from, stable or
 	// beta, and empty for a release that did not come from a marketplace. An
 	// empty channel reads as stable.
@@ -483,8 +488,9 @@ type ModuleEntry struct {
 // ModuleAsks is what a module's manifest asks the operator for: the
 // permissions it takes as itself, the events it publishes, whether it may ask
 // about a person it is not serving, whether it may list the people, the room
-// for its records, the ports it listens on, whether it wants a data directory
-// and whether it wants a database of its own.
+// for its records, the ports it listens on, whether it wants a data directory,
+// whether it wants a database of its own, and the browser origins it wants
+// the API to answer.
 type ModuleAsks struct {
 	Permissions       []string          `json:"permissions,omitempty"         yaml:"permissions"`
 	Checks            []string          `json:"checks,omitempty"              yaml:"checks"`
@@ -497,6 +503,7 @@ type ModuleAsks struct {
 	Listen            []ListenAsk       `json:"listen,omitempty"              yaml:"listen"`
 	Data              bool              `json:"data,omitempty"                yaml:"data"`
 	Database          bool              `json:"database,omitempty"            yaml:"database"`
+	AllowedOrigins    []string          `json:"allowed_origins,omitempty"     yaml:"allowed_origins"`
 }
 
 // ListenAsk is one port a manifest asks for, as the declaration records the

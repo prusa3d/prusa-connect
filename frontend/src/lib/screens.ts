@@ -12,6 +12,7 @@ import type {
   DeviceModels,
   DeviceStates,
   DiscoveryVisibility,
+  AllowedOrigins,
   TimeServerSwitch,
   Fleet,
   FleetListing,
@@ -114,6 +115,7 @@ export interface AppContext {
   discovery: DiscoveryVisibility;
   /** Whether this server answers the time on its network. */
   timeServer: TimeServerSwitch;
+  allowedOrigins: AllowedOrigins;
   /** Whether this server is ready, and how the printers behind each connector stand. */
   health: ServerHealth;
   /** Signed core releases, the current update transaction and protected backups. */
