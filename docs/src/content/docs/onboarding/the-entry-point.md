@@ -235,7 +235,7 @@ once (`internal/connector/xbuddy/listener.go:350`).
 
 The third listener is the Prometheus exposition, and it is there for a
 different reason. `MetricsHandler`
-(`internal/transport/http/httpapi/server.go:616`) serves `/metrics` and no other
+(`internal/transport/http/httpapi/server.go:614`) serves `/metrics` and no other
 path, to a caller holding no credential. A collector running beside this server
 holds no account on it, so it can carry no grant. The address a deployment
 publishes is the boundary instead, which is how etcd, CoreDNS and ingress-nginx

@@ -1,14 +1,8 @@
 package httpapi
 
 import (
-	"errors"
 	"net/http"
 )
-
-// ErrWildcardOrigin reports a Config that allows every origin. The
-// configuration loader refuses the same value with a message naming the key;
-// this is the sealed constructor refusing it from any other caller.
-var ErrWildcardOrigin = errors.New("httpapi: Config.AllowedOrigins may not carry *")
 
 // What a cross-origin request may carry and what a client reads back. Both
 // lists are written out by hand, because the browser checks its preflight
@@ -49,11 +43,12 @@ const (
 //
 // The list is read for every request, because a person changes it in Settings
 // and an extension adds to it while the server runs. A list that is empty at
-// the time of a request sends nothing, Vary included.
-func corsMiddleware(origins allowedOrigins) func(http.Handler) http.Handler {
+// the time of a request sends nothing, Vary included, and so does a server
+// built with no list.
+func corsMiddleware(origins BrowserOrigins) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !origins.Any() {
+			if origins == nil || !origins.Any() {
 				next.ServeHTTP(w, r)
 
 				return
@@ -86,38 +81,6 @@ func corsMiddleware(origins allowedOrigins) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-// allowedOrigins is the allow-list as the middleware asks it.
-type allowedOrigins interface {
-	Any() bool
-	Allows(origin string) bool
-}
-
-// fixedOrigins is the allow-list of a server built with a list and no store.
-type fixedOrigins map[string]struct{}
-
-func (f fixedOrigins) Any() bool { return len(f) > 0 }
-
-func (f fixedOrigins) Allows(origin string) bool {
-	_, ok := f[origin]
-
-	return ok
-}
-
-// originsOf is the allow-list the middleware reads: the store when the
-// composition root wired one, else the fixed list.
-func originsOf(cfg Config) allowedOrigins {
-	if cfg.Origins != nil {
-		return cfg.Origins
-	}
-
-	fixed := make(fixedOrigins, len(cfg.AllowedOrigins))
-	for _, origin := range cfg.AllowedOrigins {
-		fixed[origin] = struct{}{}
-	}
-
-	return fixed
 }
 
 // isPreflight reports whether this is the browser asking before it sends,

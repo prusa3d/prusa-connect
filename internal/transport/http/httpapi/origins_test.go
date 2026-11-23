@@ -147,30 +147,28 @@ func TestAnAdministratorReplacesTheStoredOrigins(t *testing.T) {
 	require.Equal(t, []AllowedOrigin{extension}, listedOrigins(t, rec.Body.Bytes()))
 }
 
-func TestAServerWithNoOriginStoreListsItsFixedListAndRefusesAChange(t *testing.T) {
+func TestAServerWithNoOriginStoreListsNoneAndRefusesAChange(t *testing.T) {
 	t.Parallel()
 
 	built, err := New(Config{
-		Version:        "test",
-		Principals:     fixedPrincipal("user:admin"),
-		Resources:      seededStore(),
-		Presets:        seededPresets(),
-		Endpoints:      seededEndpoints(),
-		Grants:         &orgRoleGrants{admin: true},
-		Sessions:       newFakeSessions(),
-		Accounts:       &fakeAccounts{},
-		Readiness:      &fakeReadiness{report: readyReport()},
-		Devices:        noPrinters{},
-		Stores:         noStorages{},
-		Events:         noEvents{},
-		AllowedOrigins: []string{farmOrigin},
+		Version:    "test",
+		Principals: fixedPrincipal("user:admin"),
+		Resources:  seededStore(),
+		Presets:    seededPresets(),
+		Endpoints:  seededEndpoints(),
+		Grants:     &orgRoleGrants{admin: true},
+		Sessions:   newFakeSessions(),
+		Accounts:   &fakeAccounts{},
+		Readiness:  &fakeReadiness{report: readyReport()},
+		Devices:    noPrinters{},
+		Stores:     noStorages{},
+		Events:     noEvents{},
 	})
 	require.NoError(t, err)
 
 	rec := call(t, built.Handler(), http.MethodGet, allowedOriginsPath, "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, []AllowedOrigin{{Origin: farmOrigin, Source: OriginFromFile}},
-		listedOrigins(t, rec.Body.Bytes()))
+	require.Empty(t, listedOrigins(t, rec.Body.Bytes()))
 
 	rec = call(t, built.Handler(), http.MethodPut, allowedOriginsPath, `{"origins": []}`)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())

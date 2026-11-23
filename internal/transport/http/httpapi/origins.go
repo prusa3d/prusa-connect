@@ -109,17 +109,12 @@ func registerAllowedOrigins(api huma.API, cfg Config) {
 }
 
 // allowedOriginsAnswer stores the list when one is given and answers every
-// allowed origin. A server with no store answers what its Config was built
-// with, each from the file.
+// allowed origin. A server built with no list answers none.
 func allowedOriginsAnswer(ctx context.Context, cfg Config, set *[]string) (*allowedOriginsOutput, error) {
 	out := &allowedOriginsOutput{}
 	out.Body.Items = []AllowedOrigin{}
 
 	if cfg.Origins == nil {
-		for _, origin := range cfg.AllowedOrigins {
-			out.Body.Items = append(out.Body.Items, AllowedOrigin{Origin: origin, Source: OriginFromFile})
-		}
-
 		return out, nil
 	}
 

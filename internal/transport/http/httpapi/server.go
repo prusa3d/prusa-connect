@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"slices"
 	"sync"
 	"time"
 
@@ -186,18 +185,14 @@ type Config struct {
 	// value is a deployment that serves no app, which is what a caller reading
 	// it is told.
 	App AppSettings
-	// AllowedOrigins are the browser origins a page may call this API from,
-	// each exact and matched byte for byte against the Origin header. Empty
-	// sends no CORS header at all, so a page from another origin cannot read a
-	// response. A wildcard is refused by New: the API takes a credential, and a
-	// browser sends none to an origin that answers every page with *.
+	// Origins is the browser origins a page may call this API from, each
+	// matched byte for byte against the Origin header. The CORS answer reads it
+	// for every request, because a person and the extensions change it while
+	// the server runs. Nil answers no origin and stores no list, so a page
+	// from another origin cannot read a response.
 	//
 	// It applies to the API listener alone. The device listener serves wires a
 	// printer dials, and a printer is not a browser.
-	AllowedOrigins []string
-	// Origins is the allow-list a person and the extensions change while the
-	// server runs. When it is set the CORS answer reads it for every request
-	// and AllowedOrigins is not read. Nil serves AllowedOrigins as built.
 	Origins BrowserOrigins
 	// InsecureCookies drops the Secure attribute from the session cookie. It is
 	// set from the scheme of the redirect URI the issuer sends the browser back
@@ -514,15 +509,11 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
-	if slices.Contains(cfg.AllowedOrigins, "*") {
-		return nil, ErrWildcardOrigin
-	}
-
 	mux := chi.NewMux()
 	// First, and on this router only. A preflight is answered here before it
 	// is counted, traced or routed, and the device router never sees the
 	// allow-list; see corsMiddleware.
-	mux.Use(corsMiddleware(originsOf(cfg)))
+	mux.Use(corsMiddleware(cfg.Origins))
 	mux.Use(middlewareStack(cfg)...)
 	// Last of the router's own, so the deadline is the nearest bound to the
 	// handler and the refusal it leads to is recovered, counted and traced like

@@ -22,7 +22,12 @@ func corsServer(t *testing.T, origins ...string) *Server {
 	cfg := mountConfig([]Mount{
 		{Pattern: "/p/ws", Handler: mountedText("connector"), Reason: "a frozen device wire", Device: true},
 	})
-	cfg.AllowedOrigins = origins
+	fixed := &fakeOrigins{}
+	for _, origin := range origins {
+		fixed.fixed = append(fixed.fixed, AllowedOrigin{Origin: origin, Source: OriginFromFile})
+	}
+
+	cfg.Origins = fixed
 
 	server, err := New(cfg)
 	require.NoError(t, err)
@@ -138,19 +143,6 @@ func TestAPreflightFromAnOriginOffTheListAnswersAsBefore(t *testing.T) {
 		map[string]string{"Access-Control-Request-Method": http.MethodPut})
 	require.Equal(t, http.StatusMethodNotAllowed, rec.Code, "body: %s", rec.Body.String())
 	requireNoCORS(t, rec.Header())
-}
-
-// TestAWildcardOriginIsRefusedByTheConstructor is the sealed constructor's
-// half of a rule the configuration loader also holds: nothing builds a server
-// that answers every page.
-func TestAWildcardOriginIsRefusedByTheConstructor(t *testing.T) {
-	t.Parallel()
-
-	cfg := mountConfig(nil)
-	cfg.AllowedOrigins = []string{farmOrigin, "*"}
-
-	_, err := New(cfg)
-	require.ErrorIs(t, err, ErrWildcardOrigin)
 }
 
 // TestThePrinterListenerNeverSetsACORSHeader is the listener the allow-list
