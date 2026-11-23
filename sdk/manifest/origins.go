@@ -2,8 +2,11 @@ package manifest
 
 import (
 	"fmt"
+	"net/netip"
 	"net/url"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // MaxAllowedOrigins is how many origins one manifest may name under
@@ -35,8 +38,9 @@ func readAllowedOrigins(tree map[string]any) ([]string, error) {
 
 	for _, origin := range origins {
 		if !IsAllowedOrigin(origin) {
-			return nil, fmt.Errorf("%w: allowed_origins names %q, expected an exact https origin in lower case "+
-				"with no path and no default port, such as https://slicer.example", ErrInvalid, origin)
+			return nil, fmt.Errorf("%w: allowed_origins names %q, expected an exact https origin as a browser "+
+				"writes it: lower case, an ASCII host, no path and no default port, such as https://slicer.example",
+				ErrInvalid, origin)
 		}
 	}
 
@@ -57,5 +61,41 @@ func IsAllowedOrigin(origin string) bool {
 		return false
 	}
 
-	return parsed.Scheme+"://"+parsed.Host == origin && parsed.Port() != "443"
+	return parsed.Scheme+"://"+parsed.Host == origin && parsed.Port() != "443" && browserHost(parsed)
+}
+
+// browserHost reports whether the host and the port are in the form a browser
+// writes them in: an ASCII host (a browser sends a name in punycode), an IP
+// address in its shortest form, and a port as a plain number from 1 to 65535.
+// The core holds core.api.allowed_origins to the same form.
+func browserHost(parsed *url.URL) bool {
+	if strings.HasSuffix(parsed.Host, ":") {
+		return false
+	}
+
+	if port := parsed.Port(); port != "" {
+		number, err := strconv.Atoi(port)
+		if err != nil || number < 1 || number > 65535 || strconv.Itoa(number) != port {
+			return false
+		}
+	}
+
+	host := parsed.Hostname()
+	for i := range len(host) {
+		if host[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+
+	// A browser reads a host whose last label is a number as an IPv4 address,
+	// so 0x7f.1 reaches it as 127.0.0.1.
+	last := host[strings.LastIndexByte(host, '.')+1:]
+	if strings.HasPrefix(parsed.Host, "[") || strings.HasPrefix(last, "0x") ||
+		(last != "" && strings.Trim(last, "0123456789") == "") {
+		addr, err := netip.ParseAddr(host)
+
+		return err == nil && addr.Zone() == "" && addr.String() == host
+	}
+
+	return true
 }

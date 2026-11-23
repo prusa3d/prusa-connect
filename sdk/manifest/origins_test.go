@@ -79,7 +79,10 @@ func TestAllowedOriginsAreBounded(t *testing.T) {
 func TestAnOriginIsHeldToWhatABrowserSendsOverHTTPS(t *testing.T) {
 	t.Parallel()
 
-	for _, origin := range []string{"https://slicer.example", "https://slicer.example:8443"} {
+	for _, origin := range []string{
+		"https://slicer.example", "https://slicer.example:8443", "https://xn--bcher-kva.example",
+		"https://127.0.0.1", "https://[::1]:8443",
+	} {
 		if !manifest.IsAllowedOrigin(origin) {
 			t.Errorf("%q was refused", origin)
 		}
@@ -96,6 +99,15 @@ func TestAnOriginIsHeldToWhatABrowserSendsOverHTTPS(t *testing.T) {
 		"https://user@slicer.example",
 		"https://",
 		"slicer.example",
+		"https://slicer.example:",
+		"https://slicer.example:0443",
+		"https://slicer.example:08443",
+		"https://slicer.example:99999",
+		"https://slicer.example:0",
+		"https://bücher.example",
+		"https://[0:0::1]",
+		"https://0x7f.1",
+		"https://127.1",
 	} {
 		if manifest.IsAllowedOrigin(origin) {
 			t.Errorf("%q was taken", origin)
