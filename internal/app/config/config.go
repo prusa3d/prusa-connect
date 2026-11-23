@@ -346,9 +346,11 @@ type Listener struct {
 	// a local curl use.
 	TLS TLS `yaml:"tls"`
 	// AllowedOrigins are the browser origins a page may call this API from,
-	// each an exact origin such as https://printers.example. Empty is the default
-	// and sends no CORS header: only a page served from this server's own
-	// origin can call the API from a browser.
+	// each an exact origin such as https://printers.example. The server adds
+	// the list a person keeps in Settings and the origins of the extensions
+	// that are switched on. While all three are empty, which is the default,
+	// it sends no CORS header: only a page served from this server's own origin
+	// can call the API from a browser.
 	//
 	// A wildcard is refused. The API takes a credential, and a browser will
 	// not send one to an origin that answers every page with *, so the key

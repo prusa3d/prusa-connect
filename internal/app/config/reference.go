@@ -82,8 +82,8 @@ var Keys = map[string]Key{
 		See:       "certificates/",
 	},
 	"core.api.allowed_origins": {
-		Doc: "Browser origins that may call this API from a page this server did not serve itself. " +
-			"A wildcard is refused.",
+		Doc: "Browser origins that may call this API from a page this server did not serve. " +
+			"The Settings list and switched-on extensions add to it. A wildcard is refused.",
 		See: "using-the-api-from-a-page/",
 	},
 	"core.api.request_timeout": {

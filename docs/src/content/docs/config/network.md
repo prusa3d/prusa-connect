@@ -45,7 +45,7 @@ Every key has a working default, so a file with no `core:` block starts a server
 | key | type | default | required | what it does |
 |---|---|---|---|---|
 | <a id="key-core-api-addr"></a>`core.api.addr` | text | `:8080` | no | The host and port the HTTP API, the web app and the event stream are served on. |
-| <a id="key-core-api-allowed-origins"></a>`core.api.allowed_origins` | list of text | empty | no | Browser origins that may call this API from a page this server did not serve itself. A wildcard is refused. |
+| <a id="key-core-api-allowed-origins"></a>`core.api.allowed_origins` | list of text | empty | no | Browser origins that may call this API from a page this server did not serve. The Settings list and switched-on extensions add to it. A wildcard is refused. |
 | <a id="key-core-api-request-timeout"></a>`core.api.request_timeout` | duration | `30s` | no | How long one request may take before the server stops waiting for its own handler and answers 504. |
 | <a id="key-core-api-stream-timeout"></a>`core.api.stream_timeout` | duration | `6h` | no | The same limit for the routes that stream events or transfer a file. It may not be shorter than request_timeout. |
 | <a id="key-core-time-server-enabled"></a>`core.time_server.enabled` | true or false | `false` | no | Answer SNTP requests on UDP port 123 with this machine's clock, for devices on a network with no internet. The web app's switch wins once a person uses it. |
