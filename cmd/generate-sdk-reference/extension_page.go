@@ -454,18 +454,26 @@ func approvals(m manifest.Manifest) []string {
 		lines = append(lines, "calls to the routes of "+codeList(m.Calls))
 	}
 
-	if len(m.Routes.Public) > 0 {
-		public := make([]string, 0, len(m.Routes.Public))
-		for _, route := range m.Routes.Public {
+	return append(lines, routeApprovals(m.Routes)...)
+}
+
+// routeApprovals lists what the routes block asks for: the routes with no
+// caller, the staged routes and the request headers.
+func routeApprovals(routes manifest.Routes) []string {
+	var lines []string
+
+	if len(routes.Public) > 0 {
+		public := make([]string, 0, len(routes.Public))
+		for _, route := range routes.Public {
 			public = append(public, route.String())
 		}
 
 		lines = append(lines, "routes anybody may call without signing in: "+codeList(public))
 	}
 
-	if len(m.Routes.Staged) > 0 {
-		staged := make([]string, 0, len(m.Routes.Staged))
-		for _, route := range m.Routes.Staged {
+	if len(routes.Staged) > 0 {
+		staged := make([]string, 0, len(routes.Staged))
+		for _, route := range routes.Staged {
 			staged = append(staged, fmt.Sprintf("%s up to %d MiB", route.Route, route.MaxMiB))
 		}
 
@@ -473,9 +481,9 @@ func approvals(m manifest.Manifest) []string {
 			"with the largest body each asks for: "+codeList(staged))
 	}
 
-	if len(m.Routes.Headers) > 0 {
-		headers := make([]string, 0, len(m.Routes.Headers))
-		for _, header := range m.Routes.Headers {
+	if len(routes.Headers) > 0 {
+		headers := make([]string, 0, len(routes.Headers))
+		for _, header := range routes.Headers {
 			headers = append(headers, header.Name)
 		}
 
