@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/prusa3d/prusa-connect/internal/app/config/install"
 	"github.com/prusa3d/prusa-connect/internal/kernel/atomicfile"
@@ -27,7 +28,8 @@ import (
 // These functions check no version token. The token protects one file from
 // two writers at the same time, and the install command runs while the server
 // does not. A running core reads the overlay at its next start, and the
-// command says so when it finishes.
+// command says so when it finishes. A running server calls them too, from its
+// installer, and overlayWriting keeps them from overlapping its own writes.
 
 // InstallModule writes one module's declaration into the overlay, replacing
 // the declaration under that name, and returns what it wrote.
@@ -79,6 +81,9 @@ func InstallModule(
 		Source: SourceOverlay,
 	}
 
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
 	overlay, err := readOverlayFile(overlayPath)
 	if err != nil {
 		return Declaration{}, err
@@ -104,6 +109,9 @@ func InstallModule(
 // left is the module's own database that stays after the removal. It is
 // recorded in the same file write, and it is nil for a module granted none.
 func RemoveModule(overlayPath string, instance ref.Ref, left *LeftDatabase) (bool, error) {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
 	overlay, err := readOverlayFile(overlayPath)
 	if err != nil {
 		return false, err
@@ -134,6 +142,9 @@ func RemoveModule(overlayPath string, instance ref.Ref, left *LeftDatabase) (boo
 // left is the list of databases left behind as it was before the install. The
 // same write restores it.
 func RestoreModule(overlayPath string, declared Declaration, left []LeftDatabase) error {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
 	overlay, err := readOverlayFile(overlayPath)
 	if err != nil {
 		return err
@@ -163,6 +174,33 @@ func Installed(paths Paths) ([]Declaration, error) {
 	}
 
 	return out, nil
+}
+
+// overlayWriting makes one read and the write that follows it a single step
+// for every writer of the overlay in this process. The store holds its own
+// lock as well, but the install functions below run under the installer's
+// lock in a running server, and without this one an install and a settings
+// write that overlap would each write back the file as it was before the
+// other. A version token cannot replace it, because these functions take
+// none.
+var overlayWriting sync.Mutex
+
+// updateOverlay reads the overlay, applies change and writes the result as
+// one step. An error from change writes nothing. The caller holds s.mu.
+func (s *Store) updateOverlay(change func(*overlayFile) error) error {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
+	overlay, err := s.readOverlay()
+	if err != nil {
+		return err
+	}
+
+	if err = change(&overlay); err != nil {
+		return err
+	}
+
+	return s.writeOverlay(overlay)
 }
 
 // readOverlayFile reads the machine-owned file, and returns an empty overlay

@@ -82,6 +82,9 @@ func FileCameras(paths Paths) ([]FileCamera, []Failure, error) {
 // DropOverlayCameras takes the cameras out of the overlay, once the host holds
 // them.
 func DropOverlayCameras(paths Paths) error {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
 	read, err := readInputs(paths)
 	if err != nil {
 		return err

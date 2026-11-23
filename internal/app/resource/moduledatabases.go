@@ -104,6 +104,9 @@ func LeftDatabases(overlayPath string) ([]LeftDatabase, error) {
 // ForgetLeftDatabase removes one record from the overlay, after a purge, and
 // reports whether the overlay held it.
 func ForgetLeftDatabase(overlayPath string, forgotten LeftDatabase) (bool, error) {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
 	overlay, err := readOverlayFile(overlayPath)
 	if err != nil {
 		return false, err

@@ -80,18 +80,15 @@ func (s *Store) RecordSetupMode(mode string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		if overlay.Auth != nil && overlay.Auth.Mode != "" {
+			return fmt.Errorf("%w: %s", ErrSetupRecorded, overlay.Auth.Mode)
+		}
 
-	if overlay.Auth != nil && overlay.Auth.Mode != "" {
-		return fmt.Errorf("%w: %s", ErrSetupRecorded, overlay.Auth.Mode)
-	}
+		overlay.Auth = &overlayAuth{Mode: mode}
 
-	overlay.Auth = &overlayAuth{Mode: mode}
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // AdmissionMode returns how a new printer joins, as the overlay records it,
@@ -132,14 +129,11 @@ func (s *Store) RecordAdmission(mode string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		overlay.Admission = &overlayAdmission{Mode: mode}
 
-	overlay.Admission = &overlayAdmission{Mode: mode}
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // DiscoveryHidden returns the hidden setting the overlay records. recorded is
@@ -168,14 +162,11 @@ func (s *Store) RecordDiscoveryHidden(hidden bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		overlay.Discovery = &overlayDiscovery{Hidden: hidden}
 
-	overlay.Discovery = &overlayDiscovery{Hidden: hidden}
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // TimeServerEnabled returns the time server switch the overlay records.
@@ -203,14 +194,11 @@ func (s *Store) RecordTimeServerEnabled(enabled bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		overlay.TimeServer = &overlayTimeServer{Enabled: enabled}
 
-	overlay.TimeServer = &overlayTimeServer{Enabled: enabled}
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // readOverlay parses the machine-owned file from disk. An absent file is an

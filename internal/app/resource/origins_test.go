@@ -3,6 +3,7 @@ package resource_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -164,5 +165,53 @@ func TestADeclaredOriginNoInstallWritesRefusesItsInstance(t *testing.T) {
 			require.Len(t, doc.Failures, 1)
 			require.ErrorContains(t, doc.Failures[0].Err, "module.allowed_origins")
 		})
+	}
+}
+
+// An install and a settings write that overlap each keep the other's change
+// to the machine-owned file.
+func TestAnInstallAndAStoredListKeepEachOther(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	done := make(chan error, 1)
+
+	const rounds = 40
+
+	go func() {
+		for i := range rounds {
+			instance, err := ref.New(ref.KindAsset, fmt.Sprintf("slicer%d", i))
+			if err != nil {
+				done <- err
+
+				return
+			}
+
+			if _, err = resource.InstallModule(h.paths.Overlay, instance, slicerEntry(h.dir, true),
+				resource.LeftChange{}); err != nil {
+				done <- err
+
+				return
+			}
+		}
+
+		done <- nil
+	}()
+
+	for i := range rounds {
+		require.NoError(t, h.store.RecordAllowedOrigins([]string{fmt.Sprintf("https://s%d.example", i)}))
+	}
+
+	require.NoError(t, <-done)
+
+	stored, err := h.store.AllowedOrigins()
+	require.NoError(t, err)
+	require.Equal(t, []string{fmt.Sprintf("https://s%d.example", rounds-1)}, stored)
+
+	content, err := os.ReadFile(h.paths.Overlay)
+	require.NoError(t, err)
+
+	for i := range rounds {
+		require.Contains(t, string(content), fmt.Sprintf(`"slicer%d"`, i), "an install was written over")
 	}
 }

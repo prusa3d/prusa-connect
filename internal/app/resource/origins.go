@@ -42,14 +42,11 @@ func (s *Store) RecordAllowedOrigins(origins []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		overlay.API = &overlayAPI{AllowedOrigins: slices.Clone(origins)}
 
-	overlay.API = &overlayAPI{AllowedOrigins: slices.Clone(origins)}
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // ModuleOrigin is one browser origin a module adds to the ones the API

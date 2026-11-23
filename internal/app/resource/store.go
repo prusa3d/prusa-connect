@@ -558,16 +558,8 @@ func (s *Store) commit(ctx context.Context, next overlayFile, read inputs) (stri
 		return "", s.internal("stage the overlay", err)
 	}
 
-	if err = s.verifyUnmoved(read); err != nil {
-		_ = staged.Discard()
-
+	if err = s.publishStaged(ctx, staged, read); err != nil {
 		return "", err
-	}
-
-	s.keepPrevious(ctx, read.overlay)
-
-	if err = staged.Commit(); err != nil {
-		return "", s.internal("publish the overlay", err)
 	}
 
 	doc, err := Load(s.paths)
@@ -757,6 +749,27 @@ func (s *Store) recordIdentities(doc Document, read inputs) (Document, error) {
 	}
 
 	return Load(s.paths)
+}
+
+// publishStaged is the compare and the swap of commit, as one step for
+// every writer of the overlay in this process (see overlayWriting).
+func (s *Store) publishStaged(ctx context.Context, staged *atomicfile.Staged, read inputs) error {
+	overlayWriting.Lock()
+	defer overlayWriting.Unlock()
+
+	if err := s.verifyUnmoved(read); err != nil {
+		_ = staged.Discard()
+
+		return err
+	}
+
+	s.keepPrevious(ctx, read.overlay)
+
+	if err := staged.Commit(); err != nil {
+		return s.internal("publish the overlay", err)
+	}
+
+	return nil
 }
 
 // writeOverlay writes an overlay without the compare-and-swap, for the

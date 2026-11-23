@@ -26,18 +26,15 @@ func (s *Store) RecordMarketplaceEnabled(enabled bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		if overlay.Marketplace == nil {
+			overlay.Marketplace = &overlayMarketplace{}
+		}
 
-	if overlay.Marketplace == nil {
-		overlay.Marketplace = &overlayMarketplace{}
-	}
+		overlay.Marketplace.Enabled = &enabled
 
-	overlay.Marketplace.Enabled = &enabled
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
 
 // MarketplaceCommunity returns whether a person chose to list the community
@@ -60,16 +57,13 @@ func (s *Store) RecordMarketplaceCommunity(shown bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	overlay, err := s.readOverlay()
-	if err != nil {
-		return err
-	}
+	return s.updateOverlay(func(overlay *overlayFile) error {
+		if overlay.Marketplace == nil {
+			overlay.Marketplace = &overlayMarketplace{}
+		}
 
-	if overlay.Marketplace == nil {
-		overlay.Marketplace = &overlayMarketplace{}
-	}
+		overlay.Marketplace.Community = shown
 
-	overlay.Marketplace.Community = shown
-
-	return s.writeOverlay(overlay)
+		return nil
+	})
 }
