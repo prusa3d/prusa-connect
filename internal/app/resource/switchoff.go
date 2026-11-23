@@ -74,6 +74,7 @@ func (s *Store) switchOffByHost(ctx context.Context, instance ref.Ref, record Sw
 	if declared.Source == SourceFile {
 		previous := s.effective(s.current)
 		s.hostHeld[instance] = record
+		s.syncModuleOrigins(ctx)
 		warn()
 
 		if plan := Diff(previous, s.effective(s.current)); !plan.Empty() && s.plane != nil {

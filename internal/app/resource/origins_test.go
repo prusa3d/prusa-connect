@@ -121,3 +121,21 @@ func TestAModuleHeldOffAddsNoOrigin(t *testing.T) {
 	h.store.WatchModuleOrigins(t.Context(), watched)
 	require.Empty(t, watched.last())
 }
+
+// A module the operator declares in their own file is held off in memory when
+// the host stops retrying it, and its origin leaves with that hold.
+func TestAModuleTheHostHoldsOffAddsNoOrigin(t *testing.T) {
+	t.Parallel()
+
+	farm := mustRef(t, ref.KindSink, "farm")
+	h := newHarness(t)
+	h.writeFile(operatorsFarm + "      module:\n        allowed_origins: [https://slicer.example]\n")
+	require.NoError(t, h.store.Reload(t.Context()))
+
+	watched := &watchedOrigins{}
+	h.store.WatchModuleOrigins(t.Context(), watched)
+	require.Len(t, watched.last(), 1)
+
+	require.NoError(t, h.store.SwitchOffByHost(t.Context(), farm, threeStops()))
+	require.Empty(t, watched.last(), "a module the host holds off still adds its origin")
+}
