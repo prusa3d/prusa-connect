@@ -86,7 +86,7 @@ func registerAllowedOrigins(api huma.API, cfg Config) {
 		Tags:   []string{"system"},
 		Errors: discoveryErrors,
 	}, func(ctx context.Context, _ *struct{}) (*allowedOriginsOutput, error) {
-		if err := requireDiscoveryView(ctx, cfg.Grants); err != nil {
+		if err := requireDiscoveryView(ctx, cfg.Grants, "the allowed browser origins"); err != nil {
 			return nil, err
 		}
 

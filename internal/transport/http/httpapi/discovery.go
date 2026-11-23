@@ -111,7 +111,7 @@ func registerNearby(api huma.API, cfg Config) {
 		Tags:   []string{"discovery"},
 		Errors: discoveryErrors,
 	}, func(ctx context.Context, _ *struct{}) (*nearbyOutput, error) {
-		if err := requireDiscoveryView(ctx, cfg.Grants); err != nil {
+		if err := requireDiscoveryView(ctx, cfg.Grants, "the printers nearby"); err != nil {
 			return nil, err
 		}
 
@@ -141,7 +141,7 @@ func registerGetVisibility(api huma.API, cfg Config) {
 		Tags:   []string{"discovery"},
 		Errors: discoveryErrors,
 	}, func(ctx context.Context, _ *struct{}) (*visibilityOutput, error) {
-		if err := requireDiscoveryView(ctx, cfg.Grants); err != nil {
+		if err := requireDiscoveryView(ctx, cfg.Grants, "the printers nearby"); err != nil {
 			return nil, err
 		}
 
@@ -193,8 +193,10 @@ func registerSetVisibility(api huma.API, cfg Config) {
 // announcementOff is what a server with no announcer reports.
 const announcementOff = "off"
 
-// requireDiscoveryView refuses a caller who may not see the printers nearby.
-func requireDiscoveryView(ctx context.Context, grants GrantStore) error {
+// requireDiscoveryView refuses a caller who may not see what the network
+// settings show. They are decided on the link resource kind, and what names
+// the setting in the refusal.
+func requireDiscoveryView(ctx context.Context, grants GrantStore, what string) error {
 	who, object, err := kindDecision(ctx, discoveryKind)
 	if err != nil {
 		return err
@@ -202,11 +204,11 @@ func requireDiscoveryView(ctx context.Context, grants GrantStore) error {
 
 	allowed, err := grants.Can(ctx, who, authz.ActionViewResource, object)
 	if err != nil {
-		return httpfault.Unexpected("ask the authorization graph who may see the printers nearby")
+		return httpfault.Unexpected("ask the authorization graph who may see " + what)
 	}
 
 	if !allowed {
-		return fault.New(authz.CodeAccessDenied(), "this caller may not see the printers nearby").With(
+		return fault.New(authz.CodeAccessDenied(), "this caller may not see "+what).With(
 			fault.StringParam("object", object.String()),
 			fault.StringParam("action", authz.ActionViewResource.String()))
 	}

@@ -51,7 +51,7 @@ func registerTimeServer(api huma.API, cfg Config) {
 		Tags:   []string{"discovery"},
 		Errors: discoveryErrors,
 	}, func(ctx context.Context, _ *struct{}) (*timeServerOutput, error) {
-		if err := requireDiscoveryView(ctx, cfg.Grants); err != nil {
+		if err := requireDiscoveryView(ctx, cfg.Grants, "the time server"); err != nil {
 			return nil, err
 		}
 
