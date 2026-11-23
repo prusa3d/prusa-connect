@@ -85,6 +85,8 @@ core:
     allowed_origins:
       - https://printers.example
       - http://localhost:5173
+      - http://127.0.0.1:8080
+      - http://[::1]:5173
   log:
     level: debug
     format: json
@@ -102,7 +104,9 @@ core:
 	require.NoError(t, err)
 
 	require.Equal(t, "127.0.0.1:9000", core.API.Addr)
-	require.Equal(t, []string{"https://printers.example", "http://localhost:5173"}, core.API.AllowedOrigins)
+	require.Equal(t, []string{
+		"https://printers.example", "http://localhost:5173", "http://127.0.0.1:8080", "http://[::1]:5173",
+	}, core.API.AllowedOrigins)
 	require.Equal(t, "debug", core.Log.Level)
 	require.Equal(t, "json", core.Log.Format)
 	require.Equal(t, "/var/lib/prusa/resources.json", core.Overlay)
@@ -223,6 +227,38 @@ func TestValidateNamesTheKeyItRefused(t *testing.T) {
 		"an origin with a userinfo": {
 			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://me@printers.example"} },
 			"more than a scheme and a host",
+		},
+		"a wildcard host": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://*.printers.example"} },
+			"wildcard",
+		},
+		"an origin with no host": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://:8080"} },
+			"names no host",
+		},
+		"an origin with an empty port": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://printers.example:"} },
+			"a port as a number",
+		},
+		"an origin with a padded port": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://printers.example:08443"} },
+			"a port as a number",
+		},
+		"an origin with a port out of range": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://printers.example:99999"} },
+			"a port as a number",
+		},
+		"an origin with a host in unicode": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://bücher.example"} },
+			"ASCII",
+		},
+		"an origin with a long IPv6 address": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"https://[0:0::1]"} },
+			"shortest form",
+		},
+		"an origin with a number a browser reads as an address": {
+			func(c *config.Core) { c.API.AllowedOrigins = []string{"http://0x7f.1"} },
+			"shortest form",
 		},
 	}
 

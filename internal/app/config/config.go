@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/prusa3d/prusa-connect/internal/app/config/install"
 	"github.com/prusa3d/prusa-connect/internal/kernel/buildprofile"
@@ -1111,7 +1112,7 @@ const (
 	schemeHTTPS = "https"
 )
 
-// The reasons validOrigin refuses a value, each phrased to follow the value it
+// The reasons CheckOrigin refuses a value, each phrased to follow the value it
 // names.
 var (
 	errOriginScheme      = errors.New("its scheme is not http or https")
@@ -1119,6 +1120,9 @@ var (
 	errOriginCase        = errors.New("a browser writes the scheme and the host in lowercase")
 	errOriginPath        = errors.New("it carries more than a scheme and a host")
 	errOriginDefaultPort = errors.New("a browser writes its origin without the scheme's default port")
+	errOriginWildcard    = errors.New("a wildcard is refused, so name each host")
+	errOriginForm        = errors.New("a browser writes the host in ASCII, an IP address in its shortest form, " +
+		"and a port as a number from 1 to 65535")
 )
 
 // CheckOrigin refuses a value a browser never sends as its Origin header, and
@@ -1130,12 +1134,16 @@ func CheckOrigin(origin string) error {
 		return errOriginScheme
 	}
 
-	if parsed.Host == "" {
+	if parsed.Hostname() == "" {
 		return errOriginHost
 	}
 
 	if strings.ToLower(origin) != origin {
 		return errOriginCase
+	}
+
+	if strings.Contains(parsed.Host, "*") {
+		return errOriginWildcard
 	}
 
 	// The serialized form is only the scheme and the host, so a value with a
@@ -1149,7 +1157,52 @@ func CheckOrigin(origin string) error {
 		return errOriginDefaultPort
 	}
 
+	if !browserHost(parsed) {
+		return errOriginForm
+	}
+
 	return nil
+}
+
+// browserHost reports whether the host and the port are in the one form a
+// browser writes them in its Origin header: an ASCII host (a browser sends a
+// name in punycode), an IP address in its shortest form, and a port as a plain
+// number from 1 to 65535. sdk/manifest holds a manifest's origins to the same
+// form in IsAllowedOrigin.
+func browserHost(parsed *url.URL) bool {
+	if strings.HasSuffix(parsed.Host, ":") {
+		return false
+	}
+
+	if port := parsed.Port(); port != "" {
+		number, err := strconv.Atoi(port)
+		if err != nil || number < 1 || number > 65535 || strconv.Itoa(number) != port {
+			return false
+		}
+	}
+
+	host := parsed.Hostname()
+	for i := range len(host) {
+		if host[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+
+	// A browser reads a host whose last label is a number as an IPv4 address,
+	// so 0x7f.1 reaches it as 127.0.0.1.
+	last := host[strings.LastIndexByte(host, '.')+1:]
+	if strings.HasPrefix(parsed.Host, "[") || strings.HasPrefix(last, "0x") || isDigits(last) {
+		addr, err := netip.ParseAddr(host)
+
+		return err == nil && addr.Zone() == "" && addr.String() == host
+	}
+
+	return true
+}
+
+// isDigits reports whether text is one or more ASCII digits.
+func isDigits(text string) bool {
+	return text != "" && strings.Trim(text, "0123456789") == ""
 }
 
 // validateRecords holds the two keys about what the core writes for a module:

@@ -110,6 +110,8 @@ func TestAStoredOriginIsHeldToWhatABrowserSends(t *testing.T) {
 
 	for _, list := range [][]string{
 		{"*"},
+		{"https://*.slicer.example"},
+		{"https://slicer.example:0443"},
 		{"https://slicer.example/"},
 		{"https://Slicer.example"},
 		{"https://slicer.example:443"},
