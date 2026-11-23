@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { AllowedOrigins } from './allowed-origins.svelte';
-import type { AllowedOrigin, AllowedOriginsClient } from './services/origins';
+import type {
+  AllowedOrigin,
+  AllowedOriginsClient,
+  AllowedOriginsPage,
+} from './services/origins';
 import { StubApiError } from './stubs';
 
 const FILE: AllowedOrigin = {
@@ -65,6 +69,31 @@ const stubClient = (
 
   return { client, held };
 };
+
+// A request the test answers when it chooses, so it can act while the request
+// is on its way.
+const deferred = (): {
+  promise: Promise<AllowedOriginsPage>;
+  answer: (page: AllowedOriginsPage) => void;
+  refuse: (fault: Error) => void;
+} => {
+  let answer: (page: AllowedOriginsPage) => void = () => undefined;
+  let refuse: (fault: Error) => void = () => undefined;
+  const promise = new Promise<AllowedOriginsPage>((resolve, reject) => {
+    answer = resolve;
+    refuse = reject;
+  });
+
+  return { promise, answer, refuse };
+};
+
+const pageOf = (stored: string[], version: string): AllowedOriginsPage => ({
+  items: stored.map((origin): AllowedOrigin => ({
+    origin,
+    source: 'settings',
+  })),
+  version,
+});
 
 describe('AllowedOrigins', () => {
   it('starts unread', () => {
@@ -159,5 +188,80 @@ describe('AllowedOrigins', () => {
 
     expect(store.loaded).toBe(false);
     expect(store.items).toEqual([]);
+  });
+
+  it('keeps the fault when the first read fails', async () => {
+    const store = new AllowedOrigins({
+      listAllowedOrigins: () =>
+        Promise.reject(new StubApiError('core.authz/ACCESS_DENIED', 403)),
+      setAllowedOrigins: () => Promise.reject(new Error('not called')),
+    });
+
+    await store.load();
+
+    expect(store.loaded).toBe(false);
+    expect(store.error?.code).toBe('core.authz/ACCESS_DENIED');
+  });
+
+  it('does not draw an old list back with a read sent before a write', async () => {
+    const reads = [deferred(), deferred()];
+    let read = 0;
+    const store = new AllowedOrigins({
+      listAllowedOrigins: () => reads[read++]!.promise,
+      setAllowedOrigins: () =>
+        Promise.resolve(pageOf(['https://new.example'], '2')),
+    });
+    const first = store.load();
+    reads[0]!.answer(pageOf([], '1'));
+    await first;
+
+    const late = store.load();
+    await store.add('https://new.example');
+    reads[1]!.answer(pageOf([], '1'));
+    await late;
+
+    expect(store.items.map((item) => item.origin)).toEqual([
+      'https://new.example',
+    ]);
+  });
+
+  it('is saving while a change is on its way, and drops a second one', async () => {
+    const write = deferred();
+    const sent: string[][] = [];
+    const store = new AllowedOrigins({
+      listAllowedOrigins: () => Promise.resolve(pageOf([], '1')),
+      setAllowedOrigins: (request) => {
+        sent.push(request.body.origins);
+
+        return write.promise;
+      },
+    });
+    await store.load();
+
+    const first = store.add('https://a.example');
+    expect(store.saving).toBe(true);
+    expect(await store.add('https://b.example')).toBe(false);
+
+    write.answer(pageOf(['https://a.example'], '2'));
+    expect(await first).toBe(true);
+    expect(store.saving).toBe(false);
+    expect(sent).toEqual([['https://a.example']]);
+  });
+
+  it('records nothing from an answer to a request sent before a reset', async () => {
+    const write = deferred();
+    const store = new AllowedOrigins({
+      listAllowedOrigins: () => Promise.resolve(pageOf([], '1')),
+      setAllowedOrigins: () => write.promise,
+    });
+    await store.load();
+
+    const pending = store.add('https://a.example');
+    store.reset();
+    write.answer(pageOf(['https://a.example'], '2'));
+    await pending;
+
+    expect(store.loaded).toBe(false);
+    expect(store.saving).toBe(false);
   });
 });
