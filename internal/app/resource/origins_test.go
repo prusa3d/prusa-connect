@@ -59,7 +59,7 @@ func (w *watchedOrigins) SyncModuleOrigins(_ context.Context, origins []resource
 func (w *watchedOrigins) last() []resource.ModuleOrigin { return w.lists[len(w.lists)-1] }
 
 // slicerEntry is a module that only draws, as an approved install declares
-// it, with one origin granted and one value no install writes.
+// it, with one origin granted.
 func slicerEntry(dir string, enabled bool) install.Entry {
 	return install.Entry{
 		Type:    "com.github.acme.slicer/slicer",
@@ -68,7 +68,7 @@ func slicerEntry(dir string, enabled bool) install.Entry {
 		Asset:   &install.AssetEntry{Path: dir, Checksum: "sha256:" + sixtyFourZeros},
 		Module: &install.ModuleEntry{
 			Title:          "Web slicer",
-			AllowedOrigins: []string{"https://slicer.example", "http://slicer.example", "*"},
+			AllowedOrigins: []string{"https://slicer.example"},
 		},
 	}
 }
@@ -76,7 +76,7 @@ func slicerEntry(dir string, enabled bool) install.Entry {
 const sixtyFourZeros = "0000000000000000000000000000000000000000000000000000000000000000"
 
 // A module's origins hold while it is switched on and leave with the write
-// that switches it off or removes it. Only an exact https origin counts.
+// that switches it off or removes it.
 func TestAModuleOriginHoldsWhileTheModuleIsSwitchedOn(t *testing.T) {
 	t.Parallel()
 
@@ -138,4 +138,31 @@ func TestAModuleTheHostHoldsOffAddsNoOrigin(t *testing.T) {
 
 	require.NoError(t, h.store.SwitchOffByHost(t.Context(), farm, threeStops()))
 	require.Empty(t, watched.last(), "a module the host holds off still adds its origin")
+}
+
+// An origin an install never writes is a hand edit of a declaration, and the
+// instance is refused with the reason in either file.
+func TestADeclaredOriginNoInstallWritesRefusesItsInstance(t *testing.T) {
+	t.Parallel()
+
+	for name, origins := range map[string]string{
+		"http":     "[http://slicer.example]",
+		"wildcard": "['https://*.slicer.example']",
+		"repeat":   "[https://slicer.example, https://slicer.example]",
+		"too many": "[https://a.example, https://b.example, https://c.example, https://d.example, " +
+			"https://e.example, https://f.example, https://g.example, https://h.example, https://i.example]",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.writeFile(operatorsFarm + "      module:\n        allowed_origins: " + origins + "\n")
+
+			doc, err := resource.Load(h.paths)
+			require.NoError(t, err)
+			require.Empty(t, doc.Instances)
+			require.Len(t, doc.Failures, 1)
+			require.ErrorContains(t, doc.Failures[0].Err, "module.allowed_origins")
+		})
+	}
 }

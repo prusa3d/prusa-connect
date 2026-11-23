@@ -407,6 +407,10 @@ func fileDeclaration(
 		return Declaration{}, err
 	}
 
+	if err = checkModuleOrigins(spec.Module); err != nil {
+		return Declaration{}, err
+	}
+
 	spec.Runtime, spec.Service, spec.Script, spec.Asset = installModeOf(modes, instance)
 
 	return Declaration{Ref: instance, Spec: spec, Source: SourceFile}, nil
@@ -798,6 +802,10 @@ func overlayDeclarations(overlay overlayFile) ([]Declaration, []Failure, error) 
 func overlayModule(instance ref.Ref, entry overlayEntry) (Declaration, error) {
 	config, err := canonicalJSON(entry.Config)
 	if err != nil {
+		return Declaration{}, err
+	}
+
+	if err = checkModuleOrigins(entry.Module); err != nil {
 		return Declaration{}, err
 	}
 

@@ -320,10 +320,6 @@ func report(out io.Writer, held moduleReport) {
 
 	reportRoutes(out, held)
 
-	for _, origin := range held.origins {
-		fmt.Fprintf(out, "  answers     pages of %s that call the API from a browser (allowed_origins)\n", origin)
-	}
-
 	if held.recordsMiB > 0 {
 		fmt.Fprintf(out, "  records     %s\n", recordsGranted(held.recordsMiB))
 	}
@@ -375,7 +371,8 @@ func routeRequests(routes manifest.Routes) []string {
 	return out
 }
 
-// reportRoutes writes what an approved install granted of the routes block.
+// reportRoutes writes what an approved install granted of the routes block,
+// and the browser origins it lets call the API.
 func reportRoutes(out io.Writer, held moduleReport) {
 	for _, route := range held.public {
 		fmt.Fprintf(out, "  public      %s, answered without a signed-in caller (routes.public)\n", route)
@@ -388,5 +385,9 @@ func reportRoutes(out io.Writer, held moduleReport) {
 	for _, header := range held.headers {
 		fmt.Fprintf(out, "  header      %s, passed to the module (%s) (routes.headers)\n",
 			header.Name, header.Reason)
+	}
+
+	for _, origin := range held.origins {
+		fmt.Fprintf(out, "  answers     pages of %s that call the API from a browser (allowed_origins)\n", origin)
 	}
 }

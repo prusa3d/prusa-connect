@@ -2,9 +2,11 @@ package resource
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/prusa3d/prusa-connect/internal/app/config/install"
 	"github.com/prusa3d/prusa-connect/sdk/manifest"
 )
 
@@ -89,9 +91,7 @@ func (s *Store) syncModuleOrigins(ctx context.Context) {
 }
 
 // moduleOrigins is every origin the enabled modules of a document were
-// granted, sorted by origin and then by namespace. An entry that is not an
-// exact https origin is left out: an install never writes one, and the
-// operator names any other origin in core.api.allowed_origins.
+// granted, sorted by origin and then by namespace.
 func moduleOrigins(doc Document) []ModuleOrigin {
 	var out []ModuleOrigin
 
@@ -107,9 +107,7 @@ func moduleOrigins(doc Document) []ModuleOrigin {
 		}
 
 		for _, origin := range declared.Spec.Module.AllowedOrigins {
-			if manifest.IsAllowedOrigin(origin) {
-				out = append(out, ModuleOrigin{Origin: origin, Namespace: namespace, Title: title})
-			}
+			out = append(out, ModuleOrigin{Origin: origin, Namespace: namespace, Title: title})
 		}
 	}
 
@@ -122,4 +120,32 @@ func moduleOrigins(doc Document) []ModuleOrigin {
 	})
 
 	return out
+}
+
+// checkModuleOrigins holds the origins a declaration grants to what a
+// manifest may ask for. An install writes only such origins, so another value
+// is a hand edit, and its instance is refused with the reason rather than
+// listed with an origin the server never answers.
+func checkModuleOrigins(module *install.ModuleEntry) error {
+	if module == nil {
+		return nil
+	}
+
+	if len(module.AllowedOrigins) > manifest.MaxAllowedOrigins {
+		return fmt.Errorf("%w: module.allowed_origins names %d origins, and the limit is %d",
+			ErrConfigInvalid, len(module.AllowedOrigins), manifest.MaxAllowedOrigins)
+	}
+
+	for i, origin := range module.AllowedOrigins {
+		if !manifest.IsAllowedOrigin(origin) {
+			return fmt.Errorf("%w: module.allowed_origins names %q, expected an exact https origin as a "+
+				"browser writes it, such as https://slicer.example", ErrConfigInvalid, origin)
+		}
+
+		if slices.Contains(module.AllowedOrigins[:i], origin) {
+			return fmt.Errorf("%w: module.allowed_origins names %q twice", ErrConfigInvalid, origin)
+		}
+	}
+
+	return nil
 }
