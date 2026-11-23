@@ -38,17 +38,24 @@ acts with a credential it was given, such as one from the app pairing.
 ### what the extension declares
 
 1. An extension asks with the manifest key `allowed_origins`, a list of at
-   most 8 origins. An extension with no process may ask too.
-2. Each entry is an exact `https` origin as a browser writes it: lower case,
-   a port only when it is not 443, and nothing after the host. A wildcard, a
-   path and an `http` origin are refused when the manifest is read.
+   most 8 origins. An extension with no process may ask too. A core from
+   before the key refuses the manifest. So an extension that uses the key
+   names the first release that reads it in `require.core`, as
+   [ADR-20261019-3ns](20261019-3ns-a-module-declares-its-ports-and-gets-a-data-directory.md)
+   rule 4 asks of a new key.
+2. Each entry is an exact `https` origin as a browser writes it. That is lower
+   case, a host in ASCII, an IP address in its shortest form, a port only when
+   it is not 443, and nothing after the host. A wildcard, a path and an `http`
+   origin are refused when the manifest is read.
 
 ### who grants it
 
 3. The key is a request, like `permissions`. `module add` and
    `POST /api/v1/modules` write it into the declaration only with approve, as
    `module.allowed_origins`, and record the ask as
-   `module.asked.allowed_origins`.
+   `module.asked.allowed_origins`. A declaration whose `module.allowed_origins`
+   names an origin rule 2 refuses, or more than 8, is a hand edit, and its
+   instance is refused at load with the reason.
 4. Approving it takes the admin role on the organization, as approving a
    permission does. `configure_resource` on the resource kind is not enough.
 5. An install without approve lists each entry among the requests, as
@@ -66,8 +73,9 @@ acts with a credential it was given, such as one from the app pairing.
 8. The server answers a granted origin exactly as it answers one from
    `core.api.allowed_origins`, while the extension is switched on.
 9. The origin leaves with the write that switches the extension off or removes
-   it, with no restart. It also leaves while `core.modules_enabled` is false
-   and in safe mode.
+   it, with no restart. It also leaves while `core.modules_enabled` is false,
+   in safe mode, and while the host holds the extension off because it failed
+   too often.
 10. The origin is never copied into `core.api.allowed_origins` or into the
     Settings list. It is read from the declaration, so a removed extension
     leaves nothing behind. An origin another source also names stays allowed
@@ -89,13 +97,16 @@ acts with a credential it was given, such as one from the app pairing.
 ### the list in Settings
 
 15. `PUT /api/v1/allowed-origins` replaces the Settings list. It takes the
-    admin role on the organization.
+    admin role on the organization and the version of the list last read in
+    `If-Match`. A write from an older read is refused with `412`, so it does
+    not undo a change another person made since.
 16. The list is kept in the machine-owned file. It is added to the list in
     the operator's file and never replaces it, because this server does not
     write that file.
-17. An entry is held to what `core.api.allowed_origins` is held to. A
-    wildcard is refused, and an `http` origin is accepted, as a page under
-    development needs one.
+17. An entry is held to what `core.api.allowed_origins` is held to: the form a
+    browser writes, as rule 2 says, with `http` accepted as a page under
+    development needs it. A wildcard is refused. An origin a file repeats is
+    listed once.
 18. Every source applies at once. The answer to a browser reads one set that
     is rebuilt on each change.
 
@@ -104,13 +115,14 @@ acts with a credential it was given, such as one from the app pairing.
 | rule | gate |
 |---|---|
 | 1, 2 | `sdk/manifest/origins_test.go` |
-| 3, 5, 6, 7 | `internal/app/moduleorigins_test.go`, and `TestEveryAskSurvivesEveryHop` for the marketplace row, the index row and the API |
+| 3 | `internal/app/moduleorigins_test.go`, and `TestADeclaredOriginNoInstallWritesRefusesItsInstance` for a hand edit |
+| 5, 6, 7 | `internal/app/moduleorigins_test.go`, and `TestEveryAskSurvivesEveryHop` for the marketplace row, the index row and the API |
 | 4 | `TestApprovingAnOriginNeedsTheOrganization` |
 | 8, 9 | `internal/app/resource/origins_test.go` and `internal/app/origins_test.go` |
-| 12, 15 | `internal/transport/http/httpapi/origins_test.go` |
+| 12, 15 | `internal/transport/http/httpapi/origins_test.go`, and `TestAWriteFromAnOldReadChangesNothing` |
 | 13, 14 | the tests of the network section in `packages/svelte` and of the request list in `frontend` |
-| 16, 17 | `internal/app/origins_test.go` |
-| 18 | `TestAStoredOriginIsAnsweredWithNoRestart` |
+| 16, 17 | `internal/app/origins_test.go`, and the origin cases of `internal/app/config/config_test.go` |
+| 18 | `TestStoringTheSettingsListAppliesAtOnce`, and `TestAStoredOriginIsAnsweredWithNoRestart` for the CORS answer |
 
 ## rejected
 

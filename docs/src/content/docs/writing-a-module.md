@@ -1868,9 +1868,14 @@ allowed_origins:
 ```
 
 A module with no process may ask too. Each entry is an exact `https` origin as
-a browser writes it: lower case, no path, and a port only when it is not 443.
-A manifest names at most 8, and a wildcard or an `http` origin is refused when
+a browser writes it. That is lower case, a host in ASCII, no path, and a port
+only when it is not 443. Write a name in another script in punycode. A
+manifest names at most 8, and a wildcard or an `http` origin is refused when
 the manifest is read.
+
+An older core refuses a manifest that carries `allowed_origins`. Set
+`require.core` to the first release that knows the key, in the way the section
+on [what the module needs](#saying-what-the-module-needs) explains.
 
 The operator sees `origin https://slicer.example` among the requests, and the
 origin is granted only on an approved install. The server then answers pages
