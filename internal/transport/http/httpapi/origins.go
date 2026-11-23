@@ -34,10 +34,19 @@ type BrowserOrigins interface {
 	Any() bool
 	// Allows reports whether a page served from origin may read an answer.
 	Allows(origin string) bool
-	// AllowedOrigins is every allowed origin with where it comes from.
-	AllowedOrigins(ctx context.Context) ([]AllowedOrigin, error)
-	// SetAllowedOrigins stores the settings list and applies it at once.
-	SetAllowedOrigins(ctx context.Context, origins []string) ([]AllowedOrigin, error)
+	// AllowedOrigins is every allowed origin with where it comes from, and
+	// the version of the settings list.
+	AllowedOrigins(ctx context.Context) (AllowedOriginList, error)
+	// SetAllowedOrigins stores the settings list and applies it at once, when
+	// the precondition holds for the version of the list it replaces.
+	SetAllowedOrigins(ctx context.Context, origins []string, pre Precondition) (AllowedOriginList, error)
+}
+
+// AllowedOriginList is every allowed origin, and the version of the settings
+// list a write quotes in If-Match.
+type AllowedOriginList struct {
+	Items   []AllowedOrigin
+	Version string
 }
 
 // AllowedOrigin is one browser origin this server answers, and where it comes
@@ -50,13 +59,16 @@ type AllowedOrigin struct {
 }
 
 type allowedOriginsOutput struct {
+	ETag string `header:"ETag" doc:"The version of the settings list, to quote in If-Match on the next write."`
 	Body struct {
-		Items []AllowedOrigin `json:"items" doc:"Every browser origin this server answers, sorted by source and then by origin."`
+		Items   []AllowedOrigin `json:"items"   doc:"Every browser origin this server answers, sorted by source and then by origin."`
+		Version string          `json:"version" doc:"The version of the settings list, to quote in If-Match on the next write. Empty from a server that stores no list."`
 	}
 }
 
 type setAllowedOriginsInput struct {
-	Body struct {
+	IfMatch string `header:"If-Match" doc:"The version of the settings list last read, quotes included. A write whose version is not the stored list's is refused, so a change another person made in the meantime is not written over."`
+	Body    struct {
 		Origins []string `json:"origins" doc:"The whole settings list, which replaces the stored one. Each entry is an exact origin such as https://slicer.example: a lowercase scheme and host, a port only when it is not the scheme's default, and nothing after the host. A wildcard is refused. An empty list stores none." maxItems:"32" nullable:"false"`
 	}
 }
@@ -78,7 +90,16 @@ func registerAllowedOrigins(api huma.API, cfg Config) {
 			return nil, err
 		}
 
-		return allowedOriginsAnswer(ctx, cfg, nil)
+		if cfg.Origins == nil {
+			return allowedOriginsOf(AllowedOriginList{})
+		}
+
+		list, err := cfg.Origins.AllowedOrigins(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return allowedOriginsOf(list)
 	})
 
 	register(api, huma.Operation{
@@ -91,49 +112,53 @@ func registerAllowedOrigins(api huma.API, cfg Config) {
 			"core.api.allowed_origins: it echoes the origin and lets the browser send the credential. " +
 			"The list is added to the configuration file's and to the origins of the extensions that " +
 			"are switched on, and it changes neither. An origin from one of those is not removed here: " +
-			"edit the file, or switch the extension off. It takes the admin role on the organization, " +
-			"because an allowed origin acts with the rights of whoever opens its page.",
-		Tags:   []string{"system"},
-		Errors: append(discoveryErrors, http.StatusNotFound, http.StatusUnprocessableEntity),
+			"edit the file, or switch the extension off. It takes the version last read in If-Match, " +
+			"so a change another person stored in the meantime is refused and not written over. It " +
+			"takes the admin role on the organization, because an allowed origin acts with the rights " +
+			"of whoever opens its page.",
+		Tags: []string{"system"},
+		Errors: append(discoveryErrors, http.StatusNotFound, http.StatusPreconditionFailed,
+			http.StatusUnprocessableEntity, http.StatusPreconditionRequired),
 	}, func(ctx context.Context, in *setAllowedOriginsInput) (*allowedOriginsOutput, error) {
 		if err := requireOrgAdmin(ctx, cfg, "the allowed browser origins"); err != nil {
 			return nil, err
 		}
 
 		if cfg.Origins == nil {
-			return nil, httpfault.ResourceNotFound(httpfault.Reference("system", "allowed-origins"))
+			return nil, httpfault.ResourceNotFound(AllowedOriginsReference)
 		}
 
-		return allowedOriginsAnswer(ctx, cfg, &in.Body.Origins)
+		pre, err := precondition(in.IfMatch, "", false)
+		if err != nil {
+			return nil, err
+		}
+
+		list, err := cfg.Origins.SetAllowedOrigins(ctx, in.Body.Origins, pre)
+		if err != nil {
+			return nil, err
+		}
+
+		return allowedOriginsOf(list)
 	})
 }
 
-// allowedOriginsAnswer stores the list when one is given and answers every
-// allowed origin. A server built with no list answers none.
-func allowedOriginsAnswer(ctx context.Context, cfg Config, set *[]string) (*allowedOriginsOutput, error) {
+// AllowedOriginsReference names the settings list in a fault.
+var AllowedOriginsReference = httpfault.Reference("system", "allowed-origins")
+
+// allowedOriginsOf is the answer to a read or a write of the list.
+func allowedOriginsOf(list AllowedOriginList) (*allowedOriginsOutput, error) {
 	out := &allowedOriginsOutput{}
-	out.Body.Items = []AllowedOrigin{}
+	out.Body.Items = append([]AllowedOrigin{}, list.Items...)
+	out.Body.Version = list.Version
 
-	if cfg.Origins == nil {
-		return out, nil
+	if list.Version != "" {
+		etag, err := validatedETag(list.Version)
+		if err != nil {
+			return nil, err
+		}
+
+		out.ETag = etag
 	}
-
-	var (
-		items []AllowedOrigin
-		err   error
-	)
-
-	if set != nil {
-		items, err = cfg.Origins.SetAllowedOrigins(ctx, *set)
-	} else {
-		items, err = cfg.Origins.AllowedOrigins(ctx)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	out.Body.Items = append(out.Body.Items, items...)
 
 	return out, nil
 }

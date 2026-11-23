@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -114,7 +116,7 @@ func (b *browserOrigins) SyncModuleOrigins(_ context.Context, origins []resource
 }
 
 // AllowedOrigins is httpapi.BrowserOrigins.
-func (b *browserOrigins) AllowedOrigins(context.Context) ([]httpapi.AllowedOrigin, error) {
+func (b *browserOrigins) AllowedOrigins(context.Context) (httpapi.AllowedOriginList, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -122,18 +124,30 @@ func (b *browserOrigins) AllowedOrigins(context.Context) ([]httpapi.AllowedOrigi
 }
 
 // SetAllowedOrigins stores the list first and then applies it, so a write the
-// file refused leaves the answer as it was.
-func (b *browserOrigins) SetAllowedOrigins(_ context.Context, origins []string) ([]httpapi.AllowedOrigin, error) {
+// file refused leaves the answer as it was. A write quoting a version the
+// stored list no longer has is refused, so it does not undo a change it never
+// read.
+func (b *browserOrigins) SetAllowedOrigins(
+	_ context.Context, origins []string, pre httpapi.Precondition,
+) (httpapi.AllowedOriginList, error) {
 	next, err := settingsOrigins(origins)
 	if err != nil {
-		return nil, err
+		return httpapi.AllowedOriginList{}, err
 	}
 
 	b.writing.Lock()
 	defer b.writing.Unlock()
 
+	b.mu.Lock()
+	current := settingsVersion(b.settings)
+	b.mu.Unlock()
+
+	if !pre.Holds(true, current) {
+		return httpapi.AllowedOriginList{}, httpfault.VersionConflict(httpapi.AllowedOriginsReference, current)
+	}
+
 	if err = b.store.RecordAllowedOrigins(next); err != nil {
-		return nil, httpfault.Unexpected("store the allowed browser origins").Wrap(err)
+		return httpapi.AllowedOriginList{}, httpfault.Unexpected("store the allowed browser origins").Wrap(err)
 	}
 
 	b.mu.Lock()
@@ -143,6 +157,15 @@ func (b *browserOrigins) SetAllowedOrigins(_ context.Context, origins []string) 
 	b.publish()
 
 	return b.listed(), nil
+}
+
+// settingsVersion is the version of a settings list: a digest of the sorted
+// list, so two servers that hold the same list answer the same version, and
+// a write that changed nothing leaves it as it was.
+func settingsVersion(settings []string) string {
+	sum := sha256.Sum256([]byte(strings.Join(settings, "\n")))
+
+	return hex.EncodeToString(sum[:8])
 }
 
 // settingsOrigins holds a request's list to what core.api.allowed_origins is
@@ -180,7 +203,7 @@ func settingsOrigins(origins []string) ([]string, error) {
 
 // listed is every allowed origin with its source: the file's, then the
 // stored ones, then the modules'. The caller holds mu.
-func (b *browserOrigins) listed() []httpapi.AllowedOrigin {
+func (b *browserOrigins) listed() httpapi.AllowedOriginList {
 	out := make([]httpapi.AllowedOrigin, 0, len(b.file)+len(b.settings)+len(b.modules))
 
 	for _, origin := range slices.Sorted(slices.Values(b.file)) {
@@ -198,5 +221,5 @@ func (b *browserOrigins) listed() []httpapi.AllowedOrigin {
 		})
 	}
 
-	return out
+	return httpapi.AllowedOriginList{Items: out, Version: settingsVersion(b.settings)}
 }

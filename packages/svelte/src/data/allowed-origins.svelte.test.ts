@@ -18,15 +18,24 @@ const EXTENSION: AllowedOrigin = {
 interface Held {
   fixed: AllowedOrigin[];
   stored: string[];
+  // Moves with every stored list, as the server's version does.
+  version: number;
   written: string[][];
   refusal?: StubApiError;
 }
 
+// The server as the store sees it: a write must quote the version of the list
+// it replaces.
 const stubClient = (
   stored: string[] = [],
 ): { client: AllowedOriginsClient; held: Held } => {
-  const held: Held = { fixed: [FILE, EXTENSION], stored, written: [] };
-  const listed = (): { items: AllowedOrigin[] } => ({
+  const held: Held = {
+    fixed: [FILE, EXTENSION],
+    stored,
+    version: 1,
+    written: [],
+  };
+  const listed = (): { items: AllowedOrigin[]; version: string } => ({
     items: [
       ...held.stored.map((origin): AllowedOrigin => ({
         origin,
@@ -34,14 +43,21 @@ const stubClient = (
       })),
       ...held.fixed,
     ],
+    version: String(held.version),
   });
   const client: AllowedOriginsClient = {
     listAllowedOrigins: () => Promise.resolve(listed()),
     setAllowedOrigins: (request) => {
       held.written.push(request.body.origins);
       if (held.refusal) return Promise.reject(held.refusal);
+      if (request.header?.['If-Match'] !== `"${String(held.version)}"`) {
+        return Promise.reject(
+          new StubApiError('core.resource/VERSION_CONFLICT', 412),
+        );
+      }
 
       held.stored = request.body.origins;
+      held.version += 1;
 
       return Promise.resolve(listed());
     },
@@ -111,6 +127,28 @@ describe('AllowedOrigins', () => {
     expect(store.error?.code).toBe('core.validation/REQUEST_INVALID');
     expect(store.items).toHaveLength(3);
     expect(store.saving).toBe(false);
+  });
+
+  it('refuses a change to a list another person changed, and shows theirs', async () => {
+    const { client, held } = stubClient(['https://old.example']);
+    const store = new AllowedOrigins(client);
+    await store.load();
+
+    // Another person removes the origin this tab still shows.
+    held.stored = [];
+    held.version += 1;
+
+    expect(await store.add('https://new.example')).toBe(false);
+
+    expect(held.stored).toEqual([]);
+    expect(store.error?.code).toBe('core.resource/VERSION_CONFLICT');
+    expect(store.items.map((item) => item.origin)).toEqual([
+      FILE.origin,
+      EXTENSION.origin,
+    ]);
+
+    expect(await store.add('https://new.example')).toBe(true);
+    expect(held.stored).toEqual(['https://new.example']);
   });
 
   it('forgets the list on reset', async () => {

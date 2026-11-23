@@ -35,11 +35,14 @@ func discoveryExamples() map[string]operationExample {
 			Response: workshopTimeServer(),
 		},
 
-		"list-allowed-origins": {Response: map[string]any{"items": workshopOrigins()}},
+		"list-allowed-origins": {
+			Response: map[string]any{"items": workshopOrigins(), "version": workshopOriginsVersion},
+		},
 
 		"set-allowed-origins": {
+			Headers:  map[string]string{"If-Match": `"` + workshopOriginsVersion + `"`},
 			Request:  map[string]any{"origins": []string{"https://dashboard.workshop.example"}},
-			Response: map[string]any{"items": workshopOrigins()},
+			Response: map[string]any{"items": workshopOrigins(), "version": workshopOriginsVersion},
 		},
 
 		"set-discovery-visibility": {
@@ -62,6 +65,10 @@ func hiddenWorkshopServer() Visibility {
 		Addresses:    []string{"192.168.1.10", "fe80::1c2b:3aff:fe4d:5e6f"},
 	}
 }
+
+// workshopOriginsVersion is the version of the workshop's settings list, which
+// holds its dashboard alone.
+const workshopOriginsVersion = "3eef3b532c284ff2"
 
 // workshopOrigins is the pages the workshop lets call this server: its own
 // dashboard, which a person added in Settings, and the site of a slicer

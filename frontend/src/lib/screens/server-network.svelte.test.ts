@@ -12,7 +12,7 @@ import Server from './server.svelte';
 
 const visible = { hidden: false, announcement: 'announcing' };
 const timeOff = { enabled: false, state: 'off', port: 123 };
-const noOrigins = { items: [] };
+const noOrigins = { items: [], version: '1' };
 
 describe('the Network tab of the Server room', () => {
   it('hides the server when the switch is turned on', async () => {
@@ -94,6 +94,7 @@ describe('the Network tab of the Server room', () => {
 
   it('adds a site to the pages that may call this server', async () => {
     const sent: (string | undefined)[] = [];
+    const fenced: (string | undefined)[] = [];
     const extension = {
       origin: 'https://slicer.example',
       source: 'extension',
@@ -103,15 +104,20 @@ describe('the Network tab of the Server room', () => {
     const routes: Routes = {
       'GET /api/v1/discovery/visibility': json(200, visible),
       'GET /api/v1/time-server': json(200, timeOff),
-      'GET /api/v1/allowed-origins': json(200, { items: [extension] }),
+      'GET /api/v1/allowed-origins': json(200, {
+        items: [extension],
+        version: '1',
+      }),
       'PUT /api/v1/allowed-origins': (call) => {
         sent.push(call.body);
+        fenced.push(call.ifMatch);
 
         return json(200, {
           items: [
             { origin: 'https://dashboard.example', source: 'settings' },
             extension,
           ],
+          version: '2',
         });
       },
     };
@@ -137,5 +143,6 @@ describe('the Network tab of the Server room', () => {
     expect(sent).toEqual([
       JSON.stringify({ origins: ['https://dashboard.example'] }),
     ]);
+    expect(fenced).toEqual(['"1"']);
   });
 });

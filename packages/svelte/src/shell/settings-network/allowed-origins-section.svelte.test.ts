@@ -31,7 +31,7 @@ const storeOver = (
   fixed: AllowedOrigin[] = FIXED,
 ): { store: AllowedOrigins; server: Server } => {
   const server: Server = { fixed, stored, written: [], refusal: undefined };
-  const listed = (): { items: AllowedOrigin[] } => ({
+  const listed = (): { items: AllowedOrigin[]; version: string } => ({
     items: [
       ...server.stored.map((origin): AllowedOrigin => ({
         origin,
@@ -39,6 +39,7 @@ const storeOver = (
       })),
       ...server.fixed,
     ],
+    version: String(server.written.length),
   });
   const client: AllowedOriginsClient = {
     listAllowedOrigins: () => Promise.resolve(listed()),

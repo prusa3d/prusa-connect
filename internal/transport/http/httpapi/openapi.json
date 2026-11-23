@@ -345,10 +345,15 @@
               "array",
               "null"
             ]
+          },
+          "version": {
+            "description": "The version of the settings list, to quote in If-Match on the next write. Empty from a server that stores no list.",
+            "type": "string"
           }
         },
         "required": [
-          "items"
+          "items",
+          "version"
         ],
         "type": "object"
       },
@@ -12936,14 +12941,23 @@
                       "source": "extension",
                       "title": "Web slicer"
                     }
-                  ]
+                  ],
+                  "version": "3eef3b532c284ff2"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/AllowedOriginsOutputBody"
                 }
               }
             },
-            "description": "OK"
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "description": "The version of the settings list, to quote in If-Match on the next write.",
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -12982,8 +12996,19 @@
         ]
       },
       "put": {
-        "description": "Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.",
+        "description": "Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the version last read in If-Match, so a change another person stored in the meantime is refused and not written over. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.",
         "operationId": "set-allowed-origins",
+        "parameters": [
+          {
+            "description": "The version of the settings list last read, quotes included. A write whose version is not the stored list's is refused, so a change another person made in the meantime is not written over.",
+            "in": "header",
+            "name": "If-Match",
+            "schema": {
+              "description": "The version of the settings list last read, quotes included. A write whose version is not the stored list's is refused, so a change another person made in the meantime is not written over.",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -13015,14 +13040,23 @@
                       "source": "extension",
                       "title": "Web slicer"
                     }
-                  ]
+                  ],
+                  "version": "3eef3b532c284ff2"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/AllowedOriginsOutputBody"
                 }
               }
             },
-            "description": "OK"
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "description": "The version of the settings list, to quote in If-Match on the next write.",
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -13054,6 +13088,16 @@
             },
             "description": "Not Found"
           },
+          "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Precondition Failed"
+          },
           "422": {
             "content": {
               "application/problem+json": {
@@ -13063,6 +13107,16 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "428": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Precondition Required"
           },
           "500": {
             "content": {
@@ -13078,7 +13132,10 @@
         "summary": "Replace the stored list of browser origins that may call this API",
         "tags": [
           "system"
-        ]
+        ],
+        "x-sample-headers": {
+          "If-Match": "\"3eef3b532c284ff2\""
+        }
       }
     },
     "/api/v1/auth/accounts": {

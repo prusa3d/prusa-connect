@@ -2197,6 +2197,7 @@ export interface Operations {
    */
   setAllowedOrigins(
     request: {
+      header?: operations["set-allowed-origins"]["parameters"]["header"];
       body: NonNullable<operations["set-allowed-origins"]["requestBody"]>["content"]["application/json"];
     },
     signal?: AbortSignal,

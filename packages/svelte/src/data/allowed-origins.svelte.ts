@@ -4,6 +4,7 @@ import { type DataFault, faultOf } from './fault';
 import {
   type AllowedOrigin,
   type AllowedOriginsClient,
+  type AllowedOriginsPage,
   readAllowedOrigins,
   writeAllowedOrigins,
 } from './services/origins';
@@ -13,6 +14,9 @@ export class AllowedOrigins {
   readonly #client: AllowedOriginsClient;
 
   #items = $state.raw<readonly AllowedOrigin[] | undefined>(undefined);
+  // The version of the settings list the items were read with, which a write
+  // quotes.
+  #version = '';
   #saving = $state(false);
   #error = $state<DataFault | undefined>(undefined);
   #flight: Promise<void> | undefined;
@@ -62,6 +66,7 @@ export class AllowedOrigins {
     this.#resets += 1;
     this.#flight = undefined;
     this.#items = undefined;
+    this.#version = '';
     this.#saving = false;
     this.#error = undefined;
   }
@@ -83,8 +88,9 @@ export class AllowedOrigins {
   }
 
   /**
-   * A change asked for while another is on its way is dropped, and a refusal
-   * keeps the list the server holds.
+   * A change asked for while another is on its way is dropped. A refusal may
+   * be a version another person used up, so the list is read again and shows
+   * what the server holds.
    */
   async #write(origins: readonly string[]): Promise<boolean> {
     if (this.#saving) return false;
@@ -94,17 +100,30 @@ export class AllowedOrigins {
     this.#saving = true;
     this.#error = undefined;
     try {
-      const answer = await writeAllowedOrigins(this.#client, origins);
-      if (resets === this.#resets) this.#items = answer.items ?? [];
+      const answer = await writeAllowedOrigins(
+        this.#client,
+        origins,
+        this.#version,
+      );
+      if (resets === this.#resets) this.#keep(answer);
 
       return true;
     } catch (thrown) {
-      if (resets === this.#resets) this.#error = faultOf(thrown);
+      if (resets !== this.#resets) return false;
+      const fault = faultOf(thrown);
+      this.#flight = undefined;
+      await this.load();
+      this.#error = fault;
 
       return false;
     } finally {
       if (resets === this.#resets) this.#saving = false;
     }
+  }
+
+  #keep(answer: AllowedOriginsPage): void {
+    this.#items = answer.items ?? [];
+    this.#version = answer.version;
   }
 
   async #read(): Promise<void> {
@@ -113,7 +132,7 @@ export class AllowedOrigins {
     try {
       const answer = await readAllowedOrigins(this.#client);
       if (resets !== this.#resets || writes !== this.#writes) return;
-      this.#items = answer.items ?? [];
+      this.#keep(answer);
       this.#error = undefined;
     } catch (thrown) {
       if (resets === this.#resets) this.#error = faultOf(thrown);

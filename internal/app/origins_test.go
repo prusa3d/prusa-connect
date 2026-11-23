@@ -9,6 +9,7 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/app/config"
 	"github.com/prusa3d/prusa-connect/internal/app/resource"
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
+	"github.com/prusa3d/prusa-connect/internal/transport/http/httpfault"
 	"github.com/prusa3d/prusa-connect/sdk/fault"
 )
 
@@ -30,6 +31,17 @@ func (m *memoryOrigins) RecordAllowedOrigins(origins []string) error {
 	m.stored = origins
 
 	return nil
+}
+
+// asRead is the precondition of a write that quotes the version the list has
+// now, as a person who just read it sends.
+func asRead(t *testing.T, origins *browserOrigins) httpapi.Precondition {
+	t.Helper()
+
+	listed, err := origins.AllowedOrigins(t.Context())
+	require.NoError(t, err)
+
+	return httpapi.Precondition{IfMatch: []string{listed.Version}}
 }
 
 func originsOver(t *testing.T, store *memoryOrigins, file ...string) *browserOrigins {
@@ -60,7 +72,7 @@ func TestAnOriginIsAllowedFromTheFileTheSettingsAndAModule(t *testing.T) {
 			Origin: slicerOrigin, Source: httpapi.OriginFromExtension,
 			Extension: "com.github.acme.slicer", Title: "Web slicer",
 		},
-	}, listed)
+	}, listed.Items)
 
 	for _, origin := range []string{"https://file.example", "https://stored.example", slicerOrigin} {
 		require.True(t, origins.Allows(origin), origin)
@@ -93,10 +105,14 @@ func TestStoringTheSettingsListAppliesAtOnce(t *testing.T) {
 	store := &memoryOrigins{stored: []string{"https://old.example"}}
 	origins := originsOver(t, store, "https://file.example")
 
-	listed, err := origins.SetAllowedOrigins(t.Context(), []string{" https://new.example ", "http://localhost:5173"})
+	before := asRead(t, origins)
+
+	listed, err := origins.SetAllowedOrigins(t.Context(),
+		[]string{" https://new.example ", "http://localhost:5173"}, before)
 	require.NoError(t, err)
 	require.Equal(t, []string{"http://localhost:5173", "https://new.example"}, store.stored)
-	require.Len(t, listed, 3)
+	require.Len(t, listed.Items, 3)
+	require.NotEqual(t, before.IfMatch[0], listed.Version, "the write left the version as it was")
 
 	require.False(t, origins.Allows("https://old.example"))
 	require.True(t, origins.Allows("https://new.example"))
@@ -121,7 +137,7 @@ func TestAStoredOriginIsHeldToWhatABrowserSends(t *testing.T) {
 		store := &memoryOrigins{}
 		origins := originsOver(t, store)
 
-		_, err := origins.SetAllowedOrigins(t.Context(), list)
+		_, err := origins.SetAllowedOrigins(t.Context(), list, asRead(t, origins))
 
 		var raised *fault.Fault
 
@@ -137,7 +153,25 @@ func TestAListTheFileRefusedChangesNothing(t *testing.T) {
 
 	origins := originsOver(t, &memoryOrigins{fail: errors.New("read-only")})
 
-	_, err := origins.SetAllowedOrigins(t.Context(), []string{slicerOrigin})
+	_, err := origins.SetAllowedOrigins(t.Context(), []string{slicerOrigin}, asRead(t, origins))
 	require.Error(t, err)
 	require.False(t, origins.Allows(slicerOrigin))
+}
+
+// A write that quotes a version the stored list no longer has is refused and
+// stores nothing, so it does not undo a change made since it was read.
+func TestAWriteFromAnOldReadChangesNothing(t *testing.T) {
+	t.Parallel()
+
+	store := &memoryOrigins{stored: []string{"https://old.example"}}
+	origins := originsOver(t, store)
+	stale := asRead(t, origins)
+
+	_, err := origins.SetAllowedOrigins(t.Context(), nil, stale)
+	require.NoError(t, err)
+
+	_, err = origins.SetAllowedOrigins(t.Context(), []string{"https://old.example", "https://new.example"}, stale)
+	require.True(t, fault.HasCode(err, httpfault.CodeVersionConflict()), "got %v", err)
+	require.Empty(t, store.stored)
+	require.False(t, origins.Allows("https://old.example"))
 }

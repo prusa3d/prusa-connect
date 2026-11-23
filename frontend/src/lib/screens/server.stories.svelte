@@ -256,6 +256,7 @@
               title: 'Web slicer',
             },
           ],
+          version: '1',
         }),
     }}
   />

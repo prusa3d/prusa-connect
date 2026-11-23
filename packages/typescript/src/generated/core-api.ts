@@ -46,7 +46,7 @@ export interface paths {
         get: operations["list-allowed-origins"];
         /**
          * Replace the stored list of browser origins that may call this API
-         * @description Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
+         * @description Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the version last read in If-Match, so a change another person stored in the meantime is refused and not written over. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
          */
         put: operations["set-allowed-origins"];
         post?: never;
@@ -3516,6 +3516,8 @@ export interface components {
         AllowedOriginsOutputBody: {
             /** @description Every browser origin this server answers, sorted by source and then by origin. */
             items: components["schemas"]["AllowedOrigin"][] | null;
+            /** @description The version of the settings list, to quote in If-Match on the next write. Empty from a server that stores no list. */
+            version: string;
         };
         AppPairing: {
             /** @description The name the app gave itself. Nothing checks it, so the person decides whether to believe it. */
@@ -8671,6 +8673,7 @@ export interface operations {
             /** @description OK */
             200: {
                 headers: {
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -8687,7 +8690,8 @@ export interface operations {
                      *           "source": "extension",
                      *           "title": "Web slicer"
                      *         }
-                     *       ]
+                     *       ],
+                     *       "version": "3eef3b532c284ff2"
                      *     }
                      */
                     "application/json": components["schemas"]["AllowedOriginsOutputBody"];
@@ -8725,7 +8729,10 @@ export interface operations {
     "set-allowed-origins": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The version of the settings list last read, quotes included. A write whose version is not the stored list's is refused, so a change another person made in the meantime is not written over. */
+                "If-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8745,6 +8752,7 @@ export interface operations {
             /** @description OK */
             200: {
                 headers: {
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -8761,7 +8769,8 @@ export interface operations {
                      *           "source": "extension",
                      *           "title": "Web slicer"
                      *         }
-                     *       ]
+                     *       ],
+                     *       "version": "3eef3b532c284ff2"
                      *     }
                      */
                     "application/json": components["schemas"]["AllowedOriginsOutputBody"];
@@ -8794,8 +8803,26 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemError"];
                 };
             };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -23,11 +23,16 @@ export const readAllowedOrigins = (
 ): Promise<AllowedOriginsPage> => client.listAllowedOrigins();
 
 /**
- * Replaces the list a person keeps in Settings. The answer is every allowed
- * origin as the server applies them.
+ * Replaces the list a person keeps in Settings, fenced on the version last
+ * read, so a list another person changed since is refused and not written
+ * over. The answer is every allowed origin as the server applies them.
  */
 export const writeAllowedOrigins = (
   client: AllowedOriginsClient,
   origins: readonly string[],
+  version: string,
 ): Promise<AllowedOriginsPage> =>
-  client.setAllowedOrigins({ body: { origins: [...origins] } });
+  client.setAllowedOrigins({
+    header: { 'If-Match': `"${version}"` },
+    body: { origins: [...origins] },
+  });

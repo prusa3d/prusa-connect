@@ -2,9 +2,13 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -12,6 +16,7 @@ import (
 
 	"github.com/prusa3d/prusa-connect/internal/authz"
 	"github.com/prusa3d/prusa-connect/internal/kernel/ref"
+	"github.com/prusa3d/prusa-connect/internal/transport/http/httpfault"
 )
 
 // fakeOrigins is the allow-list as the routes and the CORS answer see it: a
@@ -38,16 +43,22 @@ func (f *fakeOrigins) Allows(origin string) bool {
 		slices.ContainsFunc(f.fixed, func(one AllowedOrigin) bool { return one.Origin == origin })
 }
 
-func (f *fakeOrigins) AllowedOrigins(context.Context) ([]AllowedOrigin, error) {
+func (f *fakeOrigins) AllowedOrigins(context.Context) (AllowedOriginList, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	return f.listed(), nil
 }
 
-func (f *fakeOrigins) SetAllowedOrigins(_ context.Context, origins []string) ([]AllowedOrigin, error) {
+func (f *fakeOrigins) SetAllowedOrigins(
+	_ context.Context, origins []string, pre Precondition,
+) (AllowedOriginList, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
+	if current := f.version(); !pre.Holds(true, current) {
+		return AllowedOriginList{}, httpfault.VersionConflict(AllowedOriginsReference, current)
+	}
 
 	f.stored = origins
 	f.sets++
@@ -55,13 +66,39 @@ func (f *fakeOrigins) SetAllowedOrigins(_ context.Context, origins []string) ([]
 	return f.listed(), nil
 }
 
-func (f *fakeOrigins) listed() []AllowedOrigin {
+func (f *fakeOrigins) version() string { return versionOf(f.stored) }
+
+// versionOf is the version the server answers for a stored list: a digest of
+// it, so the version does not depend on the order the samples run in.
+func versionOf(stored []string) string {
+	sum := sha256.Sum256([]byte(strings.Join(stored, "\n")))
+
+	return hex.EncodeToString(sum[:8])
+}
+
+func (f *fakeOrigins) listed() AllowedOriginList {
 	out := make([]AllowedOrigin, 0, len(f.stored)+len(f.fixed))
 	for _, origin := range f.stored {
 		out = append(out, AllowedOrigin{Origin: origin, Source: OriginFromSettings})
 	}
 
-	return append(out, f.fixed...)
+	return AllowedOriginList{Items: append(out, f.fixed...), Version: f.version()}
+}
+
+// putOrigins replaces the stored list, quoting version in If-Match when it is
+// not empty.
+func putOrigins(handler http.Handler, version, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPut, allowedOriginsPath, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	if version != "" {
+		req.Header.Set("If-Match", `"`+version+`"`)
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	return rec
 }
 
 func originsHandler(t *testing.T, grants GrantStore, principal string, origins BrowserOrigins) http.Handler {
@@ -122,8 +159,8 @@ func TestAViewerMayNotChangeTheAllowedOrigins(t *testing.T) {
 
 	origins := &fakeOrigins{}
 	grants := &orgRoleGrants{fakeGrantStore: fakeGrantStore{refuse: authz.Denied(authz.ActionAdminister, link)}}
-	rec := call(t, originsHandler(t, grants, "user:viewer", origins),
-		http.MethodPut, allowedOriginsPath, `{"origins": ["https://printers.example"]}`)
+	rec := putOrigins(originsHandler(t, grants, "user:viewer", origins), versionOf(nil),
+		`{"origins": ["https://printers.example"]}`)
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	require.Zero(t, origins.sets, "a refused caller changed the list")
 }
@@ -137,14 +174,35 @@ func TestAnAdministratorReplacesTheStoredOrigins(t *testing.T) {
 	origins := &fakeOrigins{fixed: []AllowedOrigin{extension}}
 	handler := originsHandler(t, &orgRoleGrants{admin: true}, "user:admin", origins)
 
-	rec := call(t, handler, http.MethodPut, allowedOriginsPath, `{"origins": ["https://printers.example"]}`)
+	rec := putOrigins(handler, versionOf(nil), `{"origins": ["https://printers.example"]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, `"`+versionOf([]string{farmOrigin})+`"`, rec.Header().Get("ETag"))
 	require.Equal(t, []AllowedOrigin{{Origin: farmOrigin, Source: OriginFromSettings}, extension},
 		listedOrigins(t, rec.Body.Bytes()))
 
-	rec = call(t, handler, http.MethodPut, allowedOriginsPath, `{"origins": []}`)
+	rec = putOrigins(handler, versionOf([]string{farmOrigin}), `{"origins": []}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Equal(t, []AllowedOrigin{extension}, listedOrigins(t, rec.Body.Bytes()))
+}
+
+// A write quotes the version it read, so a person working from a list another
+// person changed since is refused and does not undo that change. A write that
+// quotes none is refused before it is tried.
+func TestAWriteFromAnOldReadIsRefused(t *testing.T) {
+	t.Parallel()
+
+	origins := &fakeOrigins{}
+	handler := originsHandler(t, &orgRoleGrants{admin: true}, "user:admin", origins)
+
+	rec := putOrigins(handler, versionOf(nil), `{"origins": ["https://printers.example"]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = putOrigins(handler, versionOf(nil), `{"origins": ["https://elsewhere.example"]}`)
+	require.Equal(t, http.StatusPreconditionFailed, rec.Code, rec.Body.String())
+
+	rec = putOrigins(handler, "", `{"origins": ["https://elsewhere.example"]}`)
+	require.Equal(t, http.StatusPreconditionRequired, rec.Code, rec.Body.String())
+	require.Equal(t, []string{farmOrigin}, origins.stored, "a refused write changed the list")
 }
 
 func TestAServerWithNoOriginStoreListsNoneAndRefusesAChange(t *testing.T) {
@@ -170,7 +228,7 @@ func TestAServerWithNoOriginStoreListsNoneAndRefusesAChange(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Empty(t, listedOrigins(t, rec.Body.Bytes()))
 
-	rec = call(t, built.Handler(), http.MethodPut, allowedOriginsPath, `{"origins": []}`)
+	rec = putOrigins(built.Handler(), versionOf(nil), `{"origins": []}`)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
@@ -186,7 +244,8 @@ func TestAStoredOriginIsAnsweredWithNoRestart(t *testing.T) {
 	requireNoCORS(t, rec.Header())
 	require.Empty(t, rec.Header().Values("Vary"), "an empty list sends nothing, Vary included")
 
-	_, err := origins.SetAllowedOrigins(t.Context(), []string{farmOrigin})
+	_, err := origins.SetAllowedOrigins(t.Context(), []string{farmOrigin},
+		Precondition{IfMatch: []string{versionOf(nil)}})
 	require.NoError(t, err)
 
 	rec = callFrom(handler, http.MethodGet, readinessPath, farmOrigin, nil)
@@ -197,7 +256,8 @@ func TestAStoredOriginIsAnsweredWithNoRestart(t *testing.T) {
 	requireNoCORS(t, rec.Header())
 	require.Contains(t, rec.Header().Values("Vary"), "Origin")
 
-	_, err = origins.SetAllowedOrigins(t.Context(), nil)
+	_, err = origins.SetAllowedOrigins(t.Context(), nil,
+		Precondition{IfMatch: []string{versionOf([]string{farmOrigin})}})
 	require.NoError(t, err)
 
 	rec = callFrom(handler, http.MethodGet, readinessPath, farmOrigin, nil)

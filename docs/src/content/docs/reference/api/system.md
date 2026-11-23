@@ -636,7 +636,8 @@ The server answers `200`:
       "source": "extension",
       "title": "Web slicer"
     }
-  ]
+  ],
+  "version": "3eef3b532c284ff2"
 }
 ```
 
@@ -889,18 +890,23 @@ This operation has no sample: 202. Restoration is the operation and a fresh list
 
 `PUT /api/v1/allowed-origins`. Replace the stored list of browser origins that may call this API.
 
-Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
+Stores the list in the machine-owned file and applies it at once, with no restart. The server answers a page from a stored origin as it answers one from core.api.allowed_origins: it echoes the origin and lets the browser send the credential. The list is added to the configuration file's and to the origins of the extensions that are switched on, and it changes neither. An origin from one of those is not removed here: edit the file, or switch the extension off. It takes the version last read in If-Match, so a change another person stored in the meantime is refused and not written over. It takes the admin role on the organization, because an allowed origin acts with the rights of whoever opens its page.
+
+| parameter | in | type | required | description |
+|---|---|---|---|---|
+| `If-Match` | header | `string` | no | The version of the settings list last read, quotes included. A write whose version is not the stored list's is refused, so a change another person made in the meantime is not written over. |
 
 - credential: bearer token. The client method is `setAllowedOrigins`
 - request body: `application/json` (`SetAllowedOriginsInputBody`), required
 - response `200`: OK, `application/json` (`AllowedOriginsOutputBody`)
-- errors: `401`, `403`, `404`, `422`, `500`, each a [problem document](../../error-codes.md)
+- errors: `401`, `403`, `404`, `412`, `422`, `428`, `500`, each a [problem document](../../error-codes.md)
 
 #### Sample {#sample-set-allowed-origins}
 
 ```sh
 curl -X PUT "http://127.0.0.1:8080/api/v1/allowed-origins" \
   -H "Authorization: Bearer $TOKEN" \
+  -H "If-Match: \"3eef3b532c284ff2\"" \
   -H "Content-Type: application/json" \
   -d '{
     "origins": [
@@ -911,6 +917,7 @@ curl -X PUT "http://127.0.0.1:8080/api/v1/allowed-origins" \
 
 ```ts
 await client.setAllowedOrigins({
+  header: { "If-Match": "\"3eef3b532c284ff2\"" },
   body: {
     origins: [
       "https://dashboard.workshop.example",
@@ -934,7 +941,8 @@ The server answers `200`:
       "source": "extension",
       "title": "Web slicer"
     }
-  ]
+  ],
+  "version": "3eef3b532c284ff2"
 }
 ```
 
