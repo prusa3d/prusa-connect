@@ -19,7 +19,7 @@
   "settingsNetwork.origins.extension": "The extension {title} asks for it. It stays while that extension is switched on.",
   "settingsNetwork.origins.file": "Named in the configuration file. This page does not change it.",
   "settingsNetwork.origins.heading": "Pages that may call this server",
-  "settingsNetwork.origins.hint": "The address of the other site as the browser shows it, with https:// in front and nothing after the host, such as https://slicer.example.",
+  "settingsNetwork.origins.hint": "The address of the other site as the browser shows it: https:// or http://, the host, and a port only when the address has one. Nothing comes after that. Such as https://slicer.example or http://localhost:5173.",
   "settingsNetwork.origins.label": "Address of the site",
   "settingsNetwork.origins.loading": "Reading the allowed sites",
   "settingsNetwork.origins.none": "No other site may call this server from a browser.",
