@@ -95,12 +95,12 @@ func TestChecksAreHeldToWhatTheOperatorWasShown(t *testing.T) {
 func TestAnUpdateKeepsTheChecksTheOperatorLeft(t *testing.T) {
 	t.Parallel()
 
-	kept, added := keptChecks([]string{"operate", "configure"}, []string{"operate", "configure"},
-		[]string{"operate"}, nil)
+	kept, added := keptLines([]string{"operate", "configure"}, []string{"operate", "configure"},
+		[]string{"operate"}, nil, checkRequest)
 	require.Equal(t, []string{"operate"}, kept)
 	require.Empty(t, added)
 
-	kept, added = keptChecks([]string{"operate"}, nil, nil, nil)
+	kept, added = keptLines([]string{"operate"}, nil, nil, nil, checkRequest)
 	require.Equal(t, []string{"operate"}, kept)
 	require.Equal(t, []string{"check operate"}, added)
 }

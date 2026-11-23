@@ -410,8 +410,8 @@ func decidedAsks(
 	// before the service block is asked for.
 	var added []string
 
-	given.AllowedOrigins, added = keptOrigins(asked.AllowedOrigins, before.AllowedOrigins,
-		declared.Spec.Module.AllowedOrigins, added)
+	given.AllowedOrigins, added = keptLines(asked.AllowedOrigins, before.AllowedOrigins,
+		declared.Spec.Module.AllowedOrigins, added, originRequest)
 
 	if declared.Spec.Service == nil {
 		slices.Sort(added)
@@ -425,7 +425,8 @@ func decidedAsks(
 
 	given.Permissions, fresh = keptPermissions(asked.Permissions, before.Permissions, declaredPermissions(declared))
 	added = append(added, fresh...)
-	given.Checks, added = keptChecks(asked.Checks, before.Checks, authz.ActionNames(held.Checks), added)
+	given.Checks, added = keptLines(asked.Checks, before.Checks, authz.ActionNames(held.Checks), added,
+		checkRequest)
 	given.Events, added = keptEvents(asked.Events, before.Events, held.Events, namespace, added)
 
 	freshAbsent := asked.CheckAbsentPeople && !before.CheckAbsentPeople
@@ -442,7 +443,7 @@ func decidedAsks(
 		added = append(added, "permission "+listPeople)
 	}
 
-	given.Calls, added = keptCalls(asked.Calls, before.Calls, held.Calls, added)
+	given.Calls, added = keptLines(asked.Calls, before.Calls, held.Calls, added, callRequest)
 	given.PublicRoutes, added = keptLines(asked.PublicRoutes, before.PublicRoutes,
 		routeLines(held.PublicRoutes), added, publicRequest)
 	given.StagedRoutes, added = keptStaged(asked.StagedRoutes, before.StagedRoutes, held.StagedRoutes, added)
@@ -540,13 +541,6 @@ func linesBeyond(asked, ceiling []string, line func(string) string) []string {
 	}
 
 	return out
-}
-
-// keptCalls is each call asked that the declaration still holds, or that the
-// ask before did not have, with the lines for the second kind added to added.
-// A call the operator took away from the release before stays away.
-func keptCalls(asked, before, held, added []string) ([]string, []string) {
-	return keptLines(asked, before, held, added, callRequest)
 }
 
 // keptLines is each entry asked that the declaration still holds, or that the
@@ -706,46 +700,6 @@ func routeLines(routes []manifest.Route) []string {
 	}
 
 	return out
-}
-
-// keptOrigins is each origin asked that the declaration still holds, or that
-// the ask before did not have, with the lines for the second kind added to
-// added. An origin the operator took away from the release before stays away.
-func keptOrigins(asked, before, held, added []string) ([]string, []string) {
-	var kept []string
-
-	for _, origin := range asked {
-		fresh := !slices.Contains(before, origin)
-		if fresh {
-			added = append(added, originRequest(origin))
-		}
-
-		if fresh || slices.Contains(held, origin) {
-			kept = append(kept, origin)
-		}
-	}
-
-	return kept, added
-}
-
-// keptChecks is each check asked that the declaration still holds, or that the
-// ask before did not have, with the lines for the second kind added to added.
-// A check the operator took away from the release before stays away.
-func keptChecks(asked, before, held, added []string) ([]string, []string) {
-	var kept []string
-
-	for _, action := range asked {
-		fresh := !slices.Contains(before, action)
-		if fresh {
-			added = append(added, checkRequest(action))
-		}
-
-		if fresh || slices.Contains(held, action) {
-			kept = append(kept, action)
-		}
-	}
-
-	return kept, added
 }
 
 // keptPermissions is each permission asked that the declaration still holds,

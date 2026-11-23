@@ -18,18 +18,19 @@ func TestAnUpdateKeepsACallTheOperatorTookAwayOut(t *testing.T) {
 		fresh   = "com.github.acme.queue"
 	)
 
-	given, added := keptCalls(
+	given, added := keptLines(
 		[]string{kept, removed, fresh}, // the new release asks
 		[]string{kept, removed},        // the release before asked
 		[]string{kept},                 // the declaration holds
 		nil,
+		callRequest,
 	)
 	require.Equal(t, []string{kept, fresh}, given)
 	require.Equal(t, []string{callRequest(fresh)}, added)
 
 	// The operator took every call away. The update gives none back, and the
 	// host still starts a module that requires routes.call.
-	given, added = keptCalls([]string{kept}, []string{kept}, nil, nil)
+	given, added = keptLines([]string{kept}, []string{kept}, nil, nil, callRequest)
 	require.Empty(t, given)
 	require.Empty(t, added)
 }
