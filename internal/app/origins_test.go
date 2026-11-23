@@ -175,3 +175,23 @@ func TestAWriteFromAnOldReadChangesNothing(t *testing.T) {
 	require.Empty(t, store.stored)
 	require.False(t, origins.Allows("https://old.example"))
 }
+
+// A repeat in the operator's file or in the machine-owned file is listed
+// once, so a page draws one row for it and a write of the list read back is
+// not refused as a repeat.
+func TestARepeatedOriginIsListedOnce(t *testing.T) {
+	t.Parallel()
+
+	store := &memoryOrigins{stored: []string{slicerOrigin, slicerOrigin}}
+	origins := originsOver(t, store, "https://file.example", "https://file.example")
+
+	listed, err := origins.AllowedOrigins(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, []httpapi.AllowedOrigin{
+		{Origin: "https://file.example", Source: httpapi.OriginFromFile},
+		{Origin: slicerOrigin, Source: httpapi.OriginFromSettings},
+	}, listed.Items)
+
+	_, err = origins.SetAllowedOrigins(t.Context(), []string{slicerOrigin, "https://new.example"}, asRead(t, origins))
+	require.NoError(t, err)
+}

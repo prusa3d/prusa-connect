@@ -56,7 +56,9 @@ var (
 // newBrowserOrigins reads the stored list. A file that cannot be read does
 // not stop the start: the operator's list still holds, and the log says so.
 func newBrowserOrigins(ctx context.Context, core config.Core, store originStore, logger *slog.Logger) *browserOrigins {
-	held := &browserOrigins{file: slices.Clone(core.API.AllowedOrigins), store: store}
+	// A repeat in either file is listed once, so the list has one row for
+	// each origin a source names.
+	held := &browserOrigins{file: slices.Compact(slices.Sorted(slices.Values(core.API.AllowedOrigins))), store: store}
 
 	stored, err := store.AllowedOrigins()
 	if err != nil {
@@ -67,7 +69,7 @@ func newBrowserOrigins(ctx context.Context, core config.Core, store originStore,
 	// A value written into the machine-owned file by hand is held to the rule
 	// a request is held to.
 	for _, origin := range stored {
-		if config.CheckOrigin(origin) == nil {
+		if config.CheckOrigin(origin) == nil && !slices.Contains(held.settings, origin) {
 			held.settings = append(held.settings, origin)
 		}
 	}
@@ -206,7 +208,7 @@ func settingsOrigins(origins []string) ([]string, error) {
 func (b *browserOrigins) listed() httpapi.AllowedOriginList {
 	out := make([]httpapi.AllowedOrigin, 0, len(b.file)+len(b.settings)+len(b.modules))
 
-	for _, origin := range slices.Sorted(slices.Values(b.file)) {
+	for _, origin := range b.file {
 		out = append(out, httpapi.AllowedOrigin{Origin: origin, Source: httpapi.OriginFromFile})
 	}
 
