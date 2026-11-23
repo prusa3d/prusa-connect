@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/prusa3d/prusa-connect/internal/app/config"
+	"github.com/prusa3d/prusa-connect/internal/app/config/install"
 	"github.com/prusa3d/prusa-connect/internal/app/resource"
 	"github.com/prusa3d/prusa-connect/internal/kernel/ref"
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
@@ -122,16 +123,32 @@ func TestAnOriginThePageDidNotShowIsRefused(t *testing.T) {
 
 // An update keeps what the operator decided: an origin they took away from
 // the declaration stays away, and one the release adds is granted and named.
+// A module with no process decides its origins as one with a process does.
 func TestAnUpdateKeepsAnOriginTheOperatorTookAway(t *testing.T) {
 	t.Parallel()
 
-	kept, added := keptOrigins(
-		[]string{"https://a.example", "https://b.example", "https://c.example"},
-		[]string{"https://a.example", "https://b.example"},
-		[]string{"https://a.example"},
-		nil,
-	)
+	const a, b, c = "https://a.example", "https://b.example", "https://c.example"
 
-	require.Equal(t, []string{"https://a.example", "https://c.example"}, kept)
-	require.Equal(t, []string{"origin https://c.example"}, added)
+	instance, err := ref.New(ref.KindAsset, "slicer")
+	require.NoError(t, err)
+
+	for name, service := range map[string]*install.Service{"no process": nil, "a process": {}} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			declared := resource.Declaration{Ref: instance, Spec: resource.Spec{
+				Service: service,
+				Module: &install.ModuleEntry{
+					AllowedOrigins: []string{a},
+					Asked:          &install.ModuleAsks{AllowedOrigins: []string{a, b}},
+				},
+			}}
+
+			given, added, decideErr := decidedAsks(moduleRequest{approve: true},
+				install.ModuleAsks{AllowedOrigins: []string{a, b, c}}, declared, "com.github.acme.slicer", nil)
+			require.NoError(t, decideErr)
+			require.Equal(t, []string{a, c}, given.AllowedOrigins)
+			require.Equal(t, []string{"origin " + c}, added)
+		})
+	}
 }
