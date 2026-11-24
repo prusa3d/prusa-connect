@@ -25,4 +25,7 @@ verifyDepsBeforeRun: error
 # svelte is a peer here, and pnpm update leaves a peer's own dependencies
 # where they are.
 overrides:
+  # minimatch 10 has GHSA-g3hv-75wg-m249 and no fixed 10.x. ESLint calls only
+  # minimatch() and new Minimatch(), which 11 keeps.
+  'minimatch@10': '11.0.8'
   'devalue@<5.9.3': '5.9.3'

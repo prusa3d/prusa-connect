@@ -56,7 +56,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "threemf"
-	release = extension.Version("0.1.12")
+	release = extension.Version("0.1.13")
 )
 
 // openAPI is the fragment describing the routes, with every path relative to

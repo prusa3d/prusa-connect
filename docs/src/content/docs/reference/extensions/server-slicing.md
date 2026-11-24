@@ -29,7 +29,7 @@ Slices 3MF projects into G-code on this server with the PrusaSlicer command line
 
 | | |
 |---|---|
-| version | 0.2.3 |
+| version | 0.2.4 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/server-slicing` |
 | namespace | `com.github.aux.prusa3d.server-slicing` |

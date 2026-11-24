@@ -13,7 +13,7 @@ codeowner: Prusa Research
 # The kind the one instance is declared under. It offers the service runtime,
 # which a module with a process half needs.
 kind: sink
-version: 0.2.3
+version: 0.2.4
 license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
 # The major version of the protocol between this process and the host.
 contract_major: 1

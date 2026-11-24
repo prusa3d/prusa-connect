@@ -28,6 +28,9 @@ verifyDepsBeforeRun: error
 # Here it comes from this tree instead: linked it would load eslint from
 # packages/standards's own node_modules rather than from here.
 overrides:
+  # minimatch 10 has GHSA-g3hv-75wg-m249 and no fixed 10.x. ESLint calls only
+  # minimatch() and new Minimatch(), which 11 keeps.
+  'minimatch@10': '11.0.8'
   '@prusa/frontend-standards': 'file:../standards'
 
 # The three peers are dev dependencies here already. Left on, pnpm would also

@@ -15,7 +15,7 @@ name: easyprint
 # The one kind this module is declared under: a directory of files the host
 # verifies against a digest and serves, and never runs.
 kind: asset
-version: 0.1.0
+version: 0.1.1
 license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
 # The first core that reads allowed_origins. An older core refuses a manifest
 # with a key it does not know, so a catalogue offers the release to none.

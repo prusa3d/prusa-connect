@@ -282,7 +282,7 @@
   },
   "info": {
     "title": "prusaslicer3-connector",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "The routes the prusaslicer3-connector module serves to PrusaSlicer 3 and to its own pages. Every path is relative to the mount the host assigns."
   },
   "openapi": "3.1.0",

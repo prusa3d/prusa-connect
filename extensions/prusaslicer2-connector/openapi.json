@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "prusaslicer2-connector",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "The PrusaLink routes the prusaslicer2-connector module serves to PrusaSlicer 2, one set for each printer of this server. Every path is relative to the mount the host assigns."
   },
   "security": [

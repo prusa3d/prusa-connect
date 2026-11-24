@@ -31,7 +31,7 @@ A queue of print files for each printer. The next file starts when the bed is cl
 
 | | |
 |---|---|
-| version | 0.1.0 |
+| version | 0.1.1 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/simple-queue` |
 | namespace | `com.github.aux.prusa3d.simple-queue` |

@@ -60,7 +60,7 @@ import (
 // changelog_test.go holds the three together.
 const (
 	name    = "simple-queue"
-	release = extension.Version("0.1.0")
+	release = extension.Version("0.1.1")
 )
 
 // openAPI is the fragment describing the routes, with every path relative to
