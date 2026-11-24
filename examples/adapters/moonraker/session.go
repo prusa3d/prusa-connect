@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -65,10 +66,12 @@ func (l liveness) orShipping() liveness {
 // After begin, one reader goroutine owns every read, and it is the only writer
 // to the patch channel and therefore the only thing that closes it.
 type Session struct {
-	conn    *websocket.Conn
-	timeout time.Duration
-	live    liveness
-	log     *slog.Logger
+	conn        *websocket.Conn
+	httpBaseURL string
+	httpClient  *http.Client
+	timeout     time.Duration
+	live        liveness
+	log         *slog.Logger
 
 	// reported is what printer.info answered, kept so Connect can name the
 	// machine after the exchange it performed.
@@ -84,6 +87,12 @@ type Session struct {
 	// configuration declares. The host reads it through
 	// connectorapi.ReportsProbe and narrows the set it commands against to it.
 	probe connectorapi.Set
+
+	storagesMu     sync.Mutex
+	storages       []connectorapi.Storage
+	gcodesWritable bool
+
+	transferMu sync.Mutex
 
 	// reader gives each Klipper print an id, which the machine does not, and
 	// remembers which head prints. See telemetry.go.
@@ -121,14 +130,18 @@ var _ connectorapi.CountsLink = (*Session)(nil)
 var _ connectorapi.ReportsProbe = (*Session)(nil)
 
 // newSession wraps a connection that is open and has said nothing yet.
-func newSession(conn *websocket.Conn, timeout time.Duration, live liveness, log *slog.Logger) *Session {
+func newSession(
+	conn *websocket.Conn, httpBaseURL string, timeout time.Duration, live liveness, log *slog.Logger,
+) *Session {
 	return &Session{
-		conn:    conn,
-		timeout: timeout,
-		live:    live,
-		log:     log,
-		patches: make(chan connectorapi.StatePatch, patchBacklog),
-		done:    make(chan struct{}),
+		conn:        conn,
+		httpBaseURL: httpBaseURL,
+		httpClient:  &http.Client{},
+		timeout:     timeout,
+		live:        live,
+		log:         log,
+		patches:     make(chan connectorapi.StatePatch, patchBacklog),
+		done:        make(chan struct{}),
 	}
 }
 
@@ -168,11 +181,16 @@ func (s *Session) handshake(ctx context.Context, offered connectorapi.Set) (conn
 		return nil, err
 	}
 
+	hasGcodes, gcodesWritable, err := s.readInitialStorages(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	s.reader.heads.count = len(extruders)
 	s.first = append(toolPatches(dumped, extruders), buildVolumePatches(dumped)...)
 	s.first = append(s.first, s.reader.patchesFrom(opening.Status, time.Now())...)
 
-	s.probe = probe(listed.Objects, heaters, len(extruders), offered)
+	s.probe = probe(listed.Objects, heaters, len(extruders), hasGcodes, gcodesWritable, offered)
 
 	return offered.Intersect(s.probe), nil
 }
@@ -320,6 +338,22 @@ func (s *Session) Do(ctx context.Context, cmd connectorapi.Command) (connectorap
 func (s *Session) callFor(cmd connectorapi.Command) (method string, params any, err error) {
 	if cmd.Verb == VerbSendStateInfo {
 		return methodObjectsQuery, objectsParam(s.asked), nil
+	}
+
+	if cmd.Verb == VerbStartPrint {
+		rawPath := cmd.Args[pathArgument]
+		if refusal := connectorapi.RefusePathEscape(rawPath); refusal != nil {
+			return "", nil, refusal
+		}
+
+		rel, ok := relativeToGcodes(rawPath)
+		if !ok {
+			return "", nil, connectorapi.PathNotAllowed.
+				New("start_print path must be on gcodes storage").
+				With(fault.StringParam("path", rawPath))
+		}
+
+		return methodPrintStart, map[string]any{"filename": rel}, nil
 	}
 
 	if named, ok := methodFor(cmd.Verb); ok {

@@ -21,7 +21,9 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	pathpkg "path"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,14 +45,21 @@ const jsonrpcVersion = "2.0"
 // the error a real Moonraker gives, which is what a dialect calling something
 // that is not there has to cope with.
 const (
-	methodPrinterInfo      = "printer.info"
-	methodObjectsList      = "printer.objects.list"
-	methodObjectsQuery     = "printer.objects.query"
-	methodObjectsSubscribe = "printer.objects.subscribe"
-	methodPrintPause       = "printer.print.pause"
-	methodPrintResume      = "printer.print.resume"
-	methodPrintCancel      = "printer.print.cancel"
-	methodGcodeScript      = "printer.gcode.script"
+	methodPrinterInfo          = "printer.info"
+	methodObjectsList          = "printer.objects.list"
+	methodObjectsQuery         = "printer.objects.query"
+	methodObjectsSubscribe     = "printer.objects.subscribe"
+	methodPrintStart           = "printer.print.start"
+	methodPrintPause           = "printer.print.pause"
+	methodPrintResume          = "printer.print.resume"
+	methodPrintCancel          = "printer.print.cancel"
+	methodGcodeScript          = "printer.gcode.script"
+	methodFilesRoots           = "server.files.roots"
+	methodFilesGetDirectory    = "server.files.get_directory"
+	methodFilesMetadata        = "server.files.metadata"
+	methodFilesPostDirectory   = "server.files.post_directory"
+	methodFilesDeleteFile      = "server.files.delete_file"
+	methodFilesDeleteDirectory = "server.files.delete_directory"
 )
 
 // notifyStatusUpdate is the notification a subscription arrives as.
@@ -66,13 +75,23 @@ const requestRefused = 400
 // The readings the default machine reports. They are a machine that is switched
 // on, cold and idle, with the two heater ranges a stock configuration carries.
 const (
-	roomNozzle  = 24.5
-	roomBed     = 23.9
-	nozzleMax   = 300.0
-	nozzle      = 0.4
-	bedMax      = 120.0
-	coldest     = 0.0
-	klipperTime = 578243.57824499
+	roomNozzle      = 24.5
+	roomBed         = 23.9
+	nozzleMax       = 300.0
+	nozzle          = 0.4
+	bedMax          = 120.0
+	coldest         = 0.0
+	klipperTime     = 578243.57824499
+	axisXYMax       = 300.0
+	axisYMin        = -5.0
+	axisZMax        = 280.0
+	simModifiedTime = 1700000000.0
+	simDirSize      = 4096
+	simThumbSize    = 300
+	simDiskTotal    = int64(10_000_000_000)
+	simDiskUsed     = int64(2_000_000_000)
+	simDiskFree     = int64(8_000_000_000)
+	maxUploadBytes  = 32 << 20
 )
 
 // Options is what kind of machine this host pretends to have. Every zero field
@@ -100,6 +119,13 @@ type Options struct {
 	// where. Bind an address that is not loopback and this fake answers whatever
 	// reaches it, so do not: it authenticates nobody and it is not a machine.
 	Addr string
+	// WithoutGcodes omits the gcodes root from server.files.roots.
+	WithoutGcodes bool
+	// GcodesReadOnly reports gcodes with "r" permissions instead of "rw".
+	GcodesReadOnly bool
+	// CorruptUploadSize writes a mismatched file size on upload to test
+	// landing verification.
+	CorruptUploadSize bool
 }
 
 // DefaultObjects is a complete Klipper machine: it can pause, it has a hotend
@@ -122,16 +148,20 @@ func DefaultStatus() map[string]map[string]any {
 		"display_status": {"progress": coldest, "message": nil},
 		"extruder":       {"temperature": roomNozzle, "target": coldest, "power": coldest},
 		"heater_bed":     {"temperature": roomBed, "target": coldest, "power": coldest},
-		"toolhead":       {"position": []any{coldest, coldest, coldest, coldest}, "homed_axes": "", "extruder": "extruder"},
-		"gcode_move":     {"speed_factor": 1.0, "extrude_factor": 1.0},
+		"toolhead": {
+			"position":   []any{coldest, coldest, coldest, coldest},
+			"homed_axes": "",
+			"extruder":   "extruder",
+		},
+		"gcode_move": {"speed_factor": 1.0, "extrude_factor": 1.0},
 		"configfile": {
 			"settings": map[string]any{
 				"extruder":   map[string]any{"min_temp": coldest, "max_temp": nozzleMax, "nozzle_diameter": nozzle},
 				"heater_bed": map[string]any{"min_temp": coldest, "max_temp": bedMax},
 				"printer":    map[string]any{"kinematics": "corexy"},
-				"stepper_x":  map[string]any{"position_min": coldest, "position_max": 300.0},
-				"stepper_y":  map[string]any{"position_min": -5.0, "position_max": 300.0},
-				"stepper_z":  map[string]any{"position_max": 280.0},
+				"stepper_x":  map[string]any{"position_min": coldest, "position_max": axisXYMax},
+				"stepper_y":  map[string]any{"position_min": axisYMin, "position_max": axisXYMax},
+				"stepper_z":  map[string]any{"position_max": axisZMax},
 			},
 		},
 	}
@@ -143,16 +173,22 @@ type Host struct {
 	server   *http.Server
 	upgrader websocket.Upgrader
 
-	hostname string
-	version  string
-	objects  []string
+	hostname          string
+	version           string
+	objects           []string
+	withoutGcodes     bool
+	gcodesReadOnly    bool
+	corruptUploadSize bool
 
-	mu      sync.Mutex
-	status  map[string]map[string]any
-	refused map[string]string
-	conns   []*link
-	calls   []string
-	scripts []string
+	mu           sync.Mutex
+	status       map[string]map[string]any
+	refused      map[string]string
+	conns        []*link
+	calls        []string
+	scripts      []string
+	startedFiles []string
+	dirs         map[string]bool
+	files        map[string][]byte
 }
 
 // link is one open connection and the lock that keeps two writers off it. A
@@ -186,12 +222,17 @@ func Start(ctx context.Context, opts Options) (*Host, error) {
 	}
 
 	host := &Host{
-		listener: listener,
-		hostname: orElse(opts.Hostname, "voron-bench"),
-		version:  orElse(opts.SoftwareVersion, "v0.12.0-284-gfb1b4e39"),
-		objects:  opts.Objects,
-		status:   opts.Status,
-		refused:  maps.Clone(opts.Refused),
+		listener:          listener,
+		hostname:          orElse(opts.Hostname, "voron-bench"),
+		version:           orElse(opts.SoftwareVersion, "v0.12.0-284-gfb1b4e39"),
+		objects:           opts.Objects,
+		withoutGcodes:     opts.WithoutGcodes,
+		gcodesReadOnly:    opts.GcodesReadOnly,
+		corruptUploadSize: opts.CorruptUploadSize,
+		status:            opts.Status,
+		refused:           maps.Clone(opts.Refused),
+		dirs:              map[string]bool{"": true},
+		files:             map[string][]byte{},
 	}
 
 	if host.objects == nil {
@@ -204,6 +245,8 @@ func Start(ctx context.Context, opts Options) (*Host, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(websocketPath, host.serve)
+	mux.HandleFunc("/server/files/upload", host.serveUpload)
+	mux.HandleFunc("/server/files/gcodes/", host.serveGcodesFile)
 
 	host.server = &http.Server{Handler: mux, ReadHeaderTimeout: readHeaderTimeout}
 
@@ -259,6 +302,41 @@ func (h *Host) Scripts() []string {
 	defer h.mu.Unlock()
 
 	return slices.Clone(h.scripts)
+}
+
+// StartedFiles returns every filename passed to printer.print.start, in order.
+func (h *Host) StartedFiles() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return slices.Clone(h.startedFiles)
+}
+
+// FileBytes returns the bytes held at a path relative to gcodes.
+func (h *Host) FileBytes(rel string) ([]byte, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	data, ok := h.files[strings.Trim(rel, "/")]
+	if !ok {
+		return nil, false
+	}
+
+	return slices.Clone(data), true
+}
+
+// PutFile seeds a file at a path relative to gcodes, creating parent dirs.
+func (h *Host) PutFile(rel string, data []byte) {
+	clean := strings.Trim(rel, "/")
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for dir := pathpkg.Dir(clean); dir != "." && dir != ""; dir = pathpkg.Dir(dir) {
+		h.dirs[dir] = true
+	}
+
+	h.files[clean] = slices.Clone(data)
 }
 
 // Push sends one status update to every open connection and folds it into what
@@ -355,8 +433,22 @@ func (h *Host) answer(id uint64, method string, params json.RawMessage) map[stri
 		h.recordScript(params)
 
 		return resultFrame(id, "ok")
+	case methodPrintStart:
+		return h.startPrint(id, params)
 	case methodPrintPause, methodPrintResume, methodPrintCancel:
 		return resultFrame(id, "ok")
+	case methodFilesRoots:
+		return h.filesRoots(id)
+	case methodFilesGetDirectory:
+		return h.filesGetDirectory(id, params)
+	case methodFilesMetadata:
+		return h.filesMetadata(id, params)
+	case methodFilesPostDirectory:
+		return h.filesPostDirectory(id, params)
+	case methodFilesDeleteFile:
+		return h.filesDeleteFile(id, params)
+	case methodFilesDeleteDirectory:
+		return h.filesDeleteDirectory(id, params)
 	default:
 		return errorFrame(id, methodNotFound, "Method "+method+" is not available")
 	}

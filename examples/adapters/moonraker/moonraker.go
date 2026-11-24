@@ -204,7 +204,15 @@ const (
 // min_temp and max_temp.
 func (d *Driver) Baseline() connectorapi.Set {
 	return connectorapi.Set{
+		VerbSendInfo:      {Flag: true},
+		VerbSendFileInfo:  {Flag: true},
+		VerbCreateFolder:  {Flag: true},
+		VerbDeleteFile:    {Flag: true},
+		VerbDeleteFolder:  {Flag: true},
+		VerbFileUpload:    {Flag: true},
 		VerbSendStateInfo: {Flag: true},
+		VerbStartPrint:    {Flag: true},
+		ArgStartPrintPath: {Flag: true, Kind: connectorapi.KindString, Required: true},
 		VerbPausePrint:    {Flag: true},
 		VerbResumePrint:   {Flag: true},
 		VerbStopPrint:     {Flag: true},
@@ -238,7 +246,7 @@ func (d *Driver) Connect(
 
 	conn.SetReadLimit(maxFrameBytes)
 
-	session := newSession(conn, d.timeout, d.live, d.log)
+	session := newSession(conn, httpBaseURL(target), d.timeout, d.live, d.log)
 
 	resolved, err := session.handshake(ctx, d.Baseline().Intersect(profile))
 	if err != nil {
@@ -331,6 +339,27 @@ func websocketURL(address string) (string, error) {
 	}
 
 	return parsed.String(), nil
+}
+
+// httpBaseURL turns a validated Moonraker websocket URL into its HTTP base URL
+// for file uploads and thumbnail downloads.
+func httpBaseURL(wsTarget string) string {
+	parsed, err := url.Parse(wsTarget)
+	if err != nil {
+		return ""
+	}
+
+	if parsed.Scheme == "wss" {
+		parsed.Scheme = "https"
+	} else {
+		parsed.Scheme = "http"
+	}
+
+	parsed.Path = strings.TrimRight(strings.TrimSuffix(parsed.Path, websocketPath), "/")
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+
+	return parsed.String()
 }
 
 // withPort adds Moonraker's default port to a host that names none.

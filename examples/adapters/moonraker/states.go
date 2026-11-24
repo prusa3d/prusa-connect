@@ -24,28 +24,34 @@ const (
 	stateError    connectorapi.StateName = "ERROR"
 )
 
-// states is this dialect's declared state set. A print starts from Mainsail,
-// Fluidd or the machine's own screen and not through this driver, so every
-// move into PRINTING is one the machine makes on its own.
+// states is this dialect's declared state set. Each idle and terminal state
+// declares two transitions to PRINTING: one with VerbStartPrint for prints
+// started through Prusa Connect, and one without a verb for prints started
+// externally from Mainsail, Fluidd, or the printer screen.
 func states() connectorapi.StateSet {
-	idle := []connectorapi.Capability{VerbSendStateInfo, VerbNozzleTarget, VerbBedTarget}
+	base := []connectorapi.Capability{VerbSendStateInfo, VerbNozzleTarget, VerbBedTarget}
+	idle := append([]connectorapi.Capability{VerbStartPrint}, base...)
 
 	return connectorapi.StateSet{
 		States: []connectorapi.DeviceState{
 			{Name: stateIdle, DisplayName: "Idle", Accepts: idle},
 			{Name: statePrinting, DisplayName: "Printing", Accepts: append(
-				[]connectorapi.Capability{VerbPausePrint, VerbStopPrint}, idle...)},
+				[]connectorapi.Capability{VerbPausePrint, VerbStopPrint}, base...)},
 			{Name: statePaused, DisplayName: "Paused", Accepts: append(
-				[]connectorapi.Capability{VerbResumePrint, VerbStopPrint}, idle...)},
+				[]connectorapi.Capability{VerbResumePrint, VerbStopPrint}, base...)},
 			{Name: stateFinished, DisplayName: "Finished", Accepts: idle},
 			{Name: stateStopped, DisplayName: "Stopped", Accepts: idle},
 			{Name: stateError, DisplayName: "Error", Accepts: idle},
 		},
 		Transitions: []connectorapi.Transition{
 			{From: stateIdle, To: statePrinting},
+			{From: stateIdle, To: statePrinting, Verb: VerbStartPrint},
 			{From: stateFinished, To: statePrinting},
+			{From: stateFinished, To: statePrinting, Verb: VerbStartPrint},
 			{From: stateStopped, To: statePrinting},
+			{From: stateStopped, To: statePrinting, Verb: VerbStartPrint},
 			{From: stateError, To: statePrinting},
+			{From: stateError, To: statePrinting, Verb: VerbStartPrint},
 			{From: statePrinting, To: statePaused, Verb: VerbPausePrint},
 			{From: statePaused, To: statePrinting, Verb: VerbResumePrint},
 			{From: statePrinting, To: stateStopped, Verb: VerbStopPrint},

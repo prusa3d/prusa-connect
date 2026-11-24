@@ -13,9 +13,25 @@ import (
 // vocabulary already names, so a client that drives a Prusa drives a Klipper
 // machine with the same words.
 const (
+	// VerbSendInfo reads the machine's identity and storage roots.
+	VerbSendInfo = connectorapi.VerbSendInfo
+	// VerbSendFileInfo lists directories and inspects files on Moonraker storage.
+	VerbSendFileInfo = connectorapi.VerbSendFileInfo
+	// VerbCreateFolder makes a directory on Moonraker storage.
+	VerbCreateFolder = connectorapi.VerbCreateFolder
+	// VerbDeleteFile deletes a file from Moonraker storage.
+	VerbDeleteFile = connectorapi.VerbDeleteFile
+	// VerbDeleteFolder deletes a directory from Moonraker storage.
+	VerbDeleteFolder = connectorapi.VerbDeleteFolder
+	// VerbFileUpload uploads a print file to Moonraker storage.
+	VerbFileUpload = connectorapi.VerbFileUpload
 	// VerbSendStateInfo reads the machine's state and moves nothing, which is
 	// what makes it the verb a conformance run may send.
 	VerbSendStateInfo = connectorapi.Capability("core.command.send_state_info")
+	// VerbStartPrint starts printing a file on gcodes storage.
+	VerbStartPrint = connectorapi.Capability("core.command.start_print")
+	// ArgStartPrintPath is the storage-prefixed path passed to start_print.
+	ArgStartPrintPath = connectorapi.Capability("core.command.start_print#path")
 	// VerbPausePrint pauses the running print.
 	VerbPausePrint = connectorapi.Capability("core.command.pause_print")
 	// VerbResumePrint resumes a paused print.
@@ -59,6 +75,7 @@ const (
 	nozzleArgument = "nozzle_temperature"
 	toolArgument   = "tool"
 	bedArgument    = "bed_temperature"
+	pathArgument   = "path"
 )
 
 // toolArgumentValue is the head argument of the nozzle verb, from 0 with no
@@ -90,13 +107,26 @@ func temperatureArgument(ceiling float64) connectorapi.Value {
 // is copied from the resolved set so that the intersection changes nothing but
 // the heater bounds this function sets on purpose.
 func probe(
-	available []string, heaters map[string]heaterConfig, extruders int, resolved connectorapi.Set,
+	available []string, heaters map[string]heaterConfig, extruders int,
+	hasGcodes, gcodesWritable bool, resolved connectorapi.Set,
 ) connectorapi.Set {
 	claimed := connectorapi.Set{}
 
 	// Every machine answers a status query, so the one verb that reads and
 	// moves nothing needs no object behind it.
 	carry(claimed, resolved, VerbSendStateInfo)
+
+	if hasGcodes {
+		carry(claimed, resolved, VerbSendInfo, VerbSendFileInfo)
+
+		if gcodesWritable {
+			carry(claimed, resolved, VerbCreateFolder, VerbDeleteFile, VerbDeleteFolder, VerbFileUpload)
+		}
+
+		if slices.Contains(available, objectVirtualSDCard) {
+			carry(claimed, resolved, VerbStartPrint, ArgStartPrintPath)
+		}
+	}
 
 	// PAUSE, RESUME and CANCEL_PRINT are registered by Klipper's pause_resume
 	// section. A machine without it answers the three calls with an error, so
