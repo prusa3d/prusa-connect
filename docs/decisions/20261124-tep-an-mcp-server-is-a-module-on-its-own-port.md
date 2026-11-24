@@ -54,9 +54,9 @@ makes.
    instructions then say that the token is read-only.
 7. A person gets a token from the page "Connect an AI client" in the
    module's UI. It mints a credential named `MCP: <client>` through
-   `host.client` with the person's session, with scope `read` unless the
-   person picks `operate`, valid for 90 days unless the person picks 30 days
-   or a year. It shows the token once, with the command or snippet for the
+   `host.client` with the person's session. The scope is `read` unless the
+   person picks `operate`, and the credential is valid for 90 days unless
+   the person picks 30 days or a year. It shows the token once, with the command or snippet for the
    client, and keeps it nowhere. The person revokes it under Settings, API
    credentials.
 
@@ -97,8 +97,8 @@ makes.
     credential is revoked. This adds two optional fields to
     `CommandAuthorized` of
     [ADR-20260901-atx](20260901-atx-durable-command-records.md) rule 3.
-    The command log of a printer shows the name next to the principal, so a
-    command an assistant sent reads as sent by `MCP: <client>`.
+    The command log of a printer shows the name next to the principal, so
+    the log names `MCP: <client>` for a command an assistant sent.
 16. Every call of a tool that is not read-only writes one log line at info
     with `audit=true`: the tool, the credential's public id, the principal,
     and the outcome. It never logs the token.
@@ -108,8 +108,8 @@ makes.
 - Rules 3, 12 and 13: a manifest test in `extensions/mcp` holds `needs.listen`
   and the option defaults to this record.
 - Rules 4, 5 and 6: an integration test in `extensions/mcp` runs the module
-  against a core, calls `tools/list` with a `read` and an `operate` token,
-  and calls a write tool with a `read` token.
+  against a core. It calls `tools/list` with a `read` and an `operate`
+  token, and calls a write tool with a `read` token.
 - Rule 8: a test holds the tool names and argument names to a list copied
   from prusa-mcp.
 - Rule 10: a test fails for a tool registered without `readOnlyHint`.
@@ -128,11 +128,11 @@ makes.
 | MCP through `routes.serve` | the route buffers 1 MiB, ends after ten seconds, and drops `Authorization`, `Origin` and `Mcp-*` |
 | a streaming `routes.serve` | a change to the wire protocol and `sdk/` for one module |
 | the module in a repository of its own | it calls the core REST API, and an API change and the tool that wraps it should land in one merge request |
-| `routes.call` over the wire | it carries a person only inside a request the host serves to the module, so a call from the module's own port would act as the module |
-| MCP OAuth for local clients | clients require HTTPS for the authorization server, which a LAN server rarely has, and a bridge onto app pairing is about 1500 lines |
+| `routes.call` over the wire | it carries a person only inside a request the host serves, so a call from the module's own port would act as the module |
+| MCP OAuth for local clients | clients need HTTPS for the authorization server, rare on a LAN, and a bridge to app pairing is 1500 lines |
 | app pairing started from the client | no MCP client speaks the device flow |
 | list every tool and answer `403` for a read-only token | the assistant offers what it cannot do; a shorter list says so before the first call |
-| a person approves each write in the web app, as a pending command | the MCP client already asks a person before a tool call when it is set to, and a pending-command queue in the core is a new core feature for one module |
+| a person approves each write in the web app, as a pending command | the MCP client can ask a person before each tool call, and a pending-command queue is new core work for one module |
 | a `confirm=true` argument on writes | it changes the tools' shapes from prusa-mcp's |
 | switches per tool group, as prusa-mcp has | the tools are few, and a switch is a setting nobody needs yet |
 | a certificate the module makes itself | clients do not trust it without a manual step, and the core has no such machinery either |
