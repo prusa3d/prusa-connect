@@ -64,11 +64,11 @@ const (
 //nolint:gochecknoglobals,mnd // a fixed table, transcribed and read-only.
 var headCounts = map[string]int{"XL": 5, "CoreOne_INDX": 8, "CoreOneL_INDX": 8}
 
-// headsOf is the number of heads of a model, and false for a model this
-// driver has no figures for.
+// headsOf is the number of heads of a model, matched by sameModel, and false
+// for a model this driver has no figures for.
 func headsOf(model string) (int, bool) {
 	for name, heads := range headCounts {
-		if strings.EqualFold(name, strings.TrimSpace(model)) {
+		if sameModel(name, model) {
 			return heads, true
 		}
 	}

@@ -3,7 +3,6 @@ package xbuddy
 import (
 	"encoding/json"
 	"strconv"
-	"strings"
 
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
@@ -14,7 +13,9 @@ type buildVolume struct {
 }
 
 // buildVolumes is the printable volume of each model this driver reaches,
-// keyed by the model it reports.
+// keyed by the model's name in the capability profiles. A printer reports its
+// model in its own spelling, such as COREONEINDX for CoreOne_INDX, and
+// sameModel is what matches the two.
 //
 // The figures are the ones PrusaSlicer slices against: bed_shape and
 // max_print_height of the printer profiles in its PrusaResearch.ini vendor
@@ -46,16 +47,26 @@ var buildVolumes = map[string]buildVolume{
 	"CoreOneL_INDX": {x: 301, y: 270, z: 330},
 }
 
-// buildVolumeOf is the volume of a model, matched without regard to case,
-// and false for a model this driver has no figures for.
+// buildVolumeOf is the volume of a model, matched by sameModel, and false for
+// a model this driver has no figures for.
 func buildVolumeOf(model string) (buildVolume, bool) {
 	for name, volume := range buildVolumes {
-		if strings.EqualFold(name, strings.TrimSpace(model)) {
+		if sameModel(name, model) {
 			return volume, true
 		}
 	}
 
 	return buildVolume{}, false
+}
+
+// sameModel reports whether a printer's spelling of its model names a row of
+// this driver's tables. It folds both the way the host folds a model, case and
+// separators dropped, because firmware sends COREONEINDX and COREONEL-INDX in
+// User-Agent-Printer (include/common/printer_model_data.hpp) where the tables
+// say CoreOne_INDX and CoreOneL_INDX. A comparison that only ignored case
+// left every INDX with no build volume and no head count.
+func sameModel(name, reported string) bool {
+	return connectorapi.FoldModel(name) == connectorapi.FoldModel(reported)
 }
 
 // buildVolumePatches is what one model reports about its volume.
