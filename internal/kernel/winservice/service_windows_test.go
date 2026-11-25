@@ -34,7 +34,7 @@ func TestServiceReportsWhatTheServerReturned(t *testing.T) {
 			specific, code := service.Execute(nil, requests, status)
 
 			require.Equal(t, tc.specific, specific)
-			require.Equal(t, uint32(tc.code), code) //nolint:gosec // the cases are small and not negative.
+			require.Equal(t, uint32(tc.code), code)
 			require.Equal(t, svc.StartPending, (<-status).State)
 			require.Equal(t, svc.Running, (<-status).State)
 		})

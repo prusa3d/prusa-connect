@@ -27,16 +27,16 @@ same server.
 prusa-connect core --config config/config.yaml
 ```
 
-Everything after the subcommand is `compose.Main` (`compose/compose.go:72`).
+Everything after the subcommand is `compose.Main` (`compose/compose.go:127`).
 It is not in this file for one reason. A build-composed binary is
 its own module and cannot reach `internal/app`, so the core publishes one
 function and this command is its first caller. A composed binary's `main.go` is
 that call and nothing else.
 
-`runCore` (`compose/compose.go:140`) does only three things, because
+`runCore` (`compose/compose.go:218`) does only three things, because
 everything else belongs in `internal/app`:
 
-1. `parseFlags` (`compose/compose.go:288`) reads the flags. Five of them
+1. `parseFlags` (`compose/compose.go:421`) reads the flags. Five of them
    override one configuration key each and defer to the file when empty.
    `-version` prints the version and stops
 2. `signal.NotifyContext` installs the handler for interrupt and `SIGTERM`. A
@@ -51,7 +51,14 @@ linker embedded. A stamp on the main package would name whoever composed the
 binary rather than the core inside it.
 
 Exit codes are separated so a supervisor can tell a typo from an outage: `2`
-for a usage error, `1` for a failure to run (`compose/compose.go:48`).
+for a usage error, `1` for a failure to run (`compose/compose.go:60`). Exit
+code `3` asks the supervisor to start the process again.
+
+When the Windows service control manager starts the binary, `compose.Main`
+runs the same `runCore` under it, and a stop of the service cancels the
+context. A restart then ends the process with exit code `3`, and the recovery
+action of the service starts it again
+([ADR-20261125-jqp](../../../../decisions/20261125-jqp-prusa-connect-runs-as-a-windows-service-that-an-installer.md)).
 
 ## The flags
 
@@ -66,8 +73,9 @@ for a usage error, `1` for a failure to run (`compose/compose.go:48`).
 | `--safe` | nothing. This one run starts with every module off | off |
 | `--version` | nothing. It prints the version and stops | off |
 | `--json` | nothing. It makes `--version` write machine-readable output | off |
+| `--workdir` | nothing. The folder the server runs in, from which relative paths resolve | the current folder |
 
-`Options.applyTo` (`internal/app/options.go:103`) lays them over the loaded
+`Options.applyTo` (`internal/app/options.go:119`) lays them over the loaded
 configuration, and validation runs afterwards, so a flag can no more start a
 broken process than a file key can.
 

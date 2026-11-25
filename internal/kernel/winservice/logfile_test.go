@@ -133,14 +133,12 @@ func TestLogFileLosesNoLineUnderConcurrentWrites(t *testing.T) {
 	const writers, lines = 8, 50
 	var group sync.WaitGroup
 	for range writers {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			for range lines {
 				_, writeErr := log.Write([]byte("0123456789\n"))
 				assert.NoError(t, writeErr)
 			}
-		}()
+		})
 	}
 	group.Wait()
 	require.NoError(t, log.Close())
@@ -164,7 +162,7 @@ func TestLogFileLosesNoLineUnderConcurrentWrites(t *testing.T) {
 func read(t *testing.T, path string) string {
 	t.Helper()
 
-	data, err := os.ReadFile(path) //nolint:gosec // a file this test wrote under its temporary folder.
+	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 
 	return string(data)

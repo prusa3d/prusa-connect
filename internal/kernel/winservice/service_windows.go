@@ -41,7 +41,6 @@ func Run(body func(context.Context) int) (int, error) {
 // process it starts, at a file. The Go runtime writes a panic there. Without
 // it the panic of a service is written nowhere.
 func RedirectStandardError(path string) (*os.File, error) {
-	//nolint:gosec // the path is the server's own log, named by the process entry.
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open %s for standard error: %w", path, err)
@@ -53,7 +52,9 @@ func RedirectStandardError(path string) (*os.File, error) {
 		return nil, fmt.Errorf("point standard error at %s: %w", path, err)
 	}
 
-	os.Stderr = file
+	// Code that writes to os.Stderr holds the handle it had at start, which a
+	// service does not have, so the variable follows the handle.
+	os.Stderr = file //nolint:reassign // the process entry owns standard error, and sets it once before the core starts.
 
 	return file, nil
 }
@@ -81,23 +82,27 @@ func (h *handler) Execute(_ []string, requests <-chan svc.ChangeRequest, status 
 		case h.code = <-done:
 			return exitCode(h.code)
 		case request := <-requests:
-			switch request.Cmd {
-			case svc.Interrogate:
+			if request.Cmd == svc.Interrogate {
 				status <- request.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				status <- svc.Status{State: svc.StopPending, WaitHint: StopWaitHint}
-				cancel()
-				h.code = <-done
 
-				// A stop somebody asked for reports success whatever the
-				// server returned. A failure code would make the service
-				// control manager start the service again, against the
-				// person who stopped it. The reason is in the log.
-				return false, 0
-			default:
-				// The service accepts no other request, and Windows sends
-				// none it did not accept.
+				continue
 			}
+
+			// The service accepts Stop and Shutdown alone, and Windows
+			// sends no request it did not accept.
+			if request.Cmd != svc.Stop && request.Cmd != svc.Shutdown {
+				continue
+			}
+
+			status <- svc.Status{State: svc.StopPending, WaitHint: StopWaitHint}
+			cancel()
+			h.code = <-done
+
+			// A stop somebody asked for reports success whatever the server
+			// returned. A failure code would make the service control
+			// manager start the service again, against the person who
+			// stopped it. The reason is in the log.
+			return false, 0
 		}
 	}
 }

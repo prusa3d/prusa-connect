@@ -285,8 +285,15 @@ func runCore(parent context.Context, args []string, host supervisor) int {
 
 	err = app.Run(ctx, options.Options)
 	stop()
+
+	return afterRun(err, options.Options, host)
+}
+
+// afterRun carries out what the run asked for as it ended: an upgrade, a
+// restore, or a restart. Any other outcome is reported as the run's own.
+func afterRun(err error, options app.Options, host supervisor) int {
 	if errors.Is(err, app.ErrUpgradeApply) {
-		return applyUpgrade(options.Options, host)
+		return applyUpgrade(options, host)
 	}
 	if errors.Is(err, app.ErrBackupRestore) {
 		if err = app.ApplyPreparedRestore(context.Background(), options.ConfigPath); err != nil {

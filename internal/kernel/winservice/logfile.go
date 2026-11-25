@@ -96,7 +96,6 @@ func (l *LogFile) Close() error {
 }
 
 func (l *LogFile) open() error {
-	//nolint:gosec // the path is the server's own log, named by the process entry.
 	file, err := os.OpenFile(l.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return fmt.Errorf("open the log: %w", err)
