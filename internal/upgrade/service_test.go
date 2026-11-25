@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -355,4 +356,114 @@ func TestServiceReadsAVersionReportWithFieldsItDoesNotKnow(t *testing.T) {
 	if metadata.Version != "1.2.0" || metadata.Contract != "1.1.0" {
 		t.Fatalf("metadata is %#v", metadata)
 	}
+}
+
+// verifiedServiceForPreflight stages and verifies a candidate, which is the
+// state Preflight needs. Every test gets its own root.
+func verifiedServiceForPreflight(t *testing.T) *Service {
+	t.Helper()
+
+	binary := []byte("candidate")
+	sum := sha256.Sum256(binary)
+	verifier, err := NewVerifier(nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	service, err := NewService(ServiceOptions{
+		Root: t.TempDir(), CurrentVersion: "1.0.0", Verifier: verifier,
+		Metadata: func(context.Context, string) (BinaryMetadata, error) {
+			return BinaryMetadata{Version: "1.1.0", GOOS: runtime.GOOS, GOARCH: runtime.GOARCH}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = service.Stage(t.Context(), StageRequest{
+		Name: "core", Version: "1.1.0", Binary: bytes.NewReader(binary),
+		Sums: []byte(hex.EncodeToString(sum[:]) + "  core\n"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Verify(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	return service
+}
+
+// preflightForConfigPath runs a preflight that knows where the configuration
+// file lives and returns the report the preflight stored.
+func preflightForConfigPath(t *testing.T, configPath string) PreflightReport {
+	t.Helper()
+
+	service := verifiedServiceForPreflight(t)
+	journal, err := service.Preflight(t.Context(), PreflightRequest{ConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("the preflight refused %s: %v", configPath, err)
+	}
+	if journal.State != StatePreflighted || journal.Preflight == nil {
+		t.Fatalf("preflight journal is %#v", journal)
+	}
+
+	return *journal.Preflight
+}
+
+// configDirectoryWarning is the sentence the preflight stores for a
+// configuration file whose directory refuses a write.
+func configDirectoryWarning(configPath string) string {
+	return "the configuration directory " + filepath.Dir(configPath) +
+		" is not writable, so a rollback cannot rewrite " + configPath +
+		", and the server will not start when the upgrade changed it"
+}
+
+// assertOnlyWarning fails unless the report holds exactly this one warning.
+func assertOnlyWarning(t *testing.T, report PreflightReport, want string) {
+	t.Helper()
+
+	if len(report.Warnings) != 1 || report.Warnings[0] != want {
+		t.Fatalf("warnings are %q; want %q", report.Warnings, want)
+	}
+}
+
+// TestPreflightReportsAConfigurationDirectoryARollbackCannotWrite is the
+// shipped unit: /etc/prusa-connect is read-only, so a rollback leaves an
+// unchanged file alone and cannot rewrite one that changed. The warning names
+// the directory and never blocks.
+func TestPreflightReportsAConfigurationDirectoryARollbackCannotWrite(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	// A directory that does not exist stands for one the preflight could not
+	// create; the subtest covers one that exists and refuses a write.
+	absent := filepath.Join(root, "missing", "config.d", "config.yaml")
+	assertOnlyWarning(t, preflightForConfigPath(t, absent), configDirectoryWarning(absent))
+
+	// A directory that takes a write produces no such warning.
+	for _, warning := range preflightForConfigPath(t, filepath.Join(root, "config.yaml")).Warnings {
+		if strings.Contains(warning, "the configuration directory") {
+			t.Fatalf("a writable configuration directory produced %q", warning)
+		}
+	}
+
+	t.Run("a read-only directory", func(t *testing.T) {
+		t.Parallel()
+
+		if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+			t.Skip("a directory mode does not stop this process here")
+		}
+
+		directory := filepath.Join(t.TempDir(), "config.d")
+		if err := os.Mkdir(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(directory, 0o700) })
+		if err := os.Chmod(directory, 0o500); err != nil {
+			t.Fatal(err)
+		}
+
+		configPath := filepath.Join(directory, "config.yaml")
+		assertOnlyWarning(t, preflightForConfigPath(t, configPath), configDirectoryWarning(configPath))
+	})
 }

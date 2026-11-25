@@ -443,6 +443,18 @@ func (s *Service) Preflight(ctx context.Context, request PreflightRequest) (Jour
 		report.Writable = writableBeside(journal.CurrentBinary)
 	}
 
+	// A rollback restores the configuration file into the directory it lives
+	// in. The shipped unit mounts that directory read-only, so an unwritable
+	// one is a warning and not a blocker: the restore now writes only a file
+	// that changed, and blocking would refuse every upgrade on that unit.
+	if request.ConfigPath != "" && !writableBeside(request.ConfigPath) {
+		report.Warnings = append(report.Warnings, fmt.Sprintf(
+			"the configuration directory %s is not writable, so a rollback cannot rewrite %s, and the server will not start when the upgrade changed it",
+			filepath.Dir(request.ConfigPath),
+			request.ConfigPath,
+		))
+	}
+
 	blockers := s.preflightBlockers(ctx, request, report)
 	if len(blockers) > 0 {
 		return Journal{}, fmt.Errorf("%w: %s", ErrPreflight, strings.Join(blockers, "; "))
