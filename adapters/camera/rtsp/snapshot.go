@@ -122,7 +122,7 @@ func (s *stills) fetch(ctx context.Context) (cameraapi.Snapshot, error) {
 	if s.authorize != nil {
 		// The HTTP endpoint is sent the RTSP credential as Basic, without
 		// waiting for a challenge.
-		if header := s.authorize(http.MethodGet, s.endpoint, "Basic"); header != "" {
+		if header := s.authorize(http.MethodGet, s.endpoint, "Basic", 1); header != "" {
 			req.Header.Set("Authorization", header)
 		}
 	}

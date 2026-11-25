@@ -79,11 +79,13 @@ var (
 )
 
 // credential answers a device's challenge. It is a closure so that printing a
-// struct that has one does not print the password.
-type credential func(method, uri, challenge string) string
+// struct that has one does not print the password. count is how many requests
+// have answered this challenge, the nonce count of RFC 7616 section 3.4.
+type credential func(method, uri, challenge string, count uint32) string
 
 // session is one playing RTSP connection. Two goroutines write to it, one for
-// the keepalive and one for the teardown, so writing guards the socket and seq.
+// the keepalive and one for the teardown, so writing guards the socket, seq
+// and the challenge every request answers.
 type session struct {
 	writing sync.Mutex
 	conn    net.Conn
@@ -95,6 +97,12 @@ type session struct {
 	timeout time.Duration
 	auth    credential
 	control string
+
+	// challenge is the last one the device sent, and answered counts the
+	// requests that carried an answer to it. Some cameras refuse a SETUP with no
+	// answer with 400 and close the connection instead of challenging again.
+	challenge string
+	answered  uint32
 
 	// parameters is the SPS and PPS the SDP declared. Some cameras send them
 	// only there.
@@ -297,7 +305,7 @@ func (s *session) close() error {
 // request sends one method and reads its answer, retrying once with credentials
 // when the device challenges.
 func (s *session) request(method, uri string, headers map[string]string) (map[string]string, []byte, error) {
-	head, body, err := s.send(method, uri, headers, "")
+	head, body, err := s.send(method, uri, headers)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -309,7 +317,9 @@ func (s *session) request(method, uri string, headers map[string]string) (map[st
 			return nil, nil, fmt.Errorf("%w: it asked for credentials", ErrUnauthorized)
 		}
 
-		head, body, err = s.send(method, uri, headers, s.auth(method, uri, challenge))
+		s.remember(challenge)
+
+		head, body, err = s.send(method, uri, headers)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -328,9 +338,7 @@ func (s *session) request(method, uri string, headers map[string]string) (map[st
 }
 
 // send writes one message and reads one response.
-func (s *session) send(
-	method, uri string, headers map[string]string, authorization string,
-) (map[string]string, []byte, error) {
+func (s *session) send(method, uri string, headers map[string]string) (map[string]string, []byte, error) {
 	if err := s.conn.SetWriteDeadline(time.Now().Add(s.timeout)); err != nil {
 		return nil, nil, fmt.Errorf("%w: the connection would not take a deadline", ErrHandshake)
 	}
@@ -340,10 +348,6 @@ func (s *session) send(
 
 	if s.id != "" {
 		all["Session"] = s.id
-	}
-
-	if authorization != "" {
-		all["Authorization"] = authorization
 	}
 
 	if err := s.write(method, uri, all); err != nil {
@@ -374,6 +378,14 @@ func (s *session) write(method, uri string, headers map[string]string) error {
 		out.WriteString(key + ": " + value + "\r\n")
 	}
 
+	if s.auth != nil && s.challenge != "" {
+		s.answered++
+
+		if answer := s.auth(method, uri, s.challenge, s.answered); answer != "" {
+			out.WriteString("Authorization: " + answer + "\r\n")
+		}
+	}
+
 	out.WriteString("\r\n")
 
 	if _, err := io.WriteString(s.conn, out.String()); err != nil {
@@ -381,6 +393,16 @@ func (s *session) write(method, uri string, headers map[string]string) error {
 	}
 
 	return nil
+}
+
+// remember keeps a challenge for every later request on this connection, and
+// starts its count again.
+func (s *session) remember(challenge string) {
+	s.writing.Lock()
+	defer s.writing.Unlock()
+
+	s.challenge = challenge
+	s.answered = 0
 }
 
 // skipInterleaved drops the interleaved packets in front of the next RTSP
@@ -492,7 +514,7 @@ func (s *session) sprop() [][]byte { return s.parameters }
 func basicAuth(username, password string) credential {
 	encoded := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 
-	return func(_, _, challenge string) string {
+	return func(_, _, challenge string, _ uint32) string {
 		if !strings.HasPrefix(strings.ToLower(challenge), "basic") {
 			return ""
 		}
@@ -506,9 +528,9 @@ func basicAuth(username, password string) credential {
 func digestOrBasic(username, password string) credential {
 	basic := basicAuth(username, password)
 
-	return func(method, uri, challenge string) string {
+	return func(method, uri, challenge string, count uint32) string {
 		if !strings.HasPrefix(strings.ToLower(challenge), "digest") {
-			return basic(method, uri, challenge)
+			return basic(method, uri, challenge, count)
 		}
 
 		fields := digestFields(challenge)
@@ -530,10 +552,11 @@ func digestOrBasic(username, password string) credential {
 
 		if qop := qopOf(fields["qop"]); qop != "" {
 			cnonce := nonceValue()
-			out += `, qop=` + qop + `, nc=00000001, cnonce="` + cnonce + `"`
+			nc := fmt.Sprintf("%08x", count)
+			out += `, qop=` + qop + `, nc=` + nc + `, cnonce="` + cnonce + `"`
 
 			return out + `, response="` +
-				sum(ha1+":"+nonce+":00000001:"+cnonce+":"+qop+":"+ha2) + `"`
+				sum(ha1+":"+nonce+":"+nc+":"+cnonce+":"+qop+":"+ha2) + `"`
 		}
 
 		return out + `, response="` + sum(ha1+":"+nonce+":"+ha2) + `"`
