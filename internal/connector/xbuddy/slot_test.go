@@ -44,6 +44,26 @@ func TestTheSlotBlockLandsOnTheTree(t *testing.T) {
 			active: activity{"0": false, "1": true, "2": false, "3": false, "4": false},
 		},
 		{
+			// An INDX reads only the head on the carriage, and sends -1 for
+			// each docked one. That is no reading, so it removes the head's
+			// temperature instead of writing -1.
+			name: "an INDX with its second head picked",
+			block: `{"active":2,` +
+				`"1":{"material":"ASA","temp":-1.0},"2":{"material":"ABS","temp":122.0},` +
+				`"3":{"temp":-1.0},"4":{"temp":0.0},"5":{"temp":-0.5}}`,
+			layout: layoutHeads,
+			want: map[string]string{
+				tool("0", connectorapi.MaterialAbbreviation): `"ASA"`,
+				tool("0", connectorapi.NozzleTemp):           "null",
+				tool("1", connectorapi.MaterialAbbreviation): `"ABS"`,
+				tool("1", connectorapi.NozzleTemp):           "122.0",
+				tool("2", connectorapi.NozzleTemp):           "null",
+				tool("3", connectorapi.NozzleTemp):           "0.0",
+				tool("4", connectorapi.NozzleTemp):           "-0.5",
+			},
+			active: activity{"0": false, "1": true, "2": false, "3": false, "4": false},
+		},
+		{
 			name: "an MK4S with an MMU3",
 			block: `{"active":3,"state":1,` +
 				`"1":{"material":"PLA","temp":215,"fan_print":0,"fan_hotend":8000},` +
@@ -205,6 +225,21 @@ func TestTheTreeShapedTelemetryIsReadAsItIs(t *testing.T) {
 				tool("0", connectorapi.NozzleTemp): "30",
 			},
 			active: activity{"0": false, "1": false},
+		},
+		{
+			// An INDX reads only the head on the carriage, and sends -1 for
+			// each docked one. That is no reading, so it removes the head's
+			// temperature instead of writing -1.
+			name: "an INDX with its second head picked",
+			tools: `{"0":{"active":false,"nozzle_temp":-1.0},"1":{"active":true,"nozzle_temp":122.0},` +
+				`"2":{"active":false,"nozzle_temp":0},"3":{"active":false,"nozzle_temp":-0.5}}`,
+			want: map[string]string{
+				tool("0", connectorapi.NozzleTemp): "null",
+				tool("1", connectorapi.NozzleTemp): "122.0",
+				tool("2", connectorapi.NozzleTemp): "0",
+				tool("3", connectorapi.NozzleTemp): "-0.5",
+			},
+			active: activity{"0": false, "1": true, "2": false, "3": false},
 		},
 		{
 			name:  "nested feeders",

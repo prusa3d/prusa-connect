@@ -200,6 +200,22 @@ func (s *Session) reportHead(fields map[string]json.RawMessage, head connectorap
 	}
 }
 
+// noNozzleTemp is the nozzle temperature the firmware sends for a head it has
+// no reading of. An INDX reads only the head on the carriage, and each docked
+// head carries -1, in the slot block's temp and in the tree's nozzle_temp alike
+// (render_msg copies hotend.temp_nozzle with no check). It is no temperature,
+// so the head's reading is removed rather than shown as -1 °C.
+const noNozzleTemp = -1
+
+// noNozzleReading reports whether a head's nozzle temperature is the
+// firmware's -1 for a head with no reading. Only that value is, so a real reading below zero
+// still passes through.
+func noNozzleReading(raw json.RawMessage) bool {
+	var value float64
+
+	return len(raw) > 0 && json.Unmarshal(raw, &value) == nil && value == noNozzleTemp
+}
+
 // numberedSlotPatches reads the numbered slot block onto the tree.
 //
 // On a toolchanger, entry n is head n-1 and carries that head's readings and
@@ -310,6 +326,12 @@ func numberedEntries(
 
 		if !feeder {
 			for from, to := range numberedSlotMembers {
+				if from == "temp" && noNozzleReading(members[from]) {
+					w.remove(connectorapi.ToolPath(id, to))
+
+					continue
+				}
+
 				w.member(id, to, members[from])
 			}
 		}
@@ -453,6 +475,8 @@ func treeReadings(w *writer, id connectorapi.ToolID, members map[string]json.Raw
 		case string(reading) == dialogAbsent && member == connectorapi.NozzleTargetTemp:
 			w.member(id, member, json.RawMessage(`0`))
 		case string(reading) == dialogAbsent:
+			w.remove(connectorapi.ToolPath(id, member))
+		case member == connectorapi.NozzleTemp && noNozzleReading(reading):
 			w.remove(connectorapi.ToolPath(id, member))
 		default:
 			w.member(id, member, reading)
