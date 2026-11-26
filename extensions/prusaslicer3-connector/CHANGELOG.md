@@ -3,6 +3,14 @@
 What changed in this module, newest first. The top heading is the version
 `module.yaml` declares and the version this process reports to the host.
 
+## 0.1.2 - 2026-11-26
+
+### Fixed
+
+- A CORE One INDX or CORE One L INDX that reports its model as COREONEINDX or COREONEL-INDX now gets its model in the printer list. PrusaSlicer 3 then finds the printer preset.
+- A four-head INDX is the four-head model in the printer list. Its firmware reports a tool count of eight for both builds, so the highest enabled head now decides the model.
+- The printer list leaves out a tool that the printer reports as disabled. PrusaSlicer 3 then counts only the heads that are fitted.
+
 ## 0.1.1 - 2026-11-25
 
 ### Added

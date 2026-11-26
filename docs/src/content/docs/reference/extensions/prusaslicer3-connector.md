@@ -29,7 +29,7 @@ Lets PrusaSlicer 3 in offline mode sign in to this server, list its printers and
 
 | | |
 |---|---|
-| version | 0.1.1 |
+| version | 0.1.2 |
 | licence | OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1 |
 | module path | `github.com/prusa3d/prusaslicer3-connector` |
 | namespace | `com.github.aux.prusa3d.prusaslicer3-connector` |
