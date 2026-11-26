@@ -239,3 +239,43 @@ func TestReadRealZip(t *testing.T) {
 	t.Logf("brands=%d materials=%d packages=%d containers=%d skipped=%d meta=%+v",
 		len(s.Brands), len(s.Materials), len(s.Packages), len(s.Containers), s.Skipped, s.Meta)
 }
+
+func TestReadTakesAPackageDiameterInMillimetresOrMicrometres(t *testing.T) {
+	for in, want := range map[string]int{"1.75": 1750, "2.85": 2850, "3": 3000, "1750": 1750} {
+		files := catalogue("openprinttag-database-main")
+		files["openprinttag-database-main/data/material-packages/p/pkg.yaml"] = "uuid: p1\nslug: pkg\nclass: FFF\n" +
+			"material:\n  slug: a\nfilament_diameter: " + in + "\n"
+		r, n := zipOf(t, files)
+		s, err := Read(r, n, DefaultLimits)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p := s.Packages[0]; p.DiameterUM == nil || *p.DiameterUM != want {
+			t.Errorf("filament_diameter %s: diameter %v µm, want %d", in, deref(p.DiameterUM), want)
+		}
+	}
+}
+
+// A diameter no filament has is unknown, and the package is still read.
+func TestReadLeavesADiameterNoFilamentHasUnknown(t *testing.T) {
+	for _, in := range []string{".nan", ".inf", "-.inf", "1e30", "0", "-1.75", "0.05", "50000"} {
+		files := catalogue("openprinttag-database-main")
+		files["openprinttag-database-main/data/material-packages/p/pkg.yaml"] = "uuid: p1\nslug: pkg\nclass: FFF\n" +
+			"material:\n  slug: a\nfilament_diameter: " + in + "\n"
+		r, n := zipOf(t, files)
+		s, err := Read(r, n, DefaultLimits)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(s.Packages) != 1 || s.Packages[0].DiameterUM != nil {
+			t.Errorf("filament_diameter %s: packages %+v, want one with no diameter", in, s.Packages)
+		}
+	}
+}
+
+func deref(n *int) any {
+	if n == nil {
+		return nil
+	}
+	return *n
+}

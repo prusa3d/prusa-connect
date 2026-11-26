@@ -108,7 +108,7 @@ import (
 // manifest's, and the host holds the two to each other.
 const (
 	name    = "materials"
-	release = extension.Version("0.2.8")
+	release = extension.Version("0.2.9")
 )
 
 // Settings is what an operator writes under this instance's config block. The

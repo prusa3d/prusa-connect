@@ -7,6 +7,13 @@ Write the entry in the same change as the code. One bullet per behaviour a
 person outside this repository can observe: a route, a setting, a screen, a
 refusal. Name the route and the setting key, never a function or a file.
 
+## 0.2.9 - 2026-11-26
+
+### Fixed
+
+- A filament diameter from the catalogue is read in millimetres, as the catalogue writes it since 2026-11-23. Before, 1.75 mm was kept as 1 µm. A spool added from such a package then counted almost no grams for what the printer extruded.
+- The update repairs a package and a spool that kept such a diameter: 1 µm becomes 1.75 mm, 2 µm becomes 2.85 mm and 3 µm becomes 3 mm. The grams such a spool did not count are not added back, so weigh it and type the weight left.
+
 ## 0.2.8 - 2026-11-24
 
 ### Changed

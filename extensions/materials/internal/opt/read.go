@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/google/uuid"
@@ -76,8 +77,10 @@ type yPackage struct {
 	Container  ref      `yaml:"container"`
 	GTIN       string   `yaml:"gtin"` // a bare number in the YAML
 	NetWeightG *float64 `yaml:"nominal_netto_full_weight"`
-	DiameterUM *int     `yaml:"filament_diameter"`
-	LengthMM   *int     `yaml:"nominal_full_length"`
+	// Diameter is in millimetres, as 1.75. A catalogue from before
+	// 2026-11-23 writes micrometres, as 1750.
+	Diameter *float64 `yaml:"filament_diameter"`
+	LengthMM *int     `yaml:"nominal_full_length"`
 }
 
 // Read parses the catalogue ZIP. A YAML file that does not parse or has no
@@ -203,7 +206,7 @@ func (s *Snapshot) add(rest, folder string, b []byte) bool {
 			return false
 		}
 		s.Packages = append(s.Packages, Package{y.UUID, y.Slug, y.Class, y.Material.Slug,
-			y.Container.Slug, y.GTIN, y.NetWeightG, y.DiameterUM, y.LengthMM})
+			y.Container.Slug, y.GTIN, y.NetWeightG, micrometres(y.Diameter), y.LengthMM})
 	}
 	return true
 }
@@ -297,4 +300,36 @@ func (s *Snapshot) derivePackages(brands map[string]uuid.UUID, matBrand map[stri
 		pkgs = append(pkgs, p)
 	}
 	s.Packages = pkgs
+}
+
+// thinnestMicrometres splits the two units of a diameter: no filament is
+// this many millimetres thick, nor this many micrometres thin.
+// thickestMicrometres is a bound no filament reaches.
+const (
+	thinnestMicrometres = 100
+	thickestMicrometres = 10_000
+	micrometresPerMM    = 1000
+)
+
+// micrometres is a filament diameter in micrometres. A value under
+// thinnestMicrometres is in millimetres. A diameter no filament has, as NaN,
+// an infinity, 0 or a negative number, is unknown.
+func micrometres(d *float64) *int {
+	if d == nil {
+		return nil
+	}
+
+	um := *d
+	if um < thinnestMicrometres {
+		um *= micrometresPerMM
+	}
+
+	// Written so that NaN, which fails every comparison, is unknown too.
+	if !(um >= thinnestMicrometres && um <= thickestMicrometres) {
+		return nil
+	}
+
+	n := int(math.Round(um))
+
+	return &n
 }
