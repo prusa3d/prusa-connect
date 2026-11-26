@@ -216,6 +216,7 @@ var pagesCitingNothing = []string{
 	"mqtt-asyncapi.mdx",
 	"mqtt-overview.md",
 	"nas.md",
+	"pair-a-printer-at-its-screen.md",
 	"onboarding/index.md",
 	"onboarding/where-things-live.md",
 	"plugin-architecture.md",

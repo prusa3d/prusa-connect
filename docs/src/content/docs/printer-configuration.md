@@ -21,6 +21,9 @@ its own (`core.connectors.<name>.config.listener.addr`).
 
 If you need `tls = true` with a private CA, see [Custom Certificates](./certificates.md).
 
+A printer whose firmware can pair joins without a USB drive. See
+[Pair a printer at its screen](./pair-a-printer-at-its-screen.md).
+
 ## What the printer sends, and when
 
 The public Buddy firmware does this, in `src/connect/`:
