@@ -1509,7 +1509,7 @@ describe('a spool and the printers', () => {
     expect(JSON.parse(sent.body!)).toEqual({ ids: [2] });
   });
 
-  it('edits the notes of a spool on a printer, and not its weight or archive', async () => {
+  it('edits the weight and notes of a spool on a printer, and not its archive', async () => {
     const stub = started(
       'a',
       standard({
@@ -1528,7 +1528,7 @@ describe('a spool and the printers', () => {
     const dialog = page.getByRole('dialog');
     await expect
       .element(dialog.getByRole('textbox', { name: 'Weight left (g)' }))
-      .toBeDisabled();
+      .toBeEnabled();
     await expect
       .element(dialog.getByRole('checkbox', { name: 'Archived' }))
       .toBeDisabled();
@@ -1540,6 +1540,52 @@ describe('a spool and the printers', () => {
       .toBeDefined();
     const patch = stub.calls.find((c) => c.method === 'PATCH')!;
     expect(JSON.parse(patch.body!)).toEqual({ notes: 'dry' });
+  });
+
+  it('sets the weight of a tagged spool on a printer that reported none', async () => {
+    const unweighed = spool(1, {
+      ...on('core', '0'),
+      source: 'printer',
+      full_weight_g: undefined,
+      remaining_weight_g: 0,
+    });
+    const stub = started(
+      'a',
+      standard({
+        [`${M}/materials/a/spools`]: [
+          { status: 200, body: { spools: [unweighed], total: 1 } },
+        ],
+        [`${M}/spools/1`]: [{ status: 200, body: unweighed }],
+      }),
+    );
+    await draw(stub);
+
+    // Its 0 g is unknown, not empty.
+    await expect.element(page.getByText('Weight unknown')).toBeVisible();
+    await expect
+      .element(page.getByText('0 g', { exact: true }))
+      .not.toBeInTheDocument();
+
+    await page.getByRole('button', { name: 'Edit spool 1' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect
+      .element(
+        dialog.getByText(
+          "The printer did not report the spool's full weight, so type the weight left.",
+        ),
+      )
+      .toBeVisible();
+    await expect
+      .element(dialog.getByRole('checkbox', { name: 'Archived' }))
+      .toBeDisabled();
+    await dialog.getByRole('textbox', { name: 'Weight left (g)' }).fill('405');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+
+    await expect
+      .poll(() => stub.calls.find((c) => c.method === 'PATCH')?.body)
+      .toBeDefined();
+    const patch = stub.calls.find((c) => c.method === 'PATCH')!;
+    expect(JSON.parse(patch.body!)).toEqual({ remaining_weight_g: 405 });
   });
 
   it('assigns a spool to a printer with one tool in one click', async () => {

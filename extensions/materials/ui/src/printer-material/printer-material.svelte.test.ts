@@ -511,6 +511,40 @@ describe('the material section', () => {
       .toBeEnabled();
   });
 
+  it('draws no weight for a tagged spool whose printer reported none', async () => {
+    const stub = started({
+      [TOOLS]: [
+        printer([tool('0', { assignment: assignment({ spool_id: 7 }) })]),
+      ],
+      [`${M}/materials/a/spools`]: [
+        {
+          status: 200,
+          body: {
+            spools: [
+              spool(7, {
+                source: 'printer',
+                full_weight_g: undefined,
+                remaining_weight_g: 0,
+              }),
+            ],
+            total: 1,
+          },
+        },
+      ],
+    });
+    await draw(stub);
+
+    await expect.element(page.getByTitle('From Materials')).toBeVisible();
+    // The spool is read after the tools, so the weight would follow them.
+    await expect
+      .poll(() => stub.calls.filter((c) => c.url.includes('/spools')).length)
+      .toBe(1);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await expect
+      .element(page.getByText('0 g', { exact: true }))
+      .not.toBeInTheDocument();
+  });
+
   it('shows what is left of the one tool of a printer and unloads it', async () => {
     const stub = started({
       [TOOLS]: [

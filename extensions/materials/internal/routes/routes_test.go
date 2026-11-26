@@ -896,8 +896,13 @@ func TestEditingAnAssignedSpoolIsRefused(t *testing.T) {
 		t.Errorf("the spool put on a second tool answered %d %v", status, answer)
 	}
 
+	// A person may correct its weight on the tool.
+	if status, answer = h.send(t, "user:alice", http.MethodPatch, "/spools/1", `{"remaining_weight_g":100}`); status !=
+		http.StatusOK || answer["remaining_weight_g"] != 100.0 {
+		t.Errorf("the weight of an assigned spool answered %d %v", status, answer)
+	}
+
 	for _, step := range []struct{ method, path, body string }{
-		{http.MethodPatch, "/spools/1", `{"remaining_weight_g":100}`},
 		{http.MethodPatch, "/spools/1", `{"archived":true}`},
 		{http.MethodDelete, "/spools/1", ""},
 		{http.MethodPost, "/spools/delete", `{"ids":[1]}`},
@@ -1262,6 +1267,35 @@ func TestAddReportedSpoolTakesOffWhatTheToolUsed(t *testing.T) {
 		status, answer := h.send(t, "user:alice", http.MethodPost, "/printers/"+device+"/tools/0/spool", "")
 		if status != http.StatusOK || answer["full_weight_g"] != 1000.0 || answer["remaining_weight_g"] != want {
 			t.Errorf("adding the spool on %s answered %d %v, want %v g left", device, status, answer, want)
+		}
+	}
+}
+
+// A tag with no actual weight, or one of 0 g, is weighed by its package's
+// nominal weight, and an actual weight wins over it. The tools show the same.
+func TestAddReportedSpoolTakesTheNominalWeight(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t, nil)
+	h.seed(t, 0)
+
+	for tag, actual := range map[string]*float64{"tag-1": nil, "tag-2": new(800.0), "tag-3": new(0.0)} {
+		p := tagged("p-"+tag, "PLA", connectorapi.ReportedMaterial{
+			InstanceUUID: tag, FullWeight: actual, NominalFullWeight: new(1000.0),
+		})
+		p.Tools.Tools["0"].ConsumedWeight = new(595.0)
+		h.fleet[p.ID] = p
+	}
+
+	for device, full := range map[string]float64{"p-tag-1": 1000, "p-tag-2": 800, "p-tag-3": 1000} {
+		_, view := h.send(t, "user:alice", http.MethodGet, "/printers/"+device+"/tools", "")
+		if got := view["tools"].([]any)[0].(map[string]any)["reported"].(map[string]any)["full_weight_g"]; got != full {
+			t.Errorf("the tools of %s report a full weight of %v, want %v", device, got, full)
+		}
+
+		status, answer := h.send(t, "user:alice", http.MethodPost, "/printers/"+device+"/tools/0/spool", "")
+		if status != http.StatusOK || answer["full_weight_g"] != full || answer["remaining_weight_g"] != full-595 {
+			t.Errorf("adding the spool on %s answered %d %v, want %v g full", device, status, answer, full)
 		}
 	}
 }

@@ -797,7 +797,7 @@
       "patch": {
         "operationId": "update-spool",
         "summary": "Change a spool",
-        "description": "Changes the fields the body carries. A spool on a printer tool takes notes and a location; a change of its weight or its archive is refused with materials/SPOOL_ASSIGNED until it is unassigned. The host takes operate_resource on the module's instance before this is called.",
+        "description": "Changes the fields the body carries. A spool on a printer tool takes notes, a location and its remaining weight, which the printer counts down from there; a change of its archive is refused with materials/SPOOL_ASSIGNED until it is unassigned. A weight typed for a spool with the source printer and no full_weight_g also sets its full_weight_g: the weight typed and the grams the printer counted used. The host takes operate_resource on the module's instance before this is called.",
         "parameters": [
           {
             "name": "id",
@@ -2057,7 +2057,7 @@
                 "type": "null"
               }
             ],
-            "description": "The printer tool the spool is on, null for none. A spool on a tool cannot be changed or deleted until it is unassigned."
+            "description": "The printer tool the spool is on, null for none. A spool on a tool cannot be archived or deleted until it is unassigned."
           }
         },
         "required": [
@@ -2460,7 +2460,7 @@
           },
           "full_weight_g": {
             "type": "number",
-            "description": "The weight of the full spool in grams, absent when not reported."
+            "description": "The weight of the full spool in grams: the tag's actual weight, else its package's nominal weight. Absent when the printer reports neither."
           }
         },
         "required": [

@@ -524,6 +524,17 @@ func (f *Follower) merge(ctx context.Context, deviceID string, tool connectorapi
 		tagged = &spoolID
 	}
 
+	// A spool added at 0 g before its printer reported a weight takes the
+	// weight the report now carries. The report changes when it does.
+	if known && (stored == nil || !bytes.Equal(report, stored.Reported)) {
+		if err = f.store.WeighTagged(ctx, spoolID, stock.ReportedSpool{
+			MaterialUUID: reported.MaterialUUID, PackageUUID: reported.PackageUUID,
+			FullWeightG: stock.FullWeight(reported), ConsumedG: tool.ConsumedWeight,
+		}); err != nil {
+			return err
+		}
+	}
+
 	// Every write below holds the tool to what was read here. A person's
 	// assign that lands in between stands, and the next report is merged
 	// over it.

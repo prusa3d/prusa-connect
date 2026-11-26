@@ -66,9 +66,8 @@ func patchArchive(sp *Spool, p SpoolPatch) {
 }
 
 // touchesStock is true for a patch of what a spool on a tool may not change:
-// its weight, which the printer counts down, and its archive, as an archived
-// spool goes on no tool.
+// its archive, as an archived spool goes on no tool. Its weight a person may
+// correct, and the printer counts down from there.
 func (p SpoolPatch) touchesStock() bool {
-	return p.RemainingWeightG != nil || p.Condition != nil || p.Archived != nil ||
-		p.ArchiveReason != nil || p.ArchiveReasonNote != nil
+	return p.Condition != nil || p.Archived != nil || p.ArchiveReason != nil || p.ArchiveReasonNote != nil
 }

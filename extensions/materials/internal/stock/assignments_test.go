@@ -201,15 +201,12 @@ func TestAnAssignedSpoolKeepsItsWeightAndStock(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Its weight is the printer's to count, and an archived spool
-			// goes on no tool.
-			for _, patch := range []SpoolPatch{
-				{RemainingWeightG: new(100.0)},
-				{Archived: new(true)},
-			} {
-				if _, err := s.UpdateSpool(ctx, spools[0].ID, patch); !errors.Is(err, ErrSpoolAssigned) {
-					t.Fatalf("update %+v: %v", patch, err)
-				}
+			// An archived spool goes on no tool.
+			if _, err := s.UpdateSpool(ctx, spools[0].ID, SpoolPatch{Archived: new(true)}); !errors.Is(
+				err,
+				ErrSpoolAssigned,
+			) {
+				t.Fatalf("archive: %v", err)
 			}
 
 			if err := s.DeleteSpool(ctx, spools[0].ID, t0); !errors.Is(err, ErrSpoolAssigned) {
@@ -431,6 +428,97 @@ func TestAssignedSpoolsReadsThePrintersAskedWithTheirSpools(t *testing.T) {
 
 			if none, noneErr := s.AssignedSpools(ctx, nil); noneErr != nil || len(none) != 0 {
 				t.Fatalf("no printers: %v, %v", none, noneErr)
+			}
+		})
+	}
+}
+
+func TestATaggedSpoolWithNoWeightTakesOneOnATool(t *testing.T) {
+	for _, engine := range dbtest.Engines(t) {
+		t.Run(string(engine.Name), func(t *testing.T) {
+			s, ctx := listStore(t, engine), context.Background()
+			used := 595.0
+
+			// The printer reported the tag's used weight and no full weight,
+			// and the catalogue has no package of the material.
+			sp, err := s.AddReported(ctx, "alice",
+				ReportedSpool{UUID: "tag-1", MaterialUUID: "m-2", Abbreviation: "PLA", ConsumedG: &used}, 10)
+			if err == nil {
+				_, err = s.Assign(ctx, "alice", Assignment{DeviceID: "d1", ToolID: "0", SpoolID: &sp.ID, By: ByPrinter})
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// The weight typed and the grams the tag says were used make its
+			// full weight.
+			got, err := s.UpdateSpool(ctx, sp.ID, SpoolPatch{RemainingWeightG: new(405.0)})
+			if err != nil || got.RemainingWeightG != 405 || got.FullWeightG == nil || *got.FullWeightG != 1000 {
+				t.Fatalf("the weight of a tagged spool with none: %+v %v", got, err)
+			}
+
+			// Its archive stays the printer's.
+			if _, err = s.UpdateSpool(ctx, sp.ID, SpoolPatch{Archived: new(true)}); !errors.Is(err, ErrSpoolAssigned) {
+				t.Fatalf("archive: %v", err)
+			}
+
+			// A spool with a full weight takes a corrected weight and keeps
+			// its full weight.
+			full := 1000.0
+
+			weighed, err := s.AddReported(ctx, "alice",
+				ReportedSpool{UUID: "tag-2", MaterialUUID: "m-1", Abbreviation: "PLA", FullWeightG: &full}, 10)
+			if err == nil {
+				_, err = s.Assign(
+					ctx,
+					"alice",
+					Assignment{DeviceID: "d1", ToolID: "1", SpoolID: &weighed.ID, By: ByPrinter},
+				)
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err = s.UpdateSpool(ctx, weighed.ID, SpoolPatch{RemainingWeightG: new(5.0)})
+			if err != nil || got.RemainingWeightG != 5 || got.FullWeightG == nil || *got.FullWeightG != 1000 {
+				t.Fatalf("the weight of a tagged spool with one: %+v %v", got, err)
+			}
+		})
+	}
+}
+
+// A spool added at 0 g before its printer reported a weight takes the weight
+// when it is added again, and a spool with a weight keeps it.
+func TestAddingATaggedSpoolAgainWeighsIt(t *testing.T) {
+	for _, engine := range dbtest.Engines(t) {
+		t.Run(string(engine.Name), func(t *testing.T) {
+			s, ctx := listStore(t, engine), context.Background()
+			used, full := 595.0, 1000.0
+
+			sp, err := s.AddReported(ctx, "alice",
+				ReportedSpool{UUID: "tag-1", MaterialUUID: "m-2", Abbreviation: "PLA", ConsumedG: &used}, 10)
+			if err != nil || sp.FullWeightG != nil || sp.RemainingWeightG != 0 {
+				t.Fatalf("added with no weight: %+v %v", sp, err)
+			}
+
+			again := ReportedSpool{
+				UUID: "tag-1", MaterialUUID: "m-2", Abbreviation: "PLA", FullWeightG: &full, ConsumedG: &used,
+			}
+
+			sp, err = s.AddReported(ctx, "alice", again, 10)
+			if err != nil || sp.FullWeightG == nil || *sp.FullWeightG != 1000 || sp.RemainingWeightG != 405 {
+				t.Fatalf("added again with a weight: %+v %v", sp, err)
+			}
+
+			// A weight a person typed stays.
+			if _, err = s.UpdateSpool(ctx, sp.ID, SpoolPatch{RemainingWeightG: new(300.0)}); err != nil {
+				t.Fatal(err)
+			}
+
+			if sp, err = s.AddReported(ctx, "alice", again, 10); err != nil || sp.RemainingWeightG != 300 {
+				t.Fatalf("added again after a typed weight: %+v %v", sp, err)
 			}
 		})
 	}

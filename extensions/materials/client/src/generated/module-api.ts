@@ -431,7 +431,7 @@ export interface paths {
         head?: never;
         /**
          * Change a spool
-         * @description Changes the fields the body carries. A spool on a printer tool takes notes and a location; a change of its weight or its archive is refused with materials/SPOOL_ASSIGNED until it is unassigned. The host takes operate_resource on the module's instance before this is called.
+         * @description Changes the fields the body carries. A spool on a printer tool takes notes, a location and its remaining weight, which the printer counts down from there; a change of its archive is refused with materials/SPOOL_ASSIGNED until it is unassigned. A weight typed for a spool with the source printer and no full_weight_g also sets its full_weight_g: the weight typed and the grams the printer counted used. The host takes operate_resource on the module's instance before this is called.
          */
         patch: operations["update-spool"];
         trace?: never;
@@ -832,7 +832,7 @@ export interface components {
             archive_reason?: "consumed" | "defective" | "lost" | "expired" | "damaged" | "other";
             /** @description Free text about why it was archived, absent for none or a spool in stock. */
             archive_reason_note?: string;
-            /** @description The printer tool the spool is on, null for none. A spool on a tool cannot be changed or deleted until it is unassigned. */
+            /** @description The printer tool the spool is on, null for none. A spool on a tool cannot be archived or deleted until it is unassigned. */
             tool: components["schemas"]["ToolRef"] | null;
         };
         /** @description One spool as the person typed it, and how many of it to add. */
@@ -997,7 +997,7 @@ export interface components {
             type: string;
             /** @description The colour as #rrggbbaa, or empty. */
             color_rgba: string;
-            /** @description The weight of the full spool in grams, absent when not reported. */
+            /** @description The weight of the full spool in grams: the tag's actual weight, else its package's nominal weight. Absent when the printer reports neither. */
             full_weight_g?: number;
         };
         /** @description One tool, with what is on it and what the caller may do there. */

@@ -296,7 +296,7 @@ func reportedOf(t connectorapi.Tool) *reportedView {
 	view := &reportedView{Abbreviation: *t.Material}
 	if r := t.Reported; r != nil {
 		view.InstanceUUID, view.PackageUUID, view.MaterialUUID = r.InstanceUUID, r.PackageUUID, r.MaterialUUID
-		view.Type, view.ColorRGBA, view.FullWeightG = r.Type, r.ColorRGBA, r.FullWeight
+		view.Type, view.ColorRGBA, view.FullWeightG = r.Type, r.ColorRGBA, stock.FullWeight(*r)
 	}
 
 	return view
@@ -546,7 +546,7 @@ func (s *server) addReported(w http.ResponseWriter, r *http.Request, by string, 
 	spool, err := s.store.AddReported(r.Context(), by, stock.ReportedSpool{
 		UUID: reported.InstanceUUID, MaterialUUID: reported.MaterialUUID, PackageUUID: reported.PackageUUID,
 		Abbreviation: *tool.Material,
-		Type:         reported.Type, ColorRGBA: reported.ColorRGBA, FullWeightG: reported.FullWeight,
+		Type:         reported.Type, ColorRGBA: reported.ColorRGBA, FullWeightG: stock.FullWeight(*reported),
 		ConsumedG: tool.ConsumedWeight,
 	}, s.live.Get().MaxSpools)
 

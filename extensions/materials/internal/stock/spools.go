@@ -469,9 +469,30 @@ func keptAt(ctx context.Context, tx *sql.Tx, id int64) (string, error) {
 	return name, nil
 }
 
+// typedFullWeight gives a spool added from a tag with no full weight, whose
+// weight a person typed, the full weight of that weight and the grams the
+// printer counted used.
+func typedFullWeight(ctx context.Context, tx *sql.Tx, sp *Spool) error {
+	if sp.Source != SourcePrinter || sp.FullWeightG != nil {
+		return nil
+	}
+
+	var consumed float64
+	if err := tx.QueryRowContext(ctx, `SELECT consumed_weight_g FROM spools WHERE id = $1`, sp.ID).
+		Scan(&consumed); err != nil {
+		return fmt.Errorf("read the spool's grams used: %w", err)
+	}
+
+	sp.FullWeightG = new(sp.RemainingWeightG + consumed)
+
+	return nil
+}
+
 // UpdateSpool changes the set fields of a live spool. A spool on a tool takes
-// notes and a location; a change of its weight or its archive is
-// ErrSpoolAssigned, as the printer counts what it feeds off it.
+// notes, a location and its weight, which the printer counts down from there;
+// a change of its archive is ErrSpoolAssigned. A weight typed for a spool
+// added from a tag with no full weight also gives it a full weight: the weight
+// typed and what the printer counted used.
 func (s *Store) UpdateSpool(ctx context.Context, id int64, p SpoolPatch) (Spool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -497,6 +518,9 @@ func (s *Store) UpdateSpool(ctx context.Context, id int64, p SpoolPatch) (Spool,
 
 	if p.RemainingWeightG != nil {
 		sp.RemainingWeightG = *p.RemainingWeightG
+		if err = typedFullWeight(ctx, tx, &sp); err != nil {
+			return Spool{}, err
+		}
 	}
 
 	if p.Condition != nil {
@@ -530,7 +554,8 @@ func (s *Store) UpdateSpool(ctx context.Context, id int64, p SpoolPatch) (Spool,
 	if _, err = tx.ExecContext(
 		ctx,
 		`UPDATE spools SET remaining_weight_g=$2, condition=$3, location_id=$4, notes=$5, updated_at=$6,
-			archived_at=$7, archive_reason=NULLIF($8, ''), archive_reason_note=NULLIF($9, '') WHERE id=$1`,
+			archived_at=$7, archive_reason=NULLIF($8, ''), archive_reason_note=NULLIF($9, ''), full_weight_g=$10
+			WHERE id=$1`,
 		id,
 		sp.RemainingWeightG,
 		sp.Condition,
@@ -540,6 +565,7 @@ func (s *Store) UpdateSpool(ctx context.Context, id int64, p SpoolPatch) (Spool,
 		s.atOrNil(sp.ArchivedAt),
 		sp.ArchiveReason,
 		sp.ArchiveReasonNote,
+		sp.FullWeightG,
 	); err != nil {
 		return Spool{}, fmt.Errorf("update spool: %w", err)
 	}

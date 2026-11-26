@@ -3,6 +3,7 @@
 import type { Translate } from '@prusa/connect-ui/i18n';
 
 import type { Assignment, Spool, Tool } from '../api';
+import { unweighed } from '../materials-page/weights';
 import { toolLabel } from './tool-label';
 
 export interface ToolView {
@@ -74,7 +75,7 @@ export const toolView = (
     colorRgba: colour === '' ? undefined : colour,
     name: named ? nameOf(a) : undefined,
     brand: named ? a.brand_name : '',
-    leftG: spool?.remaining_weight_g,
+    leftG: unweighed(spool) ? undefined : spool?.remaining_weight_g,
     fullG: full !== undefined && full > 0 ? full : undefined,
     fromMaterials: a?.spool_id !== undefined,
     ring: ringOf(tool, printing),

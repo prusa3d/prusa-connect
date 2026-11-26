@@ -749,3 +749,35 @@ func TestAHeaterOrFanSampleChangesNothingApplyReads(t *testing.T) {
 		t.Error("an odometer sample did not mark the printer changed")
 	}
 }
+
+// A spool added at 0 g before its printer reported a weight takes the weight
+// once the printer reports it, less what the tag says was used.
+func TestATaggedSpoolWithNoWeightIsWeighedByTheNextReport(t *testing.T) {
+	w := follow(t)
+
+	m, err := w.store.CreateCustom(w.ctx, "alice", stock.MaterialFields{
+		Name: "Galaxy", Class: "FFF", Type: "PLA", Abbreviation: "PLA",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tag := uuid.NewString()
+
+	sp, err := w.store.AddReported(w.ctx, "alice",
+		stock.ReportedSpool{UUID: tag, MaterialUUID: m.UUID, Abbreviation: "PLA"}, 1000)
+	if err != nil || sp.FullWeightG != nil || sp.RemainingWeightG != 0 {
+		t.Fatalf("added with no weight: %+v %v", sp, err)
+	}
+
+	d := printer("p1", map[connectorapi.ToolID]tool{"0": pla(tag)})
+	d.State[connectorapi.ToolPath("0", connectorapi.MaterialNominalFullWeight)] = encode(1000)
+	d.State[connectorapi.ToolPath("0", connectorapi.ConsumedWeight)] = encode(595)
+	w.fleet.set(d)
+	w.start(t)
+
+	got, _, err := w.store.Spool(w.ctx, sp.ID)
+	if err != nil || got.FullWeightG == nil || *got.FullWeightG != 1000 || got.RemainingWeightG != 405 {
+		t.Fatalf("the spool after the report: %+v %v", got, err)
+	}
+}

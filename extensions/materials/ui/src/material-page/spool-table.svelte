@@ -40,6 +40,7 @@
 
   import type { Detail, Printer, PrinterTools, Spool } from '../api';
   import { heldHost } from '../host';
+  import { unweighed } from '../materials-page/weights';
   import { OWN_MODULE } from '../own-module';
   import ToolIcon from '../printer-material/tool-icon.svelte';
   import { toolLabel } from '../printer-material/tool-label';
@@ -233,14 +234,20 @@
         <TableCell class={CELL}>
           <span class={NAME}>{t('materials.column.weight')}</span>
           <div class="flex min-w-32 flex-col gap-1 @max-md:items-end">
-            <span class="text-sm whitespace-nowrap">
-              {t('materials.spool.grams', { g: spool.remaining_weight_g })}
-            </span>
-            <Progress
-              value={spool.remaining_weight_g}
-              max={full}
-              aria-label={t('materials.spools.bar', { id: spool.id })}
-            />
+            {#if unweighed(spool)}
+              <span class="text-sm whitespace-nowrap text-muted-foreground">
+                {t('materials.spool.unweighed')}
+              </span>
+            {:else}
+              <span class="text-sm whitespace-nowrap">
+                {t('materials.spool.grams', { g: spool.remaining_weight_g })}
+              </span>
+              <Progress
+                value={spool.remaining_weight_g}
+                max={full}
+                aria-label={t('materials.spools.bar', { id: spool.id })}
+              />
+            {/if}
           </div>
         </TableCell>
         <TableCell class={CELL}>

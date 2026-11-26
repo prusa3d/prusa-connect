@@ -38,7 +38,7 @@
   import { OWN_MODULE } from '../own-module';
   import LocationField from '../location-field.svelte';
   import FaultNote from '../materials-page/fault-note.svelte';
-  import { typedWeight } from '../materials-page/weights';
+  import { typedWeight, unweighed } from '../materials-page/weights';
 
   let {
     spool,
@@ -58,8 +58,9 @@
   const t = heldHost().t;
   const uid = $props.id();
 
-  /** A spool on a tool keeps its weight and its archive: the printer counts it. */
+  /** A spool on a tool keeps its archive; the printer counts its weight down. */
   const onTool = $derived(spool?.tool != null);
+  const unknown = $derived(unweighed(spool));
 
   let remaining = $state('');
   let locationId = $state<number | undefined>(undefined);
@@ -151,6 +152,11 @@
           {t('materials.edit.onTool')}
         </p>
       {/if}
+      {#if unknown}
+        <p data-part="unweighed" class="text-sm text-muted-foreground">
+          {t('materials.edit.unweighed')}
+        </p>
+      {/if}
     </DialogHeader>
     <form class="grid gap-4" onsubmit={submit}>
       <Field
@@ -161,7 +167,6 @@
           type: 'text',
           inputmode: 'decimal',
           required: true,
-          disabled: onTool,
           value: remaining,
           oninput: (e: Event) =>
             (remaining = (e.currentTarget as HTMLInputElement).value),

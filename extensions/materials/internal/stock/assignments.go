@@ -51,14 +51,13 @@ type Assignment struct {
 // names of connectorapi.ReportedMaterial. Its fields are that type's, so the
 // two convert into each other.
 type storedReport struct {
-	InstanceUUID string   `json:"instance_uuid,omitempty"`
-	PackageUUID  string   `json:"package_uuid,omitempty"`
-	MaterialUUID string   `json:"material_uuid,omitempty"`
-	Type         string   `json:"type,omitempty"`
-	ColorRGBA    string   `json:"color_rgba,omitempty"`
-	FullWeight   *float64 `json:"full_weight_g,omitempty"`
-	// NominalFullWeight is not kept: the merge reads only FullWeight.
-	NominalFullWeight *float64           `json:"-"`
+	InstanceUUID      string             `json:"instance_uuid,omitempty"`
+	PackageUUID       string             `json:"package_uuid,omitempty"`
+	MaterialUUID      string             `json:"material_uuid,omitempty"`
+	Type              string             `json:"type,omitempty"`
+	ColorRGBA         string             `json:"color_rgba,omitempty"`
+	FullWeight        *float64           `json:"full_weight_g,omitempty"`
+	NominalFullWeight *float64           `json:"nominal_full_weight_g,omitempty"`
 	Properties        map[string]float64 `json:"properties,omitempty"`
 }
 

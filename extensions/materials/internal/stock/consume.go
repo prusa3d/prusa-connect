@@ -122,15 +122,15 @@ func sameReading(prevE *float64, prevID *int64, e float64, id *int64) bool {
 // else what the odometer fed. took is false when nothing moved.
 func takeOff(ctx context.Context, tx *sql.Tx, id int64, mm float64, r Reading) (took bool, err error) {
 	var (
-		uuid, typ, source   string
-		density             *float64
-		diameterUM          *int
-		remaining, consumed float64
+		uuid, typ, source string
+		density           *float64
+		diameterUM        *int
+		consumed          float64
 	)
 
-	if err = tx.QueryRowContext(ctx, `SELECT uuid, source, type, density, diameter_um, remaining_weight_g,
-		consumed_weight_g FROM spools WHERE id = $1`, id).
-		Scan(&uuid, &source, &typ, &density, &diameterUM, &remaining, &consumed); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT uuid, source, type, density, diameter_um, consumed_weight_g
+		FROM spools WHERE id = $1`, id).
+		Scan(&uuid, &source, &typ, &density, &diameterUM, &consumed); err != nil {
 		return false, fmt.Errorf("read the spool on the tool: %w", err)
 	}
 
@@ -145,8 +145,11 @@ func takeOff(ctx context.Context, tx *sql.Tx, id int64, mm float64, r Reading) (
 		return false, nil
 	}
 
-	_, err = tx.ExecContext(ctx, `UPDATE spools SET consumed_weight_g = $1, remaining_weight_g = $2 WHERE id = $3`,
-		total, max(0, remaining-(total-consumed)), id)
+	// The remaining weight goes down from the row as it stands, so a weight a
+	// person types between the read above and this write is kept.
+	_, err = tx.ExecContext(ctx, `UPDATE spools SET consumed_weight_g = $1,
+		remaining_weight_g = CASE WHEN remaining_weight_g > $2 THEN remaining_weight_g - $2 ELSE 0 END WHERE id = $3`,
+		total, total-consumed, id)
 	if err != nil {
 		return false, fmt.Errorf("take the filament off the spool: %w", err)
 	}

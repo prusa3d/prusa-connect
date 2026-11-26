@@ -213,9 +213,18 @@ Materials, which creates a spool with the tag's UUID and the source `printer`.
 A tag that a spool already carries adds nothing. A manual spool of the same
 material can be merged into it. The printer's spool keeps its UUID and takes
 the location and the notes of the other spool where it has none. A spool on a
-tool cannot be deleted or ticked until it is unassigned. Its notes and its
-location still change, but not its weight or its archive: the printer counts
-its weight down.
+tool cannot be deleted, archived or ticked until it is unassigned. Its notes,
+its location and its weight still change. The printer counts its weight down
+from the weight a person types.
+
+The spool's full weight comes from the tag: its actual weight, else the nominal
+weight of its package. A core reports the nominal weight from the release after
+0.1.0. A tag that carries neither takes the nominal weight of the catalogue
+package the tag names. With none of these, the weight is unknown, and the
+tile, the spool's row and the spool picker say so instead of 0 g. A person
+types the weight left, and the spool's full weight is then that weight and the
+grams the printer counted used. A spool added at 0 g before its printer
+reported a weight takes that weight when the printer next reports its tag.
 
 A printer can leave the host, or lose a tool, while the module is not following
 it. Its spools then stay on a tool that is gone, and so does a deleted

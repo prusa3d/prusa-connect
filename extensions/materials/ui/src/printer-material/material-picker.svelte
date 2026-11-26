@@ -55,7 +55,7 @@
   import { heldList, MaterialList } from '../list.svelte';
   import MaterialDetails from '../material-page/material-details.svelte';
   import FaultNote from '../materials-page/fault-note.svelte';
-  import { kilograms } from '../materials-page/weights';
+  import { kilograms, unweighed } from '../materials-page/weights';
   import { OWN_MODULE } from '../own-module';
   import SearchSelect from '../search-select.svelte';
   import { refusalText } from './reasons';
@@ -164,9 +164,13 @@
 
   function spoolLabel(spool: Spool): string {
     const id = t('materials.printer.spool', { id: spool.id });
-    const weight = t('materials.printer.grams', {
-      g: formatNumber(spool.remaining_weight_g, { maximumFractionDigits: 0 }),
-    });
+    const weight = unweighed(spool)
+      ? t('materials.spool.unweighed')
+      : t('materials.printer.grams', {
+          g: formatNumber(spool.remaining_weight_g, {
+            maximumFractionDigits: 0,
+          }),
+        });
     const use = available(spool) ? undefined : t('materials.header.inUse');
     return [id, weight, spool.location, use].filter(Boolean).join(' · ');
   }
