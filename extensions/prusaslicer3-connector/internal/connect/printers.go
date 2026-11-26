@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+
+	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 )
 
 // legacyModel is the model and the base model the cloud reports for a precise
@@ -66,6 +68,27 @@ var localModels = map[string]string{
 	"SL1S":          "SL1S",
 }
 
+// foldedModels is localModels, and the precise names the INDX rows are
+// finished from, keyed by the folded spelling the core compares models by. A
+// firmware reports the INDX by the id of its own model table, COREONEINDX or
+// COREONEL-INDX, which no exact key of localModels matches.
+//
+//nolint:gochecknoglobals // derived once from the fixed tables above.
+var foldedModels = func() map[string]string {
+	indx := []string{"COREONE_INDX", "COREONEL_INDX"}
+
+	out := make(map[string]string, len(localModels)+len(indx))
+	for spelling, precise := range localModels {
+		out[connectorapi.FoldModel(spelling)] = precise
+	}
+
+	for _, precise := range indx {
+		out[connectorapi.FoldModel(precise)] = precise
+	}
+
+	return out
+}()
+
 // connectStates are the values of connect_state PrusaSlicer knows. The cloud also answers UNKNOWN for a printer it has
 // not heard from.
 //
@@ -120,7 +143,7 @@ func PrinterJSON(p Printer) map[string]any {
 	out["connect_state"] = connectState(p)
 
 	tools := toolsOf(p.State)
-	precise := preciseModel(p.Model, toolCount(p.State, tools), hasMMU(tools))
+	precise := preciseModel(p.Model, headCount(p.Model, p.State, tools), hasMMU(tools))
 
 	if precise != "" {
 		out["legacy_printer_model"] = precise
@@ -171,6 +194,10 @@ const (
 func preciseModel(model string, tools int, mmu bool) string {
 	precise, ok := localModels[model]
 	if !ok {
+		precise, ok = foldedModels[connectorapi.FoldModel(model)]
+	}
+
+	if !ok {
 		precise = strings.ToUpper(model)
 	}
 
@@ -199,6 +226,54 @@ func preciseModel(model string, tools int, mmu bool) string {
 	}
 
 	return precise
+}
+
+// headCount is the number of heads that tells the precise model apart. It is
+// toolCount, except on an INDX: its firmware reports a tool_count of eight for
+// the four-head build too, and disables the heads that are not fitted. There
+// the highest enabled head decides, and toolCount only when no head says.
+func headCount(model string, state map[string]json.RawMessage, tools map[string]any) int {
+	count := toolCount(state, tools)
+
+	switch preciseModel(model, 0, false) {
+	case "COREONE_INDX4T", "COREONEL_INDX4T":
+		if fitted := highestEnabledHead(state); fitted > 0 {
+			return fitted
+		}
+	}
+
+	return count
+}
+
+// highestEnabledHead is one more than the highest head id whose
+// /tools/<id>/enabled is true, and 0 when no head reports enabled. A slot of a
+// feeder, such as 0.1, is not a head.
+func highestEnabledHead(state map[string]json.RawMessage) int {
+	highest := 0
+
+	for path, raw := range state {
+		rest, ok := strings.CutPrefix(path, "/tools/")
+		if !ok {
+			continue
+		}
+
+		id, member, ok := strings.Cut(rest, "/")
+		if !ok || member != "enabled" {
+			continue
+		}
+
+		n, err := strconv.Atoi(id)
+		if err != nil || n < 0 {
+			continue
+		}
+
+		var enabled bool
+		if json.Unmarshal(raw, &enabled) == nil && enabled {
+			highest = max(highest, n+1)
+		}
+	}
+
+	return highest
 }
 
 // toolCount is /tool_count, and the number of tools when the printer did not
@@ -261,6 +336,15 @@ func toolsOf(state map[string]json.RawMessage) map[string]any {
 
 	for key, tool := range tools {
 		fields, _ := tool.(map[string]any)
+
+		// The architecture's null tool: a head that is not fitted, or a slot
+		// switched off. The cloud's list names only the tools that are there.
+		if enabled, says := fields["enabled"].(bool); says && !enabled {
+			delete(tools, key)
+
+			continue
+		}
+
 		splitToolType(fields)
 		materialType(fields)
 		tools[key] = cloudTool(fields)

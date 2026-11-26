@@ -9,7 +9,7 @@ title: PrusaSlicer 3 Connector
 summary: Lets PrusaSlicer 3 in offline mode sign in to this server, list its printers and send a print, as it does with Prusa Connect.
 codeowner: Prusa Research
 kind: sink
-version: 0.1.1
+version: 0.1.2
 license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
 contract_major: 1
 openapi: openapi.json

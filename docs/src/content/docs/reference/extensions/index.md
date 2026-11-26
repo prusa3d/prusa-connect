@@ -32,7 +32,7 @@ Each page below says what the extension adds to the app, what it needs from the 
 - **[Materials](./materials.md)** 0.2.8. A catalogue of filament materials, and the spools a person has of them.
 - **[Parts](./parts.md)** 0.3.9. A private catalogue of parts, with folders, versions of their files, comments and printing.
 - **[PrusaSlicer 2 Connector](./prusaslicer2-connector.md)** 0.1.2. Lets PrusaSlicer 2.4 and later send a print to each printer of this server as it sends one to a printer with PrusaLink.
-- **[PrusaSlicer 3 Connector](./prusaslicer3-connector.md)** 0.1.1. Lets PrusaSlicer 3 in offline mode sign in to this server, list its printers and send a print, as it does with Prusa Connect.
+- **[PrusaSlicer 3 Connector](./prusaslicer3-connector.md)** 0.1.2. Lets PrusaSlicer 3 in offline mode sign in to this server, list its printers and send a print, as it does with Prusa Connect.
 - **[Server slicing](./server-slicing.md)** 0.2.3. Slices 3MF projects into G-code on this server with the PrusaSlicer command line, and writes the G-code into a storage.
 - **[Print queue](./simple-queue.md)** 0.1.0. A queue of print files for each printer. The next file starts when the bed is clear.
 - **[3MF projects](./threemf.md)** 0.1.12. Shows a 3MF project on the page of its file, with its beds, objects and settings, and reads 3MF files for the server.
