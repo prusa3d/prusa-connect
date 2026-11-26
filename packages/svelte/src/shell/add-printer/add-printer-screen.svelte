@@ -7,6 +7,10 @@
   a timer. When a printer joins while the screen waits, the screen shows the
   last step without a click.
 
+  A host that can pair a printer over the network offers that beside the
+  first step: the person types the printer's address and presses yes on the
+  printer, and the printer joins with no file and no code to type.
+
   Printers that asked without this guide still need a decision. While the
   guide is on another step, they are listed above the open step with the same
   approve and reject buttons.
@@ -35,6 +39,7 @@
     Progress,
     StepList,
   } from '../../primitives';
+  import PairAtPrinter from './pair-at-printer.svelte';
   import PendingApprovals from './pending-approvals.svelte';
   import StepConnected from './step-connected.svelte';
   import StepPrepare from './step-prepare.svelte';
@@ -58,6 +63,12 @@
     onBegin,
     onApprove,
     onReject,
+    onPair,
+    onCancelPairing,
+    onPairAgain,
+    pairing,
+    pairingBusy = false,
+    pairingError,
   }: AddPrinterScreenProps = $props();
 
   const ORDER: readonly AddPrinterStep[] = [
@@ -165,6 +176,16 @@
     shown !== 'waiting' && admission === 'approval' && pending.length > 0,
   );
 
+  // Pairing at the printer's screen is offered beside the first step, which
+  // it replaces. A pairing on its way stays in view whatever step the guide
+  // moved to, until the printer has joined.
+  const pairingShown = $derived(
+    onPair !== undefined &&
+      shown !== 'connected' &&
+      (shown === 'prepare' ||
+        (pairing !== undefined && pairing.state !== 'withdrawn')),
+  );
+
   const go = async (next: AddPrinterStep): Promise<void> => {
     step = next;
     seen = { asking, joined: joined.length };
@@ -246,6 +267,18 @@
                 <PendingApprovals {pending} {onApprove} {onReject} />
               </CardContent>
             </Card>
+          {/if}
+
+          {#if pairingShown && onPair !== undefined}
+            <PairAtPrinter
+              {connection}
+              {pairing}
+              busy={pairingBusy}
+              error={pairingError}
+              {onPair}
+              onCancel={onCancelPairing}
+              onAgain={onPairAgain}
+            />
           {/if}
 
           <Card data-part="step-card">

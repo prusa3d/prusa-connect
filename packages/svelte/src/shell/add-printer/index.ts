@@ -5,8 +5,11 @@ export type {
   AutoConnect,
   JoinedPrinter,
   JoiningPrinter,
+  PairingRequest,
+  PairingState,
   PendingPrinter,
   PrinterAdmission,
+  PrinterPairingView,
   RefusedPrinter,
   RefusedReason,
 } from './types';

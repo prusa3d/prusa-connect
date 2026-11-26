@@ -8,12 +8,18 @@
   approves each printer is read from the server and never guessed. A printer
   counts as the one just added when its approval, its arrival or its refusal
   came after the guide began to wait.
+
+  The page can also ask a printer on the network to pair at its own screen.
+  The server sends the request and approves the registration that follows,
+  so the guide learns of that printer from the same approval and arrival
+  frames as of any other.
 -->
 <script lang="ts">
   import {
     AddPrinterScreen,
     type JoinedPrinter,
     type JoiningPrinter,
+    type PairingRequest,
     type PendingPrinter,
     printerHref,
   } from '@prusa/connect-ui/shell';
@@ -23,11 +29,15 @@
   import { client } from '../client';
   import type { AppContext } from '../screens';
   import { PrinterAuthority } from '../stores/printer-authority.svelte';
+  import { PrinterPairingStore } from '../stores/printer-pairing.svelte';
 
   let { ctx }: { ctx: AppContext } = $props();
 
   const registrations = $derived(ctx.registrations);
   const authority = new PrinterAuthority(client);
+  // One pairing at a time, owned by this page: a pairing waits about a
+  // minute and means nothing once the person leaves.
+  const pairing = new PrinterPairingStore(client);
 
   // The paths a printer dials are the connector's, not this page's, and they
   // are fixed: `internal/connector/xbuddy/xbuddy.go` mounts /p/register and
@@ -150,13 +160,18 @@
     void ctx.deviceModels.read();
     if (connection.customCert && connection.tls) void authority.load();
 
-    return ctx.fleet.subscribe((event) => {
+    const unsubscribe = ctx.fleet.subscribe((event) => {
       if (event.type !== ARRIVED) return;
       const id = deviceIdOf(event);
       if (id !== undefined && !arrivals.has(id)) {
         arrivals = new Set([...arrivals, id]);
       }
     });
+
+    return () => {
+      unsubscribe();
+      pairing.dispose();
+    };
   });
 </script>
 
@@ -179,5 +194,17 @@
   }}
   onReject={(code: string) => {
     void registrations.reject(code);
+  }}
+  pairing={pairing.pairing}
+  pairingBusy={pairing.busy}
+  pairingError={pairing.error}
+  onPair={(request: PairingRequest) => {
+    void pairing.start(request);
+  }}
+  onCancelPairing={() => {
+    void pairing.cancel();
+  }}
+  onPairAgain={() => {
+    pairing.reset();
   }}
 />

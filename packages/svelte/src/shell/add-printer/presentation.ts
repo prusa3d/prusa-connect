@@ -30,3 +30,17 @@ export const buildIni = (connection: AutoConnect): string =>
  */
 export const formatFingerprint = (fingerprint: string): string =>
   fingerprint.replaceAll(/(.{4})(?=.)/g, '$1 ');
+
+/**
+ * Whether a printer stores a host name whole. The firmware keeps 20
+ * characters of it, and shortens only a name that ends in prusa3d.com before
+ * it does: by `connect.prusa3d.com` to fit 35 characters, and by
+ * `prusa3d.com` to fit 29. docs/src/content/docs/printer-configuration.md has
+ * the table.
+ */
+export const storedHostFits = (host: string): boolean => {
+  if (host.endsWith('connect.prusa3d.com')) return host.length <= 35;
+  if (host.endsWith('prusa3d.com')) return host.length <= 29;
+
+  return host.length <= 20;
+};

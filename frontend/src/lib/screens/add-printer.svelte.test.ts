@@ -4,7 +4,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 import { appContext } from '../../test/app-context';
-import { json, type Routes, stubFetch } from '../../test/stub';
+import { json, problem, type Routes, stubFetch } from '../../test/stub';
 import DeclaredAddPrinter from '../../../test/declared-add-printer.svelte';
 import AddPrinter from './add-printer.svelte';
 
@@ -348,6 +348,84 @@ describe('the add-printer page', () => {
         .element(page.getByText(/hostname = shop\.example\.net/))
         .toBeInTheDocument();
       expect(fetcher.count(AUTHORITY)).toBe(0);
+    });
+  });
+  describe('pairing at the printer', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const START = 'POST /api/v1/printer-pairings';
+    const ui = {
+      printer_address: 'http://192.168.1.50:8080',
+      printer_admission: 'approval',
+    };
+
+    const openWith = async (routes: Routes) => {
+      const table: Routes = {
+        'GET /api/v1/ui': json(200, ui),
+        'GET /api/v1/registrations': json(200, { items: [] }),
+        ...routes,
+      };
+      const fetcher = stubFetch(table);
+      vi.stubGlobal('fetch', fetcher.fetch);
+      await open(ui, table);
+
+      return fetcher;
+    };
+
+    it('asks the printer through this server, with the address printers dial', async () => {
+      const fetcher = await openWith({
+        [START]: json(201, {
+          id: 'p1',
+          code: 'K7QX-29FM',
+          printer: '192.168.1.20:80',
+          connect: { host: '192.168.1.50', port: 8080, tls: false },
+          state: 'waiting',
+          started_at: '2026-11-26T10:00:00Z',
+        }),
+        'GET /api/v1/printer-pairings/p1': json(200, {
+          id: 'p1',
+          code: 'K7QX-29FM',
+          printer: '192.168.1.20:80',
+          connect: { host: '192.168.1.50', port: 8080, tls: false },
+          state: 'waiting',
+          started_at: '2026-11-26T10:00:00Z',
+        }),
+      });
+
+      await page.getByLabelText('Printer address').fill('192.168.1.20');
+      await page.getByRole('button', { name: 'Ask the printer' }).click();
+
+      await expect.element(page.getByText('K7QX-29FM')).toBeInTheDocument();
+
+      const sent = fetcher.calls.find(
+        (call) => `${call.method} ${call.path}` === START,
+      );
+      expect(JSON.parse(sent?.body ?? '{}')).toEqual({
+        printer: '192.168.1.20',
+        connect: { host: '192.168.1.50', port: 8080, tls: false },
+      });
+    });
+
+    it('explains a printer whose firmware cannot pair, and keeps the file', async () => {
+      await openWith({
+        [START]: problem(422, 'core.printer/PAIRING_UNSUPPORTED'),
+      });
+
+      await page.getByLabelText('Printer address').fill('192.168.1.20');
+      await page.getByRole('button', { name: 'Ask the printer' }).click();
+
+      await expect
+        .element(page.getByText(/add the printer with the settings file/))
+        .toBeInTheDocument();
+      await expect
+        .element(
+          page.getByRole('link', {
+            name: 'Download prusa_printer_settings.ini',
+          }),
+        )
+        .toBeInTheDocument();
     });
   });
 });
