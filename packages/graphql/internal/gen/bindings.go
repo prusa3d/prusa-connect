@@ -177,6 +177,9 @@ var unboundGroups = []struct {
 	{
 		reasonNoWire,
 		[]string{
+			"cancel-printer-pairing",
+			"get-printer-pairing",
+			"start-printer-pairing",
 			"create-dashboard",
 			"create-device-folder",
 			"create-storage-folder",

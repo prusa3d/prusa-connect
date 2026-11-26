@@ -41,8 +41,10 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -206,6 +208,7 @@ type Driver struct {
 	log             *slog.Logger
 	upgrader        websocket.Upgrader
 	refusals        refusalLog
+	heard           atomic.Pointer[RegistrationHeard]
 
 	mu       sync.Mutex
 	sessions map[string]*Session
@@ -546,6 +549,46 @@ func (d *Driver) UseApprovals(notify connectorapi.ApprovalNotice) {
 	d.registrar.notify = notify
 }
 
+// RegistrationHeard is told about a registration a printer made, with the
+// address the request came from. It runs before the printer is given its code,
+// so an approval it makes answers the printer's first poll.
+type RegistrationHeard func(ctx context.Context, registration admission.Registration, from netip.Addr)
+
+// HearRegistrations takes the function this driver calls for every
+// registration it issues a code for. The host uses it to approve a printer a
+// person just paired at its own screen (ADR-20261126-qca).
+func (d *Driver) HearRegistrations(
+	hear func(ctx context.Context, registration admission.Registration, from netip.Addr),
+) {
+	heard := RegistrationHeard(hear)
+	d.heard.Store(&heard)
+}
+
+// tellHeard calls the RegistrationHeard the host gave, if it gave one.
+//
+// The address is the remote end of the connection and never a forwarded
+// header. A header is whatever the caller wrote, and the address is what a
+// pairing compares with the printer it reached.
+func (d *Driver) tellHeard(r *http.Request, code string, body registerRequest) {
+	hear := d.heard.Load()
+	if hear == nil {
+		return
+	}
+
+	from, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil {
+		return
+	}
+
+	(*hear)(r.Context(), admission.Registration{
+		Code:        code,
+		Fingerprint: body.Fingerprint,
+		Serial:      body.SerialNumber,
+		Model:       body.PrinterType,
+		Firmware:    body.Firmware,
+	}, from.Addr().Unmap())
+}
+
 var (
 	_ connectorapi.ReportsRefusals  = (*Driver)(nil)
 	_ connectorapi.ReportsAdmission = (*Driver)(nil)
@@ -652,6 +695,8 @@ func (d *Driver) handleBeginRegistration(w http.ResponseWriter, r *http.Request)
 		d.logWarn(r.Context(), "a registration was dropped to make room for another",
 			slog.String("dropped", dropped), slog.String("fingerprint", body.Fingerprint))
 	}
+
+	d.tellHeard(r, code, body)
 
 	w.Header().Set(codeHeader, code)
 	w.WriteHeader(http.StatusOK)

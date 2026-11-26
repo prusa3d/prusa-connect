@@ -8261,6 +8261,36 @@
         ],
         "type": "object"
       },
+      "PairedRegistration": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "The registration's code, as the registrations surface names it.",
+            "type": "string"
+          },
+          "connector": {
+            "description": "The connector instance that holds the registration.",
+            "type": "string"
+          },
+          "device_id": {
+            "description": "The device the approval bound the printer to. Open its page with this id.",
+            "type": "string"
+          },
+          "model": {
+            "description": "The model the printer reported, in its own spelling.",
+            "type": "string"
+          },
+          "serial": {
+            "description": "The serial number the printer reported.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "connector"
+        ],
+        "type": "object"
+      },
       "Pairing": {
         "additionalProperties": false,
         "properties": {
@@ -8967,6 +8997,127 @@
         "required": [
           "gcode",
           "status"
+        ],
+        "type": "object"
+      },
+      "PrinterPairing": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "The code the printer shows. Show it to the person, who checks it matches the printer's screen before accepting.",
+            "examples": [
+              "K7QX-29FM"
+            ],
+            "type": "string"
+          },
+          "connect": {
+            "$ref": "#/components/schemas/PrinterPairingConnect",
+            "description": "The server address the printer was given."
+          },
+          "id": {
+            "description": "The pairing's id on this server, which every other operation on it takes.",
+            "type": "string"
+          },
+          "printer": {
+            "description": "The address the pairing was sent to, as host:port.",
+            "type": "string"
+          },
+          "registration": {
+            "$ref": "#/components/schemas/PairedRegistration",
+            "description": "The registration the pairing approved. Present once the state is admitted."
+          },
+          "started_at": {
+            "description": "When the pairing was sent.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "state": {
+            "description": "waiting while the question is on the printer's screen. approved once the person accepted, while the printer registers. admitted once the registration was approved. refused, expired and withdrawn end the pairing.",
+            "enum": [
+              "waiting",
+              "approved",
+              "admitted",
+              "refused",
+              "expired",
+              "withdrawn"
+            ],
+            "type": "string"
+          },
+          "until": {
+            "description": "When the pairing stops waiting for the current step: for the person while waiting, for the printer's registration once approved. Absent once the pairing ended.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "printer",
+          "connect",
+          "state",
+          "started_at"
+        ],
+        "type": "object"
+      },
+      "PrinterPairingConnect": {
+        "additionalProperties": false,
+        "properties": {
+          "host": {
+            "description": "The host name or IPv4 address the printer dials this server at. A printer stores at most 20 characters of it, or 35 for a name ending in prusa3d.com, so a longer name is refused by the printer.",
+            "examples": [
+              "192.168.1.50"
+            ],
+            "maxLength": 35,
+            "minLength": 1,
+            "type": "string"
+          },
+          "port": {
+            "description": "The port the printer dials.",
+            "examples": [
+              8080
+            ],
+            "format": "int64",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tls": {
+            "description": "Whether the printer dials with TLS.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "tls"
+        ],
+        "type": "object"
+      },
+      "PrinterPairingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "connect": {
+            "$ref": "#/components/schemas/PrinterPairingConnect",
+            "description": "This server's address, which the printer stores when the person at it accepts."
+          },
+          "name": {
+            "description": "A name the printer shows beside the question, at most 20 bytes.",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "printer": {
+            "description": "The printer's address on the local network: a host name or an IP address, with an optional port. The port is 80 when none is given.",
+            "examples": [
+              "192.168.1.20"
+            ],
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "printer",
+          "connect"
         ],
         "type": "object"
       },
@@ -28153,6 +28304,336 @@
           "registrations"
         ],
         "x-sample-excuse": "one DER certificate. A worked example of binary bytes is the file, and it does not belong in a contract document"
+      }
+    },
+    "/api/v1/printer-pairings": {
+      "post": {
+        "description": "This server sends a pairing request to the printer's local API, and the printer shows a question with the code from the answer. When the person at the printer accepts, the printer stores the server address from the request and registers with this server. That registration is approved with no second step, and the pairing's state becomes admitted.\n\nThis server sends the request, and not the browser, because the printer is on this server's network. Only private, link-local and shared addresses are dialled. Firmware without pairing answers PAIRING_UNSUPPORTED: add that printer with a settings file. It takes admit_device on the driver resource kind.",
+        "operationId": "start-printer-pairing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "connect": {
+                  "host": "192.168.1.50",
+                  "port": 8080,
+                  "tls": false
+                },
+                "printer": "192.168.1.20"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/PrinterPairingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "K7QX-29FM",
+                  "connect": {
+                    "host": "192.168.1.50",
+                    "port": 8080,
+                    "tls": false
+                  },
+                  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                  "printer": "192.168.1.20:80",
+                  "started_at": "2026-11-26T10:00:00Z",
+                  "state": "waiting",
+                  "until": "2026-11-26T10:01:15Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PrinterPairing"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "Ask a printer on the local network to pair",
+        "tags": [
+          "registrations"
+        ]
+      }
+    },
+    "/api/v1/printer-pairings/{pairing_id}": {
+      "delete": {
+        "description": "Takes the question off the printer's screen while it is still there. A printer that already accepted keeps the server address it stored, and its registration waits for a person on the registrations surface. A pairing that already ended is answered as it ended. It takes admit_device on the driver resource kind.",
+        "operationId": "cancel-printer-pairing",
+        "parameters": [
+          {
+            "description": "The pairing's id, as starting it answered.",
+            "in": "path",
+            "name": "pairing_id",
+            "required": true,
+            "schema": {
+              "description": "The pairing's id, as starting it answered.",
+              "examples": [
+                "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "K7QX-29FM",
+                  "connect": {
+                    "host": "192.168.1.50",
+                    "port": 8080,
+                    "tls": false
+                  },
+                  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                  "printer": "192.168.1.20:80",
+                  "started_at": "2026-11-26T10:00:00Z",
+                  "state": "withdrawn"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PrinterPairing"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Withdraw one printer pairing",
+        "tags": [
+          "registrations"
+        ]
+      },
+      "get": {
+        "description": "The state of the pairing and, once the printer's registration was approved, the device it became. This server asks the printer about the question once a second, so reading this more often learns nothing new. A pairing that ended stays readable for ten minutes. It takes admit_device on the driver resource kind.",
+        "operationId": "get-printer-pairing",
+        "parameters": [
+          {
+            "description": "The pairing's id, as starting it answered.",
+            "in": "path",
+            "name": "pairing_id",
+            "required": true,
+            "schema": {
+              "description": "The pairing's id, as starting it answered.",
+              "examples": [
+                "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c"
+              ],
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "K7QX-29FM",
+                  "connect": {
+                    "host": "192.168.1.50",
+                    "port": 8080,
+                    "tls": false
+                  },
+                  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                  "printer": "192.168.1.20:80",
+                  "registration": {
+                    "code": "K7PQ2XR4MN",
+                    "connector": "xbuddy",
+                    "device_id": "9f2a4c18-6d3b-4e07-b5a1-8c0f2d7e4b93",
+                    "model": "MK4",
+                    "serial": "8221-1234567"
+                  },
+                  "started_at": "2026-11-26T10:00:00Z",
+                  "state": "admitted"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/PrinterPairing"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Read where one printer pairing stands",
+        "tags": [
+          "registrations"
+        ]
       }
     },
     "/api/v1/readiness": {

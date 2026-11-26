@@ -263,6 +263,9 @@ type Config struct {
 	// listing and a 404 for any code, which is a deployment whose connectors
 	// admit a device the moment it arrives.
 	Registrations DeviceRegistrations
+	// PrinterPairings sends a pairing to a printer on the local network. Nil
+	// answers PAIRING_UNSUPPORTED to a start and 404 to any id.
+	PrinterPairings PrinterPairings
 	// PrinterAuthority reads the DER certificate of this server's own authority,
 	// the file a printer loads from its USB drive as connect.der. It returns
 	// fs.ErrNotExist when the deployment makes none. Nil answers 404.

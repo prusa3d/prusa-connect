@@ -90,6 +90,7 @@ var parameterExamples = map[string][]string{
 	"namespace":   {exampleNamespace},
 	"object_id":   {examplePrinterID},
 	"object_type": {"device"},
+	"pairing_id":  {examplePrinterPairingID},
 	"preset":      {examplePresetName},
 	"provider":    {examplePairingProvider},
 	"storage":     {exampleStorageName},

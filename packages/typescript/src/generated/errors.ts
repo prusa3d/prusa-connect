@@ -102,6 +102,16 @@ export type ErrorCode =
   | "core.printer/LISTING_REFUSED"
   | "core.printer/LISTING_UNFINISHED"
   | "core.printer/NOT_FOUND"
+  | "core.printer/PAIRING_ADDRESS_REFUSED"
+  | "core.printer/PAIRING_BUSY"
+  | "core.printer/PAIRING_DISABLED"
+  | "core.printer/PAIRING_LIMITED"
+  | "core.printer/PAIRING_LOCKED"
+  | "core.printer/PAIRING_PENDING"
+  | "core.printer/PAIRING_REFUSED"
+  | "core.printer/PAIRING_SERVER_ADDRESS"
+  | "core.printer/PAIRING_UNREACHABLE"
+  | "core.printer/PAIRING_UNSUPPORTED"
   | "core.printer/PATH_NOT_ALLOWED"
   | "core.printer/PRESET_MODEL_MISMATCH"
   | "core.printer/PRINTER_CHANGED"
@@ -303,6 +313,16 @@ export const errorCodes: Readonly<Record<ErrorCode, ErrorCodeEntry>> = {
   "core.printer/LISTING_REFUSED": { status: 409, retryable: false, params: ["path", "machine_reason", "reason"], summary: "The printer refused to report what is at that path", action: "Read the machine reason this error carries, which is the printer's own word for why. For a path that names nothing, list the directory above it. For a printer that takes no command in its state, clear that state at the machine and ask again." },
   "core.printer/LISTING_UNFINISHED": { status: 409, retryable: true, params: ["path"], summary: "The printer did not finish reading the folder", action: "Ask for the folder again once the printer is connected. An MK4S takes 12 to 15 s to list a USB root of about 300 files, and a read still running after two minutes is stopped." },
   "core.printer/NOT_FOUND": { status: 404, retryable: false, params: ["device_id"], summary: "No printer is registered with that id", action: "Read the id from the printer list. An id that was removed is not reissued, so a stored one can go stale." },
+  "core.printer/PAIRING_ADDRESS_REFUSED": { status: 422, retryable: false, params: [], summary: "This server pairs only with a printer on the local network", action: "Type the address the printer shows on its network screen: a private address such as 192.168.1.20, or a name that resolves to one." },
+  "core.printer/PAIRING_BUSY": { status: 409, retryable: true, params: [], summary: "The printer is printing or shows another dialog, so it cannot ask about pairing", action: "Wait until the printer is idle and its screen shows no dialog, then try again." },
+  "core.printer/PAIRING_DISABLED": { status: 429, retryable: false, params: [], summary: "Pairing is off on the printer until it restarts", action: "A person cancelled two pairing questions in a row. Restart the printer to pair again, or add it with a settings file instead." },
+  "core.printer/PAIRING_LIMITED": { status: 409, retryable: true, params: [], summary: "This server already has a pairing open with that printer, or too many open at once", action: "Cancel the open pairing or wait a minute for it to end, then try again." },
+  "core.printer/PAIRING_LOCKED": { status: 429, retryable: true, params: ["retry_after_seconds"], summary: "The printer takes no pairing request for a while", action: "Wait for the time Retry-After gives in seconds. A printer locks pairing for five minutes after a cancel, a question nobody answered, or three requests in five minutes." },
+  "core.printer/PAIRING_PENDING": { status: 409, retryable: true, params: [], summary: "The printer already shows a pairing question", action: "Answer or cancel the question on the printer, or wait a minute for it to close, then try again." },
+  "core.printer/PAIRING_REFUSED": { status: 422, retryable: false, params: [], summary: "The printer refused the pairing request", action: "The detail says which value the printer refused. A server address longer than the printer stores is the usual cause: use the IP address instead of a long name." },
+  "core.printer/PAIRING_SERVER_ADDRESS": { status: 422, retryable: false, params: [], summary: "The printer cannot use the server address in the request", action: "Give an address the printer reaches this server at: not localhost, at most 35 characters, and a port between 1 and 65535." },
+  "core.printer/PAIRING_UNREACHABLE": { status: 502, retryable: true, params: [], summary: "This server got no answer from the printer", action: "Check the printer's address on its network screen, and that the printer and this server are on the same network." },
+  "core.printer/PAIRING_UNSUPPORTED": { status: 422, retryable: false, params: [], summary: "The printer's firmware cannot pair", action: "Update the printer's firmware, or add the printer with a settings file on a USB drive." },
   "core.printer/PATH_NOT_ALLOWED": { status: 400, retryable: false, params: ["path", "command_id"], summary: "The path leaves the storage it names", action: "Send a path relative to the storage, with no .. segment. A path is checked as it reaches the device, so prefixing a storage onto a path that climbs does not make it legal." },
   "core.printer/PRESET_MODEL_MISMATCH": { status: 422, retryable: false, params: ["printer_model", "preset_models"], summary: "The preset names printer models and this printer is not one of them", action: "Run a preset that names this printer's model, or one that names no model at all. Gcode that is safe on one model is not safe on another, so nothing was sent." },
   "core.printer/PRINTER_CHANGED": { status: 409, retryable: true, params: ["verb", "previous_firmware", "firmware", "command_id"], summary: "The printer changed while the command was waiting, so it was not sent", action: "Read the printer's capability set again and send the command against it. The command was composed for the firmware the printer had before, the printer came back reporting another one, and nothing was sent to the machine." },

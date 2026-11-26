@@ -2,6 +2,7 @@ package app
 
 import (
 	"io"
+	"net/netip"
 	"os"
 
 	"github.com/prusa3d/prusa-connect/internal/app/config"
@@ -43,6 +44,9 @@ type Options struct {
 	// restart stops the process so it starts again on the file the first-run
 	// wizard wrote. Run sets it; nothing on the command line does.
 	restart func()
+	// pairingPermit is the addresses a printer pairing may dial. Nil is the
+	// local network. A test sets it to reach a fake printer on loopback.
+	pairingPermit func(netip.Addr) bool
 	// upgradeApply stops the fully composed process before the outer launcher
 	// swaps its executable.
 	upgradeApply func()

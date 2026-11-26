@@ -85,6 +85,7 @@ func exampleDataServer(t *testing.T) *Server {
 		entry:    sampled[StorageEntry](t, "stat-storage-entry", ""),
 	}
 	cfg.History = func() (HistoryStore, error) { return exampleHistory{}, nil }
+	cfg.PrinterPairings = examplePrinterPairings{}
 	cfg.Registrations = &fakeRegistrations{
 		waiting: sampled[[]Registration](t, "list-pending-registrations", "items"),
 		// The id an approval binds. The real surface reads it off the fleet
@@ -948,4 +949,27 @@ func (exampleResourceStore) Log(context.Context, string, ref.Ref) (ResourceLog, 
 
 func (exampleResourceStore) ModuleMemory() ModuleMemoryPool {
 	return ModuleMemoryPool{PoolBytes: new(int64(1 << 30)), CommittedBytes: 384 << 20, Source: "detected"}
+}
+
+// examplePrinterPairings answers each operation with its own sample.
+type examplePrinterPairings struct{}
+
+func (examplePrinterPairings) Start(context.Context, PrinterPairingRequest) (PrinterPairing, error) {
+	return waitingPairingExample(), nil
+}
+
+func (examplePrinterPairings) Get(_ context.Context, id string) (PrinterPairing, error) {
+	if id != examplePrinterPairingID {
+		return PrinterPairing{}, ErrPrinterPairingUnknown
+	}
+
+	return admittedPairingExample(), nil
+}
+
+func (examplePrinterPairings) Cancel(_ context.Context, id string) (PrinterPairing, error) {
+	if id != examplePrinterPairingID {
+		return PrinterPairing{}, ErrPrinterPairingUnknown
+	}
+
+	return withdrawnPairingExample(), nil
 }

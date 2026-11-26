@@ -2257,6 +2257,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/printer-pairings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a printer on the local network to pair
+         * @description This server sends a pairing request to the printer's local API, and the printer shows a question with the code from the answer. When the person at the printer accepts, the printer stores the server address from the request and registers with this server. That registration is approved with no second step, and the pairing's state becomes admitted.
+         *
+         *     This server sends the request, and not the browser, because the printer is on this server's network. Only private, link-local and shared addresses are dialled. Firmware without pairing answers PAIRING_UNSUPPORTED: add that printer with a settings file. It takes admit_device on the driver resource kind.
+         */
+        post: operations["start-printer-pairing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/printer-pairings/{pairing_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read where one printer pairing stands
+         * @description The state of the pairing and, once the printer's registration was approved, the device it became. This server asks the printer about the question once a second, so reading this more often learns nothing new. A pairing that ended stays readable for ten minutes. It takes admit_device on the driver resource kind.
+         */
+        get: operations["get-printer-pairing"];
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw one printer pairing
+         * @description Takes the question off the printer's screen while it is still there. A printer that already accepted keeps the server address it stored, and its registration waits for a person on the registrations surface. A pairing that already ended is answered as it ended. It takes admit_device on the driver resource kind.
+         */
+        delete: operations["cancel-printer-pairing"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/readiness": {
         parameters: {
             query?: never;
@@ -6657,6 +6703,18 @@ export interface components {
             /** @description The page session. Store it only in the cookie, never where a page script reads it. */
             value: string;
         };
+        PairedRegistration: {
+            /** @description The registration's code, as the registrations surface names it. */
+            code: string;
+            /** @description The connector instance that holds the registration. */
+            connector: string;
+            /** @description The device the approval bound the printer to. Open its page with this id. */
+            device_id?: string;
+            /** @description The model the printer reported, in its own spelling. */
+            model?: string;
+            /** @description The serial number the printer reported. */
+            serial?: string;
+        };
         Pairing: {
             /**
              * Format: date-time
@@ -7010,6 +7068,62 @@ export interface components {
              * @enum {string}
              */
             status: "accepted" | "refused" | "not_attempted";
+        };
+        PrinterPairing: {
+            /**
+             * @description The code the printer shows. Show it to the person, who checks it matches the printer's screen before accepting.
+             * @example K7QX-29FM
+             */
+            code: string;
+            /** @description The server address the printer was given. */
+            connect: components["schemas"]["PrinterPairingConnect"];
+            /** @description The pairing's id on this server, which every other operation on it takes. */
+            id: string;
+            /** @description The address the pairing was sent to, as host:port. */
+            printer: string;
+            /** @description The registration the pairing approved. Present once the state is admitted. */
+            registration?: components["schemas"]["PairedRegistration"];
+            /**
+             * Format: date-time
+             * @description When the pairing was sent.
+             */
+            started_at: string;
+            /**
+             * @description waiting while the question is on the printer's screen. approved once the person accepted, while the printer registers. admitted once the registration was approved. refused, expired and withdrawn end the pairing.
+             * @enum {string}
+             */
+            state: "waiting" | "approved" | "admitted" | "refused" | "expired" | "withdrawn";
+            /**
+             * Format: date-time
+             * @description When the pairing stops waiting for the current step: for the person while waiting, for the printer's registration once approved. Absent once the pairing ended.
+             */
+            until?: string;
+        };
+        PrinterPairingConnect: {
+            /**
+             * @description The host name or IPv4 address the printer dials this server at. A printer stores at most 20 characters of it, or 35 for a name ending in prusa3d.com, so a longer name is refused by the printer.
+             * @example 192.168.1.50
+             */
+            host: string;
+            /**
+             * Format: int64
+             * @description The port the printer dials.
+             * @example 8080
+             */
+            port: number;
+            /** @description Whether the printer dials with TLS. */
+            tls: boolean;
+        };
+        PrinterPairingRequest: {
+            /** @description This server's address, which the printer stores when the person at it accepts. */
+            connect: components["schemas"]["PrinterPairingConnect"];
+            /** @description A name the printer shows beside the question, at most 20 bytes. */
+            name?: string;
+            /**
+             * @description The printer's address on the local network: a host name or an IP address, with an optional port. The port is 80 when none is given.
+             * @example 192.168.1.20
+             */
+            printer: string;
         };
         PrinterResult: {
             /** @description What the printer said back, in its own words, and absent for a printer that answers a command without saying anything. Shipping Buddy firmware answers nothing, so this is empty on a real machine and carries the serial reply on the simulator: ok for most lines, the temperatures for M105, the position for M114. It is the machine's vocabulary rather than this API's, so show it to a person and branch on fault_code instead. */
@@ -20586,6 +20700,289 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "start-printer-pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "connect": {
+                 *         "host": "192.168.1.50",
+                 *         "port": 8080,
+                 *         "tls": false
+                 *       },
+                 *       "printer": "192.168.1.20"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PrinterPairingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "K7QX-29FM",
+                     *       "connect": {
+                     *         "host": "192.168.1.50",
+                     *         "port": 8080,
+                     *         "tls": false
+                     *       },
+                     *       "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                     *       "printer": "192.168.1.20:80",
+                     *       "started_at": "2026-11-26T10:00:00Z",
+                     *       "state": "waiting",
+                     *       "until": "2026-11-26T10:01:15Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PrinterPairing"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "get-printer-pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pairing's id, as starting it answered. */
+                pairing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "K7QX-29FM",
+                     *       "connect": {
+                     *         "host": "192.168.1.50",
+                     *         "port": 8080,
+                     *         "tls": false
+                     *       },
+                     *       "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                     *       "printer": "192.168.1.20:80",
+                     *       "registration": {
+                     *         "code": "K7PQ2XR4MN",
+                     *         "connector": "xbuddy",
+                     *         "device_id": "9f2a4c18-6d3b-4e07-b5a1-8c0f2d7e4b93",
+                     *         "model": "MK4",
+                     *         "serial": "8221-1234567"
+                     *       },
+                     *       "started_at": "2026-11-26T10:00:00Z",
+                     *       "state": "admitted"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PrinterPairing"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "cancel-printer-pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pairing's id, as starting it answered. */
+                pairing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "K7QX-29FM",
+                     *       "connect": {
+                     *         "host": "192.168.1.50",
+                     *         "port": 8080,
+                     *         "tls": false
+                     *       },
+                     *       "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+                     *       "printer": "192.168.1.20:80",
+                     *       "started_at": "2026-11-26T10:00:00Z",
+                     *       "state": "withdrawn"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PrinterPairing"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

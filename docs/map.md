@@ -53,7 +53,7 @@ check the real imports against this table.
 | group | holds | may import |
 |---|---|---|
 | `kernel/` | primitives with no business meaning: identity, conditions, device issues, logging, version | nothing internal |
-| `connector/` | the xBuddy driver for Prusa printers | kernel and one domain |
+| `connector/` | the xBuddy driver for Prusa printers, and the client that asks a printer to pair at its own screen | kernel and one domain |
 | `transport/` | inbound: HTTP, the event stream, WebRTC | kernel and one domain |
 | `platform/` | identity backends and observability | kernel and one domain |
 | `extension/` | the host that runs extensions: registry, supervisor, lifecycle, the plugin wire | kernel |
