@@ -439,6 +439,16 @@ func TestTheListFilters(t *testing.T) {
 				"combined":  {ListQuery{Type: "PLA", Brand: "prusament", InStock: false}, []string{mine.UUID, "m-1"}},
 				"switches":  {ListQuery{Favourite: true, InStock: true}, nil},
 				"own type":  {ListQuery{Custom: true, Type: "PLA"}, []string{mine.UUID}},
+
+				// Each word of a search is matched on its own, in any field.
+				"q brand name":   {ListQuery{Q: "prusament alpha"}, []string{"m-1"}},
+				"q brand type":   {ListQuery{Q: "other pla"}, []string{"m-4"}},
+				"q type name":    {ListQuery{Q: "PLA  Alpha"}, []string{"m-1"}},
+				"q each word":    {ListQuery{Q: "beta resin"}, nil},
+				"q word escaped": {ListQuery{Q: "100% other"}, []string{theirs.UUID}},
+				"q spaces":       {ListQuery{Q: "  "}, []string{"m-2", "m-4", theirs.UUID, mine.UUID, "m-1", "m-3"}},
+				// The eleventh word is past maxWords, so it is not matched.
+				"q eleventh word": {ListQuery{Q: "a l p h r u s m e t nowhere"}, []string{"m-1"}},
 			} {
 				t.Run(name, func(t *testing.T) {
 					p := list(t, s, "alice", c.q)

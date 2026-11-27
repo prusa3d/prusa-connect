@@ -7,6 +7,12 @@ Write the entry in the same change as the code. One bullet per behaviour a
 person outside this repository can observe: a route, a setting, a screen, a
 refusal. Name the route and the setting key, never a function or a file.
 
+## 0.2.9 - 2026-11-25
+
+### Fixed
+
+- Material search now finds a material when your words match different fields, such as the brand and the colour. Each word of a search on the Materials page or in a material picker is matched on its own against the name, brand, type and abbreviation.
+
 ## 0.2.8 - 2026-11-24
 
 ### Changed

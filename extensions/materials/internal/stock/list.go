@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/prusa3d/prusa-connect/sdk/wirerpc"
@@ -94,7 +96,8 @@ type PackageView struct {
 // filament: a spool on a tool, or one with nothing left, is not stock to pick.
 // The In stock filter and the spools and weight orders count every live spool
 // instead, because they describe the shelf, not what a picker can load.
-// $1 is the caller, $2–$12 the filters.
+// $1 is the caller, $2–$11 the filters. filter adds the search words after
+// them.
 const listFrom = ` FROM (
 	SELECT c.uuid, c.name, c.brand_name, c.brand_slug, c.class, c.type, c.abbreviation, c.color_rgba, c.color_family, c.src, c.created_at,
 		f.starred_at, f.material_uuid IS NOT NULL AS fav,
@@ -122,21 +125,19 @@ const listFrom = ` FROM (
 			CASE WHEN COUNT(s.full_weight_g) = COUNT(*) THEN SUM(s.full_weight_g - COALESCE(s.empty_weight_g, 0)) END AS cap
 		-- assignments holds a spool at most once, so the join adds no row.
 		FROM spools s LEFT JOIN assignments a ON a.spool_id = s.id
-		WHERE s.deleted_at IS NULL AND s.archived_at IS NULL AND ($11 = 0 OR s.location_id = $11)
+		WHERE s.deleted_at IS NULL AND s.archived_at IS NULL AND ($10 = 0 OR s.location_id = $10)
 		GROUP BY s.material_uuid) h ON h.material_uuid = c.uuid
 ) r
-WHERE ($2 = '' OR lower(r.name) LIKE $2 ESCAPE '\' OR lower(r.brand_name) LIKE $2 ESCAPE '\'
-		OR lower(r.type) LIKE $2 ESCAPE '\' OR lower(r.abbreviation) LIKE $2 ESCAPE '\')
-	AND ($3 = '' OR r.brand_slug = $3
-		OR (r.src <> 'catalogue' AND lower(r.brand_name) = (SELECT lower(name) FROM brands WHERE slug = $3)))
-	AND ($4 = '' OR r.type = $4)
-	AND ($5 = '' OR r.class = $5)
-	AND ($6 = '' OR r.color_family = $6)
-	AND ($7 = 0 OR r.seg = 1)
-	AND ($8 = 0 OR r.src = 'custom')
-	AND (($9 = 0 AND $11 = 0) OR r.spools > 0)
-	AND ($10 = '' OR r.uuid = $10)
-	AND ($12 = 0 OR EXISTS (SELECT 1 FROM assignments a WHERE a.material_uuid = r.uuid))`
+WHERE ($2 = '' OR r.brand_slug = $2
+		OR (r.src <> 'catalogue' AND lower(r.brand_name) = (SELECT lower(name) FROM brands WHERE slug = $2)))
+	AND ($3 = '' OR r.type = $3)
+	AND ($4 = '' OR r.class = $4)
+	AND ($5 = '' OR r.color_family = $5)
+	AND ($6 = 0 OR r.seg = 1)
+	AND ($7 = 0 OR r.src = 'custom')
+	AND (($8 = 0 AND $10 = 0) OR r.spools > 0)
+	AND ($9 = '' OR r.uuid = $9)
+	AND ($11 = 0 OR EXISTS (SELECT 1 FROM assignments a WHERE a.material_uuid = r.uuid))`
 
 // orders are the sort keys a ListQuery may name; the name breaks ties.
 var orders = map[string]string{
@@ -150,6 +151,17 @@ var orders = map[string]string{
 }
 
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// maxWords is the most search words a list matches. Each word is one more
+// condition and one more placeholder, so a long search could otherwise pass
+// the engine's limit on placeholders. Words past it are not matched.
+const maxWords = 10
+
+// wordMatch is the condition one search word meets: the word is in the name,
+// the brand, the type or the abbreviation. %[1]s is the word's placeholder.
+const wordMatch = `
+	AND (lower(r.name) LIKE %[1]s ESCAPE '\' OR lower(r.brand_name) LIKE %[1]s ESCAPE '\'
+		OR lower(r.type) LIKE %[1]s ESCAPE '\' OR lower(r.abbreviation) LIKE %[1]s ESCAPE '\')`
 
 // List answers one page of the materials list as principal sees it.
 // ErrInvalid for an unknown order.
@@ -172,13 +184,15 @@ func (s *Store) List(ctx context.Context, principal string, q ListQuery) (Page, 
 	}
 
 	q.Limit, q.Offset = min(q.Limit, MaxPage), max(q.Offset, 0)
-	args := s.filterArgs(principal, q, "")
+	from, args := s.filter(principal, q, "")
+	paged := append(slices.Clip(args), q.Limit, q.Offset)
 	p := Page{}
 
 	rows, total, err := s.rows(
 		ctx,
-		`ORDER BY `+order+`, lower(r.name), r.uuid LIMIT $13 OFFSET $14`,
-		append(args, q.Limit, q.Offset)...)
+		from,
+		fmt.Sprintf(`ORDER BY %s, lower(r.name), r.uuid LIMIT $%d OFFSET $%d`, order, len(paged)-1, len(paged)),
+		paged...)
 	if err != nil {
 		return Page{}, err
 	}
@@ -187,7 +201,7 @@ func (s *Store) List(ctx context.Context, principal string, q ListQuery) (Page, 
 
 	// A page past the end carries no row to count on, so only then is the list counted apart.
 	if len(rows) == 0 && q.Offset > 0 {
-		if err = s.db.QueryRowContext(ctx, `SELECT COUNT(*)`+listFrom, args...).Scan(&p.Total); err != nil {
+		if err = s.db.QueryRowContext(ctx, `SELECT COUNT(*)`+from, args...).Scan(&p.Total); err != nil {
 			return Page{}, fmt.Errorf("count materials: %w", err)
 		}
 	}
@@ -204,15 +218,13 @@ func (s *Store) List(ctx context.Context, principal string, q ListQuery) (Page, 
 	return p, nil
 }
 
-func (s *Store) filterArgs(principal string, q ListQuery, uuid string) []any {
-	var search string
-	if t := strings.TrimSpace(q.Q); t != "" {
-		search = "%" + likeEscaper.Replace(s.lower(t)) + "%"
-	}
-
-	return []any{
+// filter answers listFrom with a condition for each word of the search, and
+// the arguments of both. Each word is matched on its own, so "prusament pla"
+// finds a material whose brand holds one word and whose type holds the other.
+// A search of only spaces matches every material.
+func (s *Store) filter(principal string, q ListQuery, uuid string) (string, []any) {
+	args := []any{
 		principal,
-		search,
 		q.Brand,
 		q.Type,
 		q.Class,
@@ -224,6 +236,24 @@ func (s *Store) filterArgs(principal string, q ListQuery, uuid string) []any {
 		q.Location,
 		boolInt(q.Assigned),
 	}
+
+	var from strings.Builder
+
+	from.WriteString(listFrom)
+
+	seen := map[string]bool{}
+
+	for word := range strings.FieldsSeq(s.lower(q.Q)) {
+		if seen[word] || len(seen) == maxWords {
+			continue
+		}
+
+		seen[word] = true
+		args = append(args, "%"+likeEscaper.Replace(word)+"%")
+		fmt.Fprintf(&from, wordMatch, "$"+strconv.Itoa(len(args)))
+	}
+
+	return from.String(), args
 }
 
 // lower folds a search as the engine's lower() folds the column it is
@@ -243,12 +273,12 @@ func (s *Store) lower(t string) string {
 	}, t)
 }
 
-// rows answers the rows tail picks, and how many rows match before the limit,
+// rows answers the rows from and tail pick, and how many rows match before the limit,
 // counted by the same query.
-func (s *Store) rows(ctx context.Context, tail string, args ...any) ([]Row, int, error) {
-	//nolint:gosec // listFrom is a constant and tail is built by this package.
+func (s *Store) rows(ctx context.Context, from, tail string, args ...any) ([]Row, int, error) {
+	//nolint:gosec // from and tail are built by this package, and the search words are arguments.
 	rows, err := s.db.QueryContext(ctx, `SELECT r.uuid, r.name, r.brand_name, r.class, r.type, r.color_rgba, r.fav,
-		r.src = 'custom', r.spools, r.on_tools, r.grams, r.free_g, r.capacity, COUNT(*) OVER ()`+listFrom+` `+tail, args...)
+		r.src = 'custom', r.spools, r.on_tools, r.grams, r.free_g, r.capacity, COUNT(*) OVER ()`+from+` `+tail, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list materials: %w", err)
 	}
@@ -337,7 +367,9 @@ func (s *Store) Types(ctx context.Context, principal string) ([]string, error) {
 // Material answers one material as principal sees it in the list. ErrNotFound
 // when it is neither in the catalogue, nor principal's, nor held in a spool.
 func (s *Store) Material(ctx context.Context, principal, uuid string) (Detail, error) {
-	rows, _, err := s.rows(ctx, `LIMIT 1`, s.filterArgs(principal, ListQuery{}, uuid)...)
+	from, args := s.filter(principal, ListQuery{}, uuid)
+
+	rows, _, err := s.rows(ctx, from, `LIMIT 1`, args...)
 	if err != nil {
 		return Detail{}, err
 	}
