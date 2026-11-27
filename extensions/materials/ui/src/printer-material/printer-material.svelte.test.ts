@@ -545,6 +545,30 @@ describe('the material section', () => {
       .not.toBeInTheDocument();
   });
 
+  it('shows what the tag says is left of a spool Materials does not hold', async () => {
+    const stub = started({
+      [TOOLS]: [
+        printer([
+          tool('0', {
+            from_nfc: true,
+            reported: reported({
+              abbreviation: 'PLA',
+              instance_uuid: 'tag-1',
+              full_weight_g: 1000,
+              consumed_weight_g: 595,
+            }),
+          }),
+        ]),
+      ],
+    });
+    await draw(stub);
+
+    await expect.element(page.getByText('405 / 1,000 g')).toBeVisible();
+    await expect
+      .element(page.getByRole('button', { name: 'Add to Materials' }))
+      .toBeVisible();
+  });
+
   it('shows what is left of the one tool of a printer and unloads it', async () => {
     const stub = started({
       [TOOLS]: [

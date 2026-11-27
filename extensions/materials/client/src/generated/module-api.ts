@@ -999,6 +999,8 @@ export interface components {
             color_rgba: string;
             /** @description The weight of the full spool in grams: the tag's actual weight, else its package's nominal weight. Absent when the printer reports neither. */
             full_weight_g?: number;
+            /** @description The grams the printer counts used of the spool, absent when it reports none. */
+            consumed_weight_g?: number;
         };
         /** @description One tool, with what is on it and what the caller may do there. */
         Tool: {

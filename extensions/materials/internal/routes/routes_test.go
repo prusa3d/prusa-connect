@@ -1289,8 +1289,9 @@ func TestAddReportedSpoolTakesTheNominalWeight(t *testing.T) {
 
 	for device, full := range map[string]float64{"p-tag-1": 1000, "p-tag-2": 800, "p-tag-3": 1000} {
 		_, view := h.send(t, "user:alice", http.MethodGet, "/printers/"+device+"/tools", "")
-		if got := view["tools"].([]any)[0].(map[string]any)["reported"].(map[string]any)["full_weight_g"]; got != full {
-			t.Errorf("the tools of %s report a full weight of %v, want %v", device, got, full)
+		if got := view["tools"].([]any)[0].(map[string]any)["reported"].(map[string]any); got["full_weight_g"] != full ||
+			got["consumed_weight_g"] != 595.0 {
+			t.Errorf("the tools of %s report %v, want %v g full and 595 g used", device, got, full)
 		}
 
 		status, answer := h.send(t, "user:alice", http.MethodPost, "/printers/"+device+"/tools/0/spool", "")

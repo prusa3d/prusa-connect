@@ -1217,6 +1217,10 @@
           "full_weight_g": {
             "type": "number",
             "description": "The weight of the full spool in grams: the tag's actual weight, else its package's nominal weight. Absent when the printer reports neither."
+          },
+          "consumed_weight_g": {
+            "type": "number",
+            "description": "The grams the printer counts used of the spool, absent when it reports none."
           }
         },
         "required": [

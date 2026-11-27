@@ -14,6 +14,7 @@ refusal. Name the route and the setting key, never a function or a file.
 - A spool added with Add to Materials from a tag that carries only the nominal weight of its package takes that weight, less what the printer reports used. The core reports that weight from the release after 0.1.0, and before, such a spool was added with 0 g.
 - A spool added at 0 g before its printer reported a weight takes the weight when the printer next reports its tag. A weight a person typed stays.
 - `PATCH /spools/{id}` takes a remaining weight while the spool is on a tool, and the edit dialog offers the field. The printer counts down from the weight typed.
+- The tile of a tagged spool that Materials does not hold yet shows what its tag says is left, and `GET /printers/{device}/tools` reports it used as `reported.consumed_weight_g`.
 - A spool from a tag with no known weight shows "Weight unknown" on its tile, in its row and in the spool picker, rather than 0 g. A weight typed for it also sets its `full_weight_g`.
 
 - A filament diameter from the catalogue is read in millimetres, as the catalogue writes it since 2026-11-23. Before, 1.75 mm was kept as 1 µm. A spool added from such a package then counted almost no grams for what the printer extruded.

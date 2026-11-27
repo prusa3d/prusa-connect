@@ -16,7 +16,10 @@ export interface ToolView {
   /** The material's name, undefined when no material is assigned. */
   name: string | undefined;
   brand: string;
-  /** The spool's grams left and when full, when Materials knows both. */
+  /**
+   * The spool's grams left and when full, when Materials knows them. A
+   * tagged spool Materials does not hold shows what its tag says.
+   */
   leftG: number | undefined;
   fullG: number | undefined;
   fromMaterials: boolean;
@@ -67,6 +70,13 @@ export const toolView = (
     spool?.full_weight_g === undefined
       ? undefined
       : spool.full_weight_g - (spool.empty_weight_g ?? 0);
+  const tag = a?.spool_id === undefined ? tool.reported : undefined;
+  const tagFull = tag?.full_weight_g;
+  const tagLeft =
+    tagFull === undefined
+      ? undefined
+      : Math.max(0, tagFull - (tag?.consumed_weight_g ?? 0));
+  const spoolLeft = unweighed(spool) ? undefined : spool?.remaining_weight_g;
 
   return {
     tool,
@@ -75,8 +85,8 @@ export const toolView = (
     colorRgba: colour === '' ? undefined : colour,
     name: named ? nameOf(a) : undefined,
     brand: named ? a.brand_name : '',
-    leftG: unweighed(spool) ? undefined : spool?.remaining_weight_g,
-    fullG: full !== undefined && full > 0 ? full : undefined,
+    leftG: tagLeft ?? spoolLeft,
+    fullG: tagFull ?? (full !== undefined && full > 0 ? full : undefined),
     fromMaterials: a?.spool_id !== undefined,
     ring: ringOf(tool, printing),
   };

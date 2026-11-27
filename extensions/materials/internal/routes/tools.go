@@ -46,6 +46,8 @@ type reportedView struct {
 	Type         string   `json:"type"`
 	ColorRGBA    string   `json:"color_rgba"`
 	FullWeightG  *float64 `json:"full_weight_g,omitempty"`
+	// ConsumedWeightG is what the printer counts used of the spool.
+	ConsumedWeightG *float64 `json:"consumed_weight_g,omitempty"`
 }
 
 // toolView is one tool with what is on it and what the caller may do.
@@ -297,6 +299,7 @@ func reportedOf(t connectorapi.Tool) *reportedView {
 	if r := t.Reported; r != nil {
 		view.InstanceUUID, view.PackageUUID, view.MaterialUUID = r.InstanceUUID, r.PackageUUID, r.MaterialUUID
 		view.Type, view.ColorRGBA, view.FullWeightG = r.Type, r.ColorRGBA, stock.FullWeight(*r)
+		view.ConsumedWeightG = t.ConsumedWeight
 	}
 
 	return view
