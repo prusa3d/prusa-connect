@@ -56,6 +56,12 @@ func doc() extension.Doc {
 				Default: "5m",
 				Summary: "How long a sent image is shown after it arrived. Past it this camera answers as one that has produced nothing.",
 			},
+			{
+				Key:     "timeout",
+				Type:    extension.OptionDuration,
+				Default: "5s",
+				Summary: "How long one RTSP handshake message, or one fetch from snapshot_url, waits before it is abandoned. A source that is slow to answer, such as one that starts a transcoder first, needs longer.",
+			},
 		},
 	}
 }
@@ -111,7 +117,10 @@ func (c *Camera) buildStills(spec cameraapi.ProviderSpec) error {
 		return nil
 	}
 
-	fetched, err := mjpeg.New(subSpec(spec, map[string]any{"snapshot_url": snapshot}))
+	fetched, err := mjpeg.New(subSpec(spec, map[string]any{
+		"snapshot_url": snapshot,
+		"timeout":      timeoutOf(spec.Config),
+	}))
 	if err != nil {
 		return fmt.Errorf("generic: %w", err)
 	}
@@ -134,10 +143,13 @@ func (c *Camera) buildStream(spec cameraapi.ProviderSpec) error {
 
 	switch parsed.Scheme {
 	case "rtsp", "rtsps":
-		c.stream, err = rtsp.New(subSpec(spec, map[string]any{"url": address}))
+		c.stream, err = rtsp.New(subSpec(spec, map[string]any{"url": address, "timeout": timeoutOf(spec.Config)}))
 		c.streamFormat = cameraapi.FormatH264AnnexB
 	case "http", "https":
-		c.stream, err = mjpeg.New(subSpec(spec, map[string]any{"stream_url": address}))
+		c.stream, err = mjpeg.New(subSpec(spec, map[string]any{
+			"stream_url": address,
+			"timeout":    timeoutOf(spec.Config),
+		}))
 		c.streamFormat = cameraapi.FormatMJPEG
 	default:
 		return fmt.Errorf("%w: it is %q", ErrStreamScheme, parsed.Scheme)
@@ -145,6 +157,25 @@ func (c *Camera) buildStream(spec cameraapi.ProviderSpec) error {
 
 	if err != nil {
 		return fmt.Errorf("generic: %w", err)
+	}
+
+	return nil
+}
+
+// timeoutOf is the timeout setting as the rtsp driver reads it: a positive
+// duration, or nil when the inner driver's own 5s default applies. The mjpeg
+// driver takes zero or a negative value as written and would then fail every
+// fetch, so a value the rtsp driver ignores is passed to neither of them.
+func timeoutOf(config map[string]any) any {
+	switch value := config["timeout"].(type) {
+	case string:
+		if parsed, err := time.ParseDuration(value); err == nil && parsed > 0 {
+			return value
+		}
+	case time.Duration:
+		if value > 0 {
+			return value
+		}
 	}
 
 	return nil

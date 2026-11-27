@@ -902,6 +902,13 @@
           "required": false,
           "default": "5m",
           "summary": "How long a sent image is shown after it arrived. Past it this camera answers as one that has produced nothing."
+        },
+        {
+          "key": "timeout",
+          "type": "duration",
+          "required": false,
+          "default": "5s",
+          "summary": "How long one RTSP handshake message, or one fetch from snapshot_url, waits before it is abandoned. A source that is slow to answer, such as one that starts a transcoder first, needs longer."
         }
       ],
       "kind": "camera",

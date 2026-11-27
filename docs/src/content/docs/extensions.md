@@ -425,6 +425,7 @@ The still images are the frames the device sends to PUT /api/v1/cameras/{camera}
 - **`snapshot_url`** url, optional, default none. An address this server fetches a still image from. Empty takes the images the camera sends.
 - **`stream_url`** url, optional, default none. An rtsp:// address of an H.264 stream, or an http:// address of an MJPEG stream. Empty is no stream.
 - **`stale`** duration, optional, default `5m`. How long a sent image is shown after it arrived. Past it this camera answers as one that has produced nothing.
+- **`timeout`** duration, optional, default `5s`. How long one RTSP handshake message, or one fetch from snapshot_url, waits before it is abandoned. A source that is slow to answer, such as one that starts a transcoder first, needs longer.
 
 ### `core/mjpeg` {#core-mjpeg}
 
