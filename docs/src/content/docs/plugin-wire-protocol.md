@@ -24,7 +24,7 @@ Read it end to end and you can write the wire in an afternoon. That is the point
 | part | state |
 | --- | --- |
 | the frame, the handshake and version negotiation | specified here, implemented in `sdk/wire`, held by 39 vectors |
-| the vectors, published as a file any language reads | `docs/wire/plugin-wire-protocol.json` |
+| the vectors, published as a file any language reads | [`docs/wire/plugin-wire-protocol.json`](https://github.com/prusa3d/prusa-connect/blob/main/docs/wire/plugin-wire-protocol.json) |
 | a host that launches a child and speaks this wire | `internal/extension/wirehost` |
 | the session above the frame: streams, JSON-RPC and credit | `sdk/wirerpc`, used by both sides |
 | credit accounting across a stream | a balance per stream, in `sdk/wirerpc`. A write waits for credit and a sender past its balance ends the connection |
@@ -55,7 +55,7 @@ Standard error is logs. The host reads it line by line and copies it into its ow
 The child writes exactly one line to standard output before its first frame:
 
 ```json
-{"protocol":1,"min_minor":0,"max_minor":3,"address":"unix:///run/prusa-connect/plugins/acme.sock"}
+{"protocol":1,"min_minor":0,"max_minor":3,"address":"stdio"}
 ```
 
 The line ends with a single newline, `0x0A`. It is UTF-8 and holds at most 4096 bytes, the newline counted.
@@ -245,7 +245,7 @@ This is Terraform's rule. A minor adds something a peer may ignore, so the newer
 
 ## The conformance vectors
 
-`docs/wire/plugin-wire-protocol.json` holds the sizes, the kinds and 39 vectors. Every implementation is held to that file, and this repository's Go is checked against it like any other.
+[`docs/wire/plugin-wire-protocol.json`](https://github.com/prusa3d/prusa-connect/blob/main/docs/wire/plugin-wire-protocol.json) holds the sizes, the kinds and 39 vectors. Every implementation is held to that file, and this repository's Go is checked against it like any other.
 
 | section | holds |
 | --- | --- |
@@ -310,9 +310,9 @@ The 64 KiB column is why bulk bytes have a kind of their own. Base64 inside a JS
 | `sdk/wirerpc` | the session above the frame: streams, JSON-RPC control, the credit balance, and the lifecycle method set |
 | `internal/extension/wirehost` | the host side: the digest, the process, the handshake, the log |
 | `cmd/generate-wire-protocol` | writes the published artefact from the first two |
-| `docs/wire/plugin-wire-protocol.json` | the artefact an implementation is held to |
+| [`docs/wire/plugin-wire-protocol.json`](https://github.com/prusa3d/prusa-connect/blob/main/docs/wire/plugin-wire-protocol.json) | the artefact an implementation is held to |
 | `examples/wire-protocol/wire.js` | the frame codec in JavaScript, written from this page |
 | `examples/wire-protocol/conformance.js` | that codec against the artefact |
-| `examples/wire-protocol/child.js` | a Node child answering the lifecycle set and streaming under credit, written from this page |
+| [`examples/wire-protocol/child.js`](https://github.com/prusa3d/prusa-connect/blob/main/examples/wire-protocol/child.js) | a Node child answering the lifecycle set and streaming under credit, written from this page |
 
 `make wire-check` runs five gates. The fourth runs the JavaScript codec against the artefact, which is the evidence that two implementations of this page agree. The fifth has a Go host launch a Go child as a second process and read bulk bytes from it under credit.
