@@ -4,8 +4,8 @@ go 1.26.11
 
 require (
 	github.com/danielgtaylor/huma/v2 v2.41.0
-	github.com/eclipse/paho.mqtt.golang v1.5.1
-	github.com/expr-lang/expr v1.17.8
+	github.com/eclipse/paho.mqtt.golang v1.5.2
+	github.com/expr-lang/expr v1.18.1
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20240701034025-d67f41855da4
@@ -13,7 +13,7 @@ require (
 	github.com/miekg/dns v1.1.73
 	github.com/pion/ice/v4 v4.4.9
 	github.com/pion/interceptor v0.1.51
-	github.com/pion/webrtc/v4 v4.2.27
+	github.com/pion/webrtc/v4 v4.2.29
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
 	github.com/prusa3d/prusa-connect/sdk v0.0.0
@@ -25,7 +25,7 @@ require (
 	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.50.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.62.0
+	modernc.org/sqlite v1.63.0
 )
 
 require (
