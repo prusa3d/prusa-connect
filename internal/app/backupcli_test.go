@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/prusa3d/prusa-connect/internal/app/config"
 	"github.com/prusa3d/prusa-connect/internal/app/moduledeps"
 	"github.com/prusa3d/prusa-connect/internal/betaportal"
+	"github.com/prusa3d/prusa-connect/internal/kernel/version"
 	"github.com/prusa3d/prusa-connect/internal/upgrade"
 )
 
@@ -55,6 +58,54 @@ func TestBackupCLIListsAndRestoresAHostDatabase(t *testing.T) {
 
 	if got := readCLIState(t, database); got != "before" {
 		t.Fatalf("restored value is %q", got)
+	}
+}
+
+// A backup made by hand has no target version, so the list shows only the
+// version that made it. A backup taken before an update shows both.
+func TestBackupCLIListShowsTheTargetOnlyWhenThereIsOne(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	configPath := filepath.Join(root, "config", "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(configPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIState(t, filepath.Join(root, "config", "config.d", "authz.db"), "state")
+
+	backups := filepath.Join(root, "backups")
+	var out bytes.Buffer
+	for _, args := range [][]string{
+		{"create", "-config", configPath, "-to", backups},
+		{"create", "-config", configPath, "-to", backups, "-upgrade-to", "2.0.0"},
+	} {
+		if err := Backup(t.Context(), &out, args); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	out.Reset()
+	if err := Backup(t.Context(), &out, []string{"list", "-config", configPath, "-from", backups}); err != nil {
+		t.Fatal(err)
+	}
+
+	var versions []string
+	for line := range strings.Lines(out.String()) {
+		fields := strings.Split(strings.TrimSuffix(line, "\n"), "\t")
+		if len(fields) != 4 {
+			t.Fatalf("list line is %q", line)
+		}
+		versions = append(versions, fields[2])
+	}
+	slices.Sort(versions)
+
+	from := version.Version()
+	want := []string{from, from + " -> 2.0.0"}
+	if !slices.Equal(versions, want) {
+		t.Errorf("listed versions are %q, want %q", versions, want)
 	}
 }
 

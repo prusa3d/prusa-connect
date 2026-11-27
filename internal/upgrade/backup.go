@@ -183,7 +183,11 @@ func (m BackupManager) Create(ctx context.Context, plan BackupPlan) (BackupManif
 	created := now().UTC()
 	id := plan.ID
 	if id == "" {
-		id = created.Format("20060102T150405Z") + "-" + safeName(plan.FromVersion) + "-to-" + safeName(plan.ToVersion)
+		id = created.Format("20060102T150405Z") + "-" + safeName(plan.FromVersion)
+		// A backup made by hand has no target version, so its name names none.
+		if plan.ToVersion != "" {
+			id += "-to-" + safeName(plan.ToVersion)
+		}
 	}
 
 	if err := validBackupID(id); err != nil {

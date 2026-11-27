@@ -119,9 +119,14 @@ func listBackups(out io.Writer, args []string) error {
 	}
 
 	for _, backup := range backups {
-		fmt.Fprintf(out, "%s\t%s\t%s -> %s\t%d files\n",
+		versions := backup.FromVersion
+		if backup.ToVersion != "" {
+			versions += " -> " + backup.ToVersion
+		}
+
+		fmt.Fprintf(out, "%s\t%s\t%s\t%d files\n",
 			backup.ID, backup.CreatedAt.Format("2006-01-02 15:04:05Z"),
-			backup.FromVersion, backup.ToVersion, len(backup.Files))
+			versions, len(backup.Files))
 	}
 
 	return nil

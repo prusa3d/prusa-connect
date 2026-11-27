@@ -107,8 +107,10 @@
                 · {formatBytes(backupSize(backup))}
                 · {formatNumber((backup.files ?? []).length)}
                 {t('settingsMaintenance.backups.files')}
-                {#if (backup.from_version ?? backup.to_version) !== undefined}
-                  · {backup.from_version ?? '—'} → {backup.to_version ?? '—'}
+                {#if backup.to_version !== undefined}
+                  · {backup.from_version ?? '—'} → {backup.to_version}
+                {:else if backup.from_version !== undefined}
+                  · {backup.from_version}
                 {/if}
               </p>
             </div>

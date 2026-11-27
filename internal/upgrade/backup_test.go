@@ -85,6 +85,48 @@ func TestBackupSnapshotsVerifiesAndRestoresSQLiteAndFiles(t *testing.T) {
 	}
 }
 
+// A backup made by hand has no target version, so its name carries only the
+// version that made it. A backup taken before an update also names the target.
+func TestBackupNameNamesTheTargetOnlyWhenThereIsOne(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name string
+		to   string
+		want string
+	}{
+		{name: "manual", to: "", want: "20261123T104715Z-0.1.0-beta.1"},
+		{name: "before an update", to: "0.2.0", want: "20261123T104715Z-0.1.0-beta.1-to-0.2.0"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			config := filepath.Join(root, "config.yaml")
+			writeFile(t, config, []byte("core: {}\n"), 0o600)
+
+			manager := BackupManager{
+				Root: filepath.Join(root, "backups"),
+				Keep: 5,
+				Now:  func() time.Time { return time.Date(2026, 11, 23, 10, 47, 15, 0, time.UTC) },
+			}
+
+			manifest, err := manager.Create(t.Context(), BackupPlan{
+				FromVersion: "0.1.0-beta.1",
+				ToVersion:   test.to,
+				Files:       []FileSource{{Name: "config", Path: config}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if manifest.ID != test.want {
+				t.Errorf("backup id is %q, want %q", manifest.ID, test.want)
+			}
+		})
+	}
+}
+
 // A configuration names its databases relative to the directory the server
 // runs in. A restore run from another directory, such as by an operator on a
 // service host, puts each database back where the backup took it from.
