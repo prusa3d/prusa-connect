@@ -185,6 +185,17 @@ var Keys = map[string]Key{
 		Doc: "Answer SNTP requests on UDP port 123 with this machine's clock, for devices on a network with no " +
 			"internet. The web app's switch wins once a person uses it.",
 	},
+	"core.webrtc.udp_port": {
+		Doc: "The one UDP port a browser plays camera streams over. Publish it from a container. 0 takes a " +
+			"random port for each viewer, which works only outside a container.",
+		Default: "`0`",
+		See:     "container/",
+	},
+	"core.webrtc.addresses": {
+		Doc: "IP addresses a browser reaches this server at, offered beside its own. Set it when the " +
+			"server runs in a container or behind NAT. Needs udp_port.",
+		See: "container/",
+	},
 	"core.observability.enabled": {
 		Doc: "Serve the metrics at /metrics. Off, the server answers 404 there. A binary built without the " +
 			"Prometheus client refuses true.",

@@ -297,6 +297,33 @@ The Buddy3D camera extension, `buddy3d-camera`, listens on TCP `9443` for the ca
 once you approve it. Publish it, as `-p 9443:9443`. The cameras dial the host's address, so set the extension's
 `address` to it: the container's own address is not one the cameras reach.
 
+### Camera streams
+
+A browser plays an RTSP camera over WebRTC, and the video reaches it on UDP.
+By default the server takes a random UDP port for each viewer and offers the
+browser only the addresses it holds. In a container those are bridge
+addresses, so the browser cannot reach them.
+
+The live view then falls back to a websocket on the page's own port, which
+needs no setting. It stalls more than WebRTC on a network that drops packets.
+For WebRTC, set one port and the address of the host, then publish that port:
+
+```yaml
+core:
+  webrtc:
+    udp_port: 8189
+    addresses:
+      - 192.168.1.20
+```
+
+```bash
+-p 8189:8189/udp
+```
+
+The published port has to be the same number on the host and in the container,
+because the server offers the container's port to the browser. Host networking
+also works, with neither key set.
+
 Nearby needs host networking. mDNS packets stay on the container's bridge, so
 the printers page lists nearby printers only with `network_mode: host`. The
 server then ignores the interfaces Docker makes for other containers.

@@ -15673,6 +15673,109 @@
         }
       }
     },
+    "/api/v1/cameras/{camera}/live": {
+      "get": {
+        "description": "Upgrades to a websocket that carries the camera's H.264 stream, for a browser that cannot reach this server over WebRTC: behind a tunnel that carries no UDP, or a container with no published UDP port. Each binary message is one picture: a flag byte, 1 for a keyframe and 0 otherwise, then the access unit in Annex-B framing. The first message is a keyframe, and every keyframe carries the parameter sets. A viewer that falls about a second behind skips to the next keyframe. Nothing is decoded or re-encoded. A camera that emits no H.264 answers 404, the same refusal as one the caller may not see.",
+        "operationId": "live-camera",
+        "parameters": [
+          {
+            "description": "The camera's name.",
+            "in": "path",
+            "name": "camera",
+            "required": true,
+            "schema": {
+              "description": "The camera's name.",
+              "examples": [
+                "bench-top"
+              ],
+              "maxLength": 63,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "The websocket, carrying one picture per binary message."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemError"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "One camera's live view over a websocket",
+        "tags": [
+          "cameras"
+        ],
+        "x-long-running": true,
+        "x-sample-excuse": "a websocket of binary pictures, which no example in a document can show"
+      }
+    },
     "/api/v1/cameras/{camera}/snapshot": {
       "get": {
         "description": "Answers image/jpeg, with Last-Modified and a private max-age of the camera's own cadence. A client that sends If-Modified-Since is answered 304 with no body while its copy is current, which is how a grid of four hundred printers costs four hundred empty responses rather than four hundred images. A camera that is working and has produced no frame yet answers 204. Cache-Control is private, so a shared proxy never holds one caller's frame and serves it to another. A camera this server could not read answers 502, and a retry may work: the request is correct and the device did not answer.",

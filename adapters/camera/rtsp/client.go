@@ -56,6 +56,11 @@ const (
 	// slow frame rate must not look like a dead connection.
 	readWindowShare = 2
 
+	// resyncCeiling is how many stray bytes next skips looking for the next
+	// packet before it gives the stream up. It is one packet's worth: a
+	// camera that loses its framing for longer is not sending video.
+	resyncCeiling = packetCeiling
+
 	// headerCount is the most headers one response may have.
 	headerCount = 64
 
@@ -222,7 +227,9 @@ func (s *session) play() error {
 
 // next returns the next interleaved RTP packet on the media channel. An RTSP
 // response on the same connection, such as a keepalive answer, is read and
-// discarded.
+// discarded. Bytes that are neither are skipped up to the next packet. A camera
+// whose server names itself rtsp_demo sends such bytes every few seconds, and
+// ffmpeg plays it by skipping them the same way.
 func (s *session) next() ([]byte, error) {
 	for {
 		if err := s.conn.SetReadDeadline(time.Now().Add(s.readWindow())); err != nil {
@@ -239,7 +246,7 @@ func (s *session) next() ([]byte, error) {
 				return nil, streamError(err)
 			}
 
-			if _, _, err = s.readResponse(); err != nil {
+			if err = s.skipStray(); err != nil {
 				return nil, err
 			}
 
@@ -263,6 +270,38 @@ func (s *session) next() ([]byte, error) {
 
 		return packet, nil
 	}
+}
+
+// skipStray reads what stands where a packet was expected. An RTSP response is
+// read and discarded. Anything else is skipped up to a dollar sign that opens
+// a packet on this session's media or report channel.
+func (s *session) skipStray() error {
+	if head, err := s.reader.Peek(len("RTSP/")); err == nil && string(head) == "RTSP/" {
+		_, _, err = s.readResponse()
+
+		return err
+	}
+
+	// A packet opens with a dollar sign and its channel.
+	const opening = 2
+
+	for range resyncCeiling {
+		head, err := s.reader.Peek(opening)
+		if err != nil {
+			return streamError(err)
+		}
+
+		if head[0] == '$' && (head[1] == s.channel || head[1] == s.channel+1) {
+			return nil
+		}
+
+		if _, err = s.reader.Discard(1); err != nil {
+			return streamError(err)
+		}
+	}
+
+	return fmt.Errorf("%w: %d bytes arrived that are neither a packet nor a response",
+		ErrHandshake, resyncCeiling)
 }
 
 // keepalive tells the device the session is still wanted. It does not read the

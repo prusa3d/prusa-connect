@@ -59,10 +59,15 @@
         </div>
       </AspectRatio>
     {:else}
-      <CameraPicture
-        {...camera}
-        alt={t('printers.camera.alt', { name: row.name })}
-      />
+      <!-- Keyed, so another camera starts as a new picture, playing while
+           it is seen (ADR-20261119-pxn). -->
+      {#key camera.camera.name}
+        <CameraPicture
+          {...camera}
+          alt={t('printers.camera.alt', { name: row.name })}
+          autoplay
+        />
+      {/key}
     {/if}
 
     {#if progress !== null}

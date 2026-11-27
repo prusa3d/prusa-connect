@@ -84,10 +84,15 @@
       description={t('dashboard.camera.silentNote')}
     />
   {:else if feed !== undefined}
-    <CameraPicture
-      {...feed}
-      alt={t('dashboard.camera.frame', { name: fallback })}
-      class="min-h-0 w-full flex-1 rounded-sm"
-    />
+    <!-- Keyed, so another camera starts as a new picture, playing while it
+         is seen (ADR-20261119-pxn). -->
+    {#key feed.camera.name}
+      <CameraPicture
+        {...feed}
+        alt={t('dashboard.camera.frame', { name: fallback })}
+        class="min-h-0 w-full flex-1 rounded-sm"
+        autoplay
+      />
+    {/key}
   {/if}
 </TilePanel>

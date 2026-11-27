@@ -26,6 +26,7 @@ export type CameraStore = Pick<
   | 'stillUrl'
   | 'streamUrl'
   | 'watch'
+  | 'socket'
 >;
 
 export class CameraFrames {
@@ -74,6 +75,7 @@ export class CameraFrames {
         live: camera.stream ? this.#store.streamUrl(camera.name) : undefined,
       },
       watch: (name, offer, signal) => this.#store.watch(name, offer, signal),
+      socket: (name) => this.#store.socket(name),
     };
   }
 

@@ -194,6 +194,9 @@ type Core struct {
 	// TimeServer is the SNTP server on UDP port 123, for devices on a network
 	// with no internet.
 	TimeServer TimeServer `yaml:"time_server"`
+	// WebRTC is the UDP port and the addresses a browser dials to play a
+	// camera's stream.
+	WebRTC WebRTC `yaml:"webrtc"`
 	// Dashboards is the home page as pages of cards. It is a core key because
 	// the server reads it, and `make build` reads the same key to leave the
 	// dashboards out of a binary that would never serve them.
@@ -818,7 +821,7 @@ func (c Core) Validate() error {
 		return err
 	}
 
-	if err := c.Discovery.validate(); err != nil {
+	if err := c.validateLocalNetwork(); err != nil {
 		return err
 	}
 
@@ -875,6 +878,16 @@ func (c Core) Validate() error {
 	}
 
 	return nil
+}
+
+// validateLocalNetwork checks the keys that describe how a machine on the
+// local network reaches this server: the announcement and the camera relay.
+func (c Core) validateLocalNetwork() error {
+	if err := c.Discovery.validate(); err != nil {
+		return err
+	}
+
+	return c.WebRTC.validate()
 }
 
 // On reports whether this server prepares upgrades, keeps backups and pairs

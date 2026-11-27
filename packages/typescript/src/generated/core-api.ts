@@ -538,6 +538,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cameras/{camera}/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One camera's live view over a websocket
+         * @description Upgrades to a websocket that carries the camera's H.264 stream, for a browser that cannot reach this server over WebRTC: behind a tunnel that carries no UDP, or a container with no published UDP port. Each binary message is one picture: a flag byte, 1 for a keyframe and 0 otherwise, then the access unit in Annex-B framing. The first message is a keyframe, and every keyframe carries the parameter sets. A viewer that falls about a second behind skips to the next keyframe. Nothing is decoded or re-encoded. A camera that emits no H.264 answers 404, the same refusal as one the caller may not see.
+         */
+        get: operations["live-camera"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cameras/{camera}/snapshot": {
         parameters: {
             query?: never;
@@ -10884,6 +10904,90 @@ export interface operations {
             };
             /** @description Internal Server Error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "live-camera": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The camera's name. */
+                camera: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The websocket, carrying one picture per binary message. */
+            101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"io"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/extension/supervised"
 	"github.com/prusa3d/prusa-connect/internal/kernel/ref"
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
+	"github.com/prusa3d/prusa-connect/internal/transport/webrtc"
 )
 
 const (
@@ -68,10 +68,8 @@ type countingRelay struct {
 	offered atomic.Int64
 }
 
-func (r *countingRelay) Offer(_ context.Context, _ string, frames io.ReadCloser) (string, error) {
+func (r *countingRelay) Offer(_ context.Context, _ string, _ webrtc.Opener) (string, error) {
 	r.offered.Add(1)
-
-	_ = frames.Close()
 
 	return "v=0\r\n", nil
 }

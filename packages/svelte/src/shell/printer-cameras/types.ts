@@ -50,11 +50,19 @@ export type CameraWatch = (
   signal: AbortSignal,
 ) => Promise<string>;
 
+/**
+ * Opens a camera's live socket, which carries its H.264 live view when WebRTC
+ * does not connect.
+ */
+export type CameraSocket = (camera: string) => WebSocket;
+
 /** One camera as its picture draws it, with the live view it can play. */
 export interface CameraFeed {
   readonly camera: Camera;
   readonly pictures: CameraPictures;
   readonly watch?: CameraWatch | undefined;
+  /** Where the H.264 live view goes when WebRTC does not connect. */
+  readonly socket?: CameraSocket | undefined;
   /** A module's own live view, for a camera of a type a module offers. */
   readonly view?: Snippet<[Camera]> | undefined;
 }
@@ -85,6 +93,8 @@ export interface PrinterCamerasPanelProps {
    * a camera that streams H.264 offers no play button.
    */
   watch?: CameraWatch | undefined;
+  /** Where the H.264 live view goes when WebRTC does not connect. */
+  socket?: CameraSocket | undefined;
   /**
    * The module's live view of a camera, drawn in place of the core's, for a
    * camera of a type whose module registered one (ADR-20261106-km2).

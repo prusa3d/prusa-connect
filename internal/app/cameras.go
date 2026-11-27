@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/prusa3d/prusa-connect/internal/app/config"
 	"github.com/prusa3d/prusa-connect/internal/app/resourcehost"
 	"github.com/prusa3d/prusa-connect/internal/authz"
 	"github.com/prusa3d/prusa-connect/internal/extension/supervised"
@@ -56,13 +57,13 @@ type cameraGraph interface {
 // here because this is where it is consumed, and internal/transport/webrtc
 // satisfies it.
 //
-// The relay takes ownership of the frames it is handed and closes them when the
-// viewer goes, whichever way the viewer goes. So this plane hands over an open
-// stream and not a way to open one. One close releases the bulkhead slot and
-// the device socket, and only the relay knows when the viewer has stopped
+// The relay is handed a way to open the camera and not an open stream. It
+// opens the camera once the browser connects and closes it when the viewer
+// goes, whichever way the viewer goes. One close releases the bulkhead slot
+// and the device socket, and only the relay knows when the viewer has stopped
 // watching.
 type cameraRelay interface {
-	Offer(ctx context.Context, offer string, frames io.ReadCloser) (string, error)
+	Offer(ctx context.Context, offer string, open webrtc.Opener) (string, error)
 }
 
 // cameras is the media plane: the supervised camera instances, read through the
@@ -410,6 +411,10 @@ func (c *cameras) Stream(
 // bytes. A malformed offer is the exception and it is the caller's own request,
 // so it answers 400 and says which part of the body was wrong. Nothing about
 // the camera reaches that answer.
+//
+// The camera is opened by the relay once the browser connects, not here. A
+// browser that cannot reach this server's candidates falls back to Live, and
+// an open here would hold the camera's stream slot against it.
 func (c *cameras) Watch(
 	ctx context.Context, principal string, name string, offer string,
 ) (httpapi.CameraAnswer, error) {
@@ -422,26 +427,55 @@ func (c *cameras) Watch(
 		return httpapi.CameraAnswer{}, httpapi.CameraNotFound(name)
 	}
 
-	view, err := camera.Open(ctx, cameraapi.FormatH264AnnexB)
-	if err != nil {
-		if errors.Is(err, cameraapi.ErrFormatNotSupported) {
-			return httpapi.CameraAnswer{}, httpapi.CameraNotFound(name)
+	answer, err := c.relay.Offer(ctx, offer, func(openCtx context.Context) (io.ReadCloser, error) {
+		view, openErr := camera.Open(openCtx, cameraapi.FormatH264AnnexB)
+		if openErr != nil {
+			c.log.WarnContext(openCtx, "a camera could not be opened",
+				"resource", camera.Ref().String(), "error", openErr.Error())
+
+			return nil, openErr
 		}
 
-		c.log.WarnContext(ctx, "a camera could not be opened",
-			"resource", camera.Ref().String(), "error", err.Error())
-
-		return httpapi.CameraAnswer{}, httpapi.CameraUnreachable(name)
-	}
-
-	// The relay owns the stream from here, on every path out of Offer,
-	// including the ones that fail.
-	answer, err := c.relay.Offer(ctx, offer, view.Body)
+		return view.Body, nil
+	})
 	if err != nil {
 		return httpapi.CameraAnswer{}, offerRefusal(err)
 	}
 
 	return httpapi.CameraAnswer{SDP: answer}, nil
+}
+
+// Live opens one camera's H.264 live view as access units, for a browser that
+// could not connect over WebRTC.
+//
+// It is refused exactly as Watch is, and the camera is opened here, before the
+// socket is upgraded, so a camera that does not answer is a 502 the browser can
+// read and not a socket that closes with no reason.
+func (c *cameras) Live(
+	ctx context.Context, principal string, name string,
+) (httpapi.CameraLive, error) {
+	camera, err := c.reach(ctx, principal, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if !slices.Contains(camera.Formats(), cameraapi.FormatH264AnnexB) {
+		return nil, httpapi.CameraNotFound(name)
+	}
+
+	view, err := camera.Open(ctx, cameraapi.FormatH264AnnexB)
+	if err != nil {
+		if errors.Is(err, cameraapi.ErrFormatNotSupported) {
+			return nil, httpapi.CameraNotFound(name)
+		}
+
+		c.log.WarnContext(ctx, "a camera could not be opened",
+			"resource", camera.Ref().String(), "error", err.Error())
+
+		return nil, httpapi.CameraUnreachable(name)
+	}
+
+	return webrtc.NewAccessUnits(view.Body, c.log), nil
 }
 
 // offerRefusal renders a negotiation failure. An offer this server cannot
@@ -622,4 +656,25 @@ func intervalMS(declared time.Duration) int64 {
 	}
 
 	return declared.Milliseconds()
+}
+
+// closeRelay releases the camera relay's UDP port once the HTTP surface that
+// opens views has stopped.
+func closeRelay(ctx context.Context, relay *webrtc.Engine, logger *slog.Logger) {
+	if err := relay.Close(); err != nil {
+		logger.WarnContext(ctx, "the media relay did not close", "error", err.Error())
+	}
+}
+
+// newRelay builds the camera relay on the port and addresses the
+// configuration gives browsers to reach it.
+func newRelay(
+	ctx context.Context, logger *slog.Logger, reach config.WebRTC, loopbackOnly bool,
+) (*webrtc.Engine, error) {
+	return webrtc.New(ctx, webrtc.Config{
+		Logger:       logger,
+		LoopbackOnly: loopbackOnly,
+		UDPPort:      reach.UDPPort,
+		Addresses:    reach.Addresses,
+	})
 }

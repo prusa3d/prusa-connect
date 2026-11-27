@@ -132,6 +132,13 @@ it means a second `containerPort`, a second Service port, and a second certifica
 listener serves only `/p/register` and `/p/ws` and answers 404 to everything else, so it is what a
 printer VLAN should reach.
 
+A camera stream reaches a browser over WebRTC on UDP, which an Ingress does not
+carry. Without UDP the live view falls back to a websocket through the Ingress,
+which needs no setting. For WebRTC, set `core.webrtc.udp_port` and publish that
+port as UDP on the same number, for example with a LoadBalancer Service. Name
+the address a browser reaches it at in `core.webrtc.addresses`. The
+[container page](./container.md#camera-streams) has an example.
+
 ## Rollouts
 
 `strategy: Recreate` and `replicas: 1`, and both are forced rather than chosen. The costs are in

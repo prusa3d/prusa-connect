@@ -210,6 +210,22 @@ The server answers `200`:
 }
 ```
 
+### `live-camera` {#live-camera}
+
+`GET /api/v1/cameras/{camera}/live`. One camera's live view over a websocket.
+
+Upgrades to a websocket that carries the camera's H.264 stream, for a browser that cannot reach this server over WebRTC: behind a tunnel that carries no UDP, or a container with no published UDP port. Each binary message is one picture: a flag byte, 1 for a keyframe and 0 otherwise, then the access unit in Annex-B framing. The first message is a keyframe, and every keyframe carries the parameter sets. A viewer that falls about a second behind skips to the next keyframe. Nothing is decoded or re-encoded. A camera that emits no H.264 answers 404, the same refusal as one the caller may not see.
+
+| parameter | in | type | required | description |
+|---|---|---|---|---|
+| `camera` | path | `string` | yes | The camera's name. |
+
+- credential: bearer token. The client method is `liveCamera`
+- request body: none
+- errors: `101`, `400`, `401`, `404`, `422`, `429`, `500`, `502`, each a [problem document](../../error-codes.md)
+
+This operation has no sample: a websocket of binary pictures, which no example in a document can show.
+
 ### `put-camera` {#put-camera}
 
 `PUT /api/v1/cameras/{camera}`. Add or change a camera.

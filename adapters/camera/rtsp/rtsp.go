@@ -42,6 +42,11 @@ const (
 	// frameBuffer is the starting size of the buffer a stream reuses for
 	// every packet.
 	frameBuffer = 64 << 10
+
+	// malformedCeiling is how many malformed packets in a row a stream drops
+	// before it ends. Two seconds of video at a low bit rate is about that
+	// many packets.
+	malformedCeiling = 64
 )
 
 var (
@@ -317,6 +322,8 @@ func (s *stream) pump() {
 		}
 	}
 
+	malformed := 0
+
 	for {
 		select {
 		case <-s.stopped:
@@ -331,12 +338,22 @@ func (s *stream) pump() {
 
 		frame, err = units.append(frame[:0], packet)
 		if err != nil {
-			// A malformed packet ends the view. A decoder would misread half a
-			// unit.
-			_ = s.writer.CloseWithError(err)
+			// A malformed packet loses the unit it belongs to, and a decoder
+			// conceals one lost unit. A run of them is a camera that sends no
+			// video, and that ends the view.
+			units.drop()
 
-			return
+			malformed++
+			if malformed > malformedCeiling {
+				_ = s.writer.CloseWithError(err)
+
+				return
+			}
+
+			continue
 		}
+
+		malformed = 0
 
 		if len(frame) == 0 {
 			continue

@@ -412,6 +412,8 @@
     signal: AbortSignal,
   ): Promise<string> => cameras.watch(camera, offer, signal);
 
+  const socket = (camera: string) => cameras.socket(camera);
+
   // The Now tab draws the first camera that serves, as the Cameras tab does.
   const feed = $derived.by((): CameraFeed | undefined => {
     const first = cameras.serving[0];
@@ -421,6 +423,7 @@
       camera: first,
       pictures: picturesOf(first),
       watch,
+      socket,
       view: viewOf(first),
     };
   });
@@ -1130,6 +1133,7 @@
     pushUrlOf={(name: string) =>
       new URL(cameras.pushUrl(name), document.baseURI).href}
     {watch}
+    {socket}
     foot={cameraFoot}
     {viewOf}
   />

@@ -525,10 +525,9 @@ describe('every slot has an outlet on its screen', () => {
             }
           },
         );
+        // The camera's view plays by itself while its card is seen
+        // (ADR-20261119-pxn), so the outlet mounts with no press.
         await drawPrinterDetail(registry, 'cameras');
-        if (slot === 'camera-view') {
-          await page.getByRole('button', { name: 'Play bed-cam live' }).click();
-        }
       } else if (slot === 'file-view') {
         await drawFileDetail(registry);
       } else if (slot === 'file-tab') {

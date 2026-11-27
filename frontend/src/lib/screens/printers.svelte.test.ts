@@ -51,11 +51,15 @@ const openFrames = async () => {
 };
 
 describe('the printers page', () => {
+  // The view plays by itself while the tile is seen (ADR-20261119-pxn), so
+  // the tile carries either control.
   it('offers the live view of a printer that has a camera', async () => {
     await openFrames();
 
     await expect
-      .element(page.getByRole('button', { name: 'Play front live' }))
+      .element(
+        page.getByRole('button', { name: /^(Play front live|Stop front)$/ }),
+      )
       .toBeInTheDocument();
   });
 
@@ -65,7 +69,9 @@ describe('the printers page', () => {
     await openFrames();
 
     await expect
-      .poll(() => page.getByRole('button', { name: /^Play / }).elements())
+      .poll(() =>
+        page.getByRole('button', { name: /^(Play|Stop) / }).elements(),
+      )
       .toHaveLength(1);
   });
 });

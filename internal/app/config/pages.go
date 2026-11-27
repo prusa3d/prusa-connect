@@ -41,6 +41,7 @@ var pageRules = []struct{ prefix, slug string }{
 	{"core.api.", "network"},
 	{"core.trusted_proxies", "network"},
 	{"core.time_server.", "network"},
+	{"core.webrtc.", "network"},
 	{"core.events.", "network"},
 	{"core.auth.", "sign-in"},
 	{"core.authz.database", "database"},

@@ -75,7 +75,6 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
 	"github.com/prusa3d/prusa-connect/internal/transport/http/loginguard"
 	"github.com/prusa3d/prusa-connect/internal/transport/stream"
-	"github.com/prusa3d/prusa-connect/internal/transport/webrtc"
 )
 
 // Run starts the core and returns when it has stopped. A caller cancels ctx to
@@ -451,10 +450,12 @@ func serveOver(
 	// The camera plane, which an HTTP push and a module's camera.accept both
 	// go through, so both take one permission check and land in one driver.
 	// It is built here, before the first reconcile starts a module.
-	relay, err := webrtc.New(webrtc.Config{Logger: logger, LoopbackOnly: opts.LoopbackOnly})
+	relay, err := newRelay(ctx, logger, core.WebRTC, opts.LoopbackOnly)
 	if err != nil {
 		return fmt.Errorf("build the media relay: %w", err)
 	}
+
+	defer closeRelay(ctx, relay, logger)
 
 	cameraPlane := newCameras(graph, supervision.host, relay, logger)
 	cameraPlane.hub = hub

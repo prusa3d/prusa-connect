@@ -172,7 +172,8 @@ var unboundGroups = []struct {
 		"stage-server-upgrade-bundle", "upload-storage-object",
 	}},
 	{reasonStream, []string{
-		"get-developer-view", "get-metrics", "stream-camera", "stream-events", "watch-camera",
+		"get-developer-view", "get-metrics", "live-camera", "stream-camera", "stream-events",
+		"watch-camera",
 	}},
 	{
 		reasonNoWire,

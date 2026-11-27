@@ -28,6 +28,7 @@ const (
 	cameraSnapshotPath = camerasPath + "/{camera}/snapshot"
 	cameraStreamPath   = camerasPath + "/{camera}/stream"
 	cameraWatchPath    = camerasPath + "/{camera}/webrtc"
+	cameraLivePath     = camerasPath + "/{camera}/live"
 )
 
 // cameraObject is the resource kind a camera refusal names, which is the kind
@@ -93,6 +94,10 @@ type CameraFleet interface {
 	// The relay owns the camera stream from here and ends it when the viewer
 	// goes, so there is nothing for this caller to close.
 	Watch(ctx context.Context, principal string, name string, offer string) (CameraAnswer, error)
+
+	// Live opens one camera's H.264 live view as access units, for a browser
+	// that could not connect over WebRTC. The caller closes it.
+	Live(ctx context.Context, principal string, name string) (CameraLive, error)
 
 	// Push stores one frame a camera sent for itself, as that camera's most
 	// recent one. It is a write, so it takes more than seeing the camera does.
@@ -161,6 +166,16 @@ type CameraAnswer struct {
 	// is one request and one response, so there is no second channel a
 	// trickled candidate could arrive on.
 	SDP string
+}
+
+// CameraLive is one camera's H.264 stream read as whole pictures.
+type CameraLive interface {
+	// Next returns the next access unit, Annex-B framed, and whether it is a
+	// keyframe carrying the parameter sets. The first one is a keyframe. It
+	// reports io.EOF when the camera stream ends.
+	Next() (unit []byte, key bool, err error)
+	// Close ends the camera stream.
+	Close() error
 }
 
 // CameraSnapshot is one still image and what a cache may do with it.
@@ -236,6 +251,7 @@ func registerCameras(api huma.API, cfg Config, closing <-chan struct{}) {
 	registerPutCameraSnapshot(api, fleet)
 	registerCameraStream(api, fleet, cfg.Logger, closing)
 	registerCameraWatch(api, fleet)
+	registerCameraLive(api, fleet, cfg.Logger, closing)
 	registerCameraTypes(api, fleet)
 }
 

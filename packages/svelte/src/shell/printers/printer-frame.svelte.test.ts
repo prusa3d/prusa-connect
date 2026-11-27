@@ -94,10 +94,9 @@ describe('PrinterFrame with a camera', () => {
     await expect.element(picture).toHaveClass(/object-contain/);
   });
 
-  it('plays the live view from the tile', async () => {
+  // ADR-20261119-pxn: the tile plays while it is seen.
+  it('plays the live view on the tile by itself', async () => {
     await render(PrinterFrame, { props: { row: row(), camera: FEED } });
-
-    await page.getByRole('button', { name: 'Play bed-cam live' }).click();
 
     await expect
       .element(page.getByRole('button', { name: 'Stop bed-cam' }))

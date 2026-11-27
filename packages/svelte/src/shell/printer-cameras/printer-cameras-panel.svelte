@@ -48,6 +48,7 @@
     printers,
     pushUrlOf,
     watch,
+    socket,
     viewOf,
     foot,
   }: PrinterCamerasPanelProps = $props();
@@ -100,9 +101,9 @@
   const altOf = (camera: string): string =>
     t('printerDetailCameras.alt', { camera, printer: printerName });
 
-  // The cameras whose live view a person started. A stream costs the
-  // camera, the network and this server while it runs, so it runs only
-  // while somebody asked for it.
+  // The cameras whose live view runs. A stream costs the camera, the network
+  // and this server while it runs, so it runs only while its card is seen or
+  // somebody asked for it.
   const playing = new SvelteSet<string>();
   const play =
     (name: string) =>
@@ -235,7 +236,9 @@
               pictures={picturesOf(camera)}
               alt={altOf(camera.name)}
               {watch}
+              {socket}
               view={moduleView}
+              autoplay
               bind:playing={() => playing.has(camera.name), play(camera.name)}
             />
           </div>

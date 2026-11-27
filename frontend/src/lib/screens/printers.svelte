@@ -108,6 +108,7 @@
           live: found.stream ? cameras.streamUrl(found.name) : undefined,
         },
         watch: (camera, offer, signal) => cameras.watch(camera, offer, signal),
+        socket: (camera) => cameras.socket(camera),
       };
     },
   };
