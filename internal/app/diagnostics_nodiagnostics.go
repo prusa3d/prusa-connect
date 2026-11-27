@@ -11,6 +11,10 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
 )
 
+// diagnosticsBuilt says this build leaves the support bundle out, so the
+// first-run wizard does not offer its keys.
+const diagnosticsBuilt = false
+
 // diagnosticsRing keeps nothing in a build that leaves the bundle out.
 func diagnosticsRing(config.Core) *observability.LogRing { return nil }
 

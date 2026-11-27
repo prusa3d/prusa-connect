@@ -22,6 +22,10 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
 )
 
+// diagnosticsBuilt says this build carries the support bundle, so the first-run
+// wizard offers its keys.
+const diagnosticsBuilt = true
+
 // diagnosticsLogLines is how many of the newest log records the core keeps in
 // memory for a diagnostics bundle.
 const diagnosticsLogLines = 2000

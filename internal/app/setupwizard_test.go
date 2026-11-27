@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,8 +17,11 @@ import (
 
 	"github.com/prusa3d/prusa-connect/internal/app/config"
 	"github.com/prusa3d/prusa-connect/internal/app/resource"
+	"github.com/prusa3d/prusa-connect/internal/authz"
 	"github.com/prusa3d/prusa-connect/internal/platform/auth/oidc"
+	"github.com/prusa3d/prusa-connect/internal/platform/observability/prom"
 	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
+	"github.com/prusa3d/prusa-connect/sdk/fault"
 )
 
 // wizardInstall is a fresh install whose first run knows its operator file and
@@ -561,5 +565,66 @@ func TestThePortIsLockedWhenTheServerWasStartedWithAddr(t *testing.T) {
 			require.True(t, key.Locked)
 			require.Equal(t, ":8090", key.Value)
 		}
+	}
+}
+
+// TestTheWizardOffersOnlyWhatThisBinaryRuns holds ADR-20261015-ejz rule 13 for
+// every part a build tag adds or takes out. A key whose part this binary was
+// built without is not in the contract, and an answer for it is refused with
+// the build tag named and nothing written. A start on that file would refuse
+// it or ignore it, and the person would not learn why. A key whose part is
+// built in is offered. The case runs in every build and checks the side that
+// build is on.
+func TestTheWizardOffersOnlyWhatThisBinaryRuns(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		key    string
+		answer any
+		tag    string
+		built  bool
+	}{
+		"metrics":     {key: "core.observability.enabled", answer: true, tag: "observability", built: prom.Compiled},
+		"diagnostics": {key: "core.diagnostics.enabled", answer: true, tag: "diagnostics", built: diagnosticsBuilt},
+		"dashboards":  {key: "core.dashboards.enabled", answer: true, tag: "nodashboards", built: dashboardsBuilt},
+		"postgres": {
+			key: "persistence.postgres.dsn", answer: "postgres://db.local/connect", tag: "postgres",
+			built: authz.PostgresLinked,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			install, restarts := wizardInstall(t, dir)
+
+			contract, err := install.first.contract()
+			require.NoError(t, err)
+
+			offered := slices.ContainsFunc(contract.Keys, func(key httpapi.SetupKey) bool {
+				return key.Path == tc.key
+			})
+			require.Equal(t, tc.built, offered,
+				"%s is offered by a binary that cannot run it, or hidden by one that can", tc.key)
+
+			if tc.built {
+				return
+			}
+
+			decision := wizardDecision(dir)
+			decision.Configuration = map[string]any{tc.key: tc.answer}
+
+			_, err = install.first.Record(t.Context(), decision)
+			require.Error(t, err)
+
+			raised, ok := errors.AsType[*fault.Fault](err)
+			require.True(t, ok, "the refusal is not a fault: %v", err)
+			require.Equal(t, http.StatusUnprocessableEntity, raised.Status())
+			require.Contains(t, err.Error(), "the "+tc.tag+" tag", "the refusal does not name the build tag")
+			require.Zero(t, *restarts)
+
+			_, statErr := os.Stat(config.SetupFile(install.first.configPath))
+			require.ErrorIs(t, statErr, os.ErrNotExist, "a refused answer wrote the wizard's file")
+		})
 	}
 }
