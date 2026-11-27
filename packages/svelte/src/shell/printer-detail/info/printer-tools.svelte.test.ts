@@ -211,6 +211,39 @@ describe('PrinterTools', () => {
     await expect.element(page.getByText('Build volume')).toBeVisible();
   });
 
+  it('marks a toolchanger head that is not picked as parked', async () => {
+    await render(PrinterTools, {
+      props: {
+        tools: {
+          tool_count: 3,
+          tools: {
+            '0': { active: false },
+            '1': { active: true, nozzle_temp: 122 },
+            '2': { active: false, nozzle_temp: 30 },
+          },
+        },
+      },
+    });
+
+    expect(await rowText(/Tool 1/)).toMatch(/Parked/);
+    expect(await rowText(/Tool 2/)).toMatch(/122\s*°C/);
+    expect(await rowText(/Tool 3/)).toMatch(/30\s*°C/);
+  });
+
+  it('does not mark a head parked before the printer says which is picked', async () => {
+    await render(PrinterTools, {
+      props: {
+        tools: {
+          tool_count: 2,
+          tools: { '0': { active: false }, '1': { active: false } },
+        },
+      },
+    });
+
+    expect(await rowText(/Tool 1/)).toMatch(/No reading yet/);
+    expect(await rowText(/Tool 2/)).toMatch(/No reading yet/);
+  });
+
   it('marks a flag the printer did not send as no reading yet', async () => {
     await render(PrinterTools, {
       props: {

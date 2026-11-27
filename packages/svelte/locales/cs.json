@@ -521,6 +521,7 @@
   "printerDetailInfo.tools.tool": "Nástroj",
   "printerDetailInfo.tools.toolNumber": "Nástroj {n}",
   "printerDetailInfo.tools.unknown": "Zatím bez údaje",
+  "printerDetailInfo.tools.parked": "Zaparkováno",
   "printerDetailInfo.tools.yes": "Ano",
   "printerDetailInfo.tools.volume": "Tiskový prostor",
   "printerDetailInfo.tools.volumeSize": "{x} × {y} × {z}",

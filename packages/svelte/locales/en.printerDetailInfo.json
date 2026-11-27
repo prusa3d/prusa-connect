@@ -116,6 +116,7 @@
   "printerDetailInfo.tools.tool": "Tool",
   "printerDetailInfo.tools.toolNumber": "Tool {n}",
   "printerDetailInfo.tools.unknown": "No reading yet",
+  "printerDetailInfo.tools.parked": "Parked",
   "printerDetailInfo.tools.yes": "Yes",
   "printerDetailInfo.tools.volume": "Build volume",
   "printerDetailInfo.tools.volumeSize": "{x} by {y} by {z}",

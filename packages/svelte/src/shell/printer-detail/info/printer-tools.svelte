@@ -60,6 +60,12 @@
   } = $props();
 
   const rows = $derived(toolRowsOf(tools));
+  const heads = $derived(rows.filter((row) => !row.slot).length);
+  // Every head reads as not picked until the printer's first telemetry frame
+  // says which one is, so a head is parked only once some head is picked.
+  const anyPicked = $derived(
+    rows.some((row) => !row.slot && row.tool?.active === true),
+  );
 
   // The nozzle chip of the header sets the same heads under the same rules: a
   // printer that is not reporting offers nothing to set, and a verb with no
@@ -88,6 +94,20 @@
     return value
       ? t('printerDetailInfo.tools.yes')
       : t('printerDetailInfo.tools.no');
+  };
+
+  // A toolchanger reads only the head on the carriage, so a head that is not
+  // picked on a printer with more than one has no reading while it is parked
+  // in its dock, and says so rather than waiting for one. Before the first
+  // telemetry frame no head is picked, and each one has no reading yet. So
+  // does every head of a toolchanger with all of them docked.
+  const temperatureText = (tool: Tool): string => {
+    if (tool.nozzle_temp !== undefined)
+      return formatUnit(tool.nozzle_temp, '°C', { maximumFractionDigits: 0 });
+    if (!tool.active && heads > 1 && anyPicked)
+      return t('printerDetailInfo.tools.parked');
+
+    return t('printerDetailInfo.tools.unknown');
   };
 
   // A null material package instance is a reading: the tool has nothing
@@ -161,7 +181,7 @@
               {
                 id: `mmu-${id}`,
                 label:
-                  rows.filter((row) => !row.slot).length > 1
+                  heads > 1
                     ? t('printerDetailInfo.tools.mmuOnHead', {
                         n: Number(id) + 1,
                       })
@@ -269,12 +289,8 @@
                   >
                   <TableCell>
                     <span class="inline-flex items-center gap-1">
-                      {row.tool.nozzle_temp === undefined
-                        ? t('printerDetailInfo.tools.unknown')
-                        : formatUnit(row.tool.nozzle_temp, '°C', {
-                            maximumFractionDigits: 0,
-                          })}
-                      {#if settable && (settable.perTool || rows.filter((entry) => !entry.slot).length === 1)}
+                      {temperatureText(row.tool)}
+                      {#if settable && (settable.perTool || heads === 1)}
                         {@const reading = settable.readings.find(
                           (head) => head.index === Number(row.id),
                         )}
