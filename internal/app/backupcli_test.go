@@ -10,6 +10,7 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/app/config"
 	"github.com/prusa3d/prusa-connect/internal/app/moduledeps"
 	"github.com/prusa3d/prusa-connect/internal/betaportal"
+	"github.com/prusa3d/prusa-connect/internal/transport/http/httpapi"
 	"github.com/prusa3d/prusa-connect/internal/upgrade"
 )
 
@@ -89,6 +90,31 @@ resources:
 	}
 	if len(paths) != 2 || paths[0] != "history.db" || paths[1] != "records.db" {
 		t.Fatalf("SQLite paths are %#v", paths)
+	}
+}
+
+// TestResourceSQLitePathsReadTheHistoryTheWizardDeclares checks that a backup
+// of a server the first-run wizard configured includes the print history.
+func TestResourceSQLitePathsReadTheHistoryTheWizardDeclares(t *testing.T) {
+	t.Parallel()
+
+	install := freshInstall(t)
+	operator := filepath.Join(install.dir, "config.yaml")
+
+	history, err := historyOf(&httpapi.SetupHistory{Retention: "168h"}, operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = install.first.declareHistory(t.Context(), history); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := resourceSQLitePaths(operator, filepath.Join(install.dir, "config.d", "resources.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 || paths[0] != history.Path {
+		t.Fatalf("SQLite paths are %#v, want the history file %q", paths, history.Path)
 	}
 }
 

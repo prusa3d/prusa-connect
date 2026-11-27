@@ -21,6 +21,7 @@ import (
 	"github.com/prusa3d/prusa-connect/internal/kernel/buildprofile"
 	"github.com/prusa3d/prusa-connect/internal/kernel/version"
 	"github.com/prusa3d/prusa-connect/internal/upgrade"
+	"github.com/prusa3d/prusa-connect/sdk/extension"
 	"github.com/prusa3d/prusa-connect/sdk/wirerpc"
 )
 
@@ -393,10 +394,14 @@ func resourceSQLitePaths(paths ...string) ([]string, error) {
 	return out, nil
 }
 
+// sqliteTypes are the two names of the built-in SQLite adapter: the bare one
+// and the qualified one the first-run wizard writes.
+var sqliteTypes = []string{"sqlite", string(extension.CoreNamespace) + extension.QualifiedSeparator + "sqlite"}
+
 func collectSQLitePaths(value any, out map[string]bool) {
 	switch typed := value.(type) {
 	case map[string]any:
-		if kind, hasKind := typed["type"].(string); hasKind && kind == "sqlite" {
+		if kind, hasKind := typed["type"].(string); hasKind && slices.Contains(sqliteTypes, kind) {
 			if settings, hasConfig := typed["config"].(map[string]any); hasConfig {
 				if path, hasPath := settings["path"].(string); hasPath && path != "" {
 					out[path] = true
