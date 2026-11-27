@@ -318,9 +318,10 @@ func (c *Client) Start(ctx context.Context, printer Printer, request Request) (n
 
 // Poll asks what became of one pairing question.
 //
-// The body of an approval is drained and never read. Firmware that runs
-// PrusaLink puts its API key there, and this server has no use for it: the
-// registration that follows issues a credential of its own.
+// The body of an approval is drained and never read. Firmware answers
+// {"paired": true} to this client, and puts its API key there only for the
+// client PrusaLink. The registration that follows issues a credential of its
+// own, so nothing in the body is needed.
 func (c *Client) Poll(ctx context.Context, printer Printer, code string) (Poll, error) {
 	answer, _, err := c.call(ctx, http.MethodGet, printer, pairingPath+"/"+url.PathEscape(code), nil)
 	if err != nil {

@@ -55,7 +55,8 @@ registration a pairing approves without a person typing its code.
 9. A registration no pairing matches is never approved by the pairing service,
    in any admission mode.
 10. The body of the printer's 200 is never parsed, stored or logged. Firmware
-    running PrusaLink puts its API key there.
+    answers `{"paired": true}` to the client `Prusa Connect`, and puts its
+    API key there only for the client `PrusaLink`.
 11. Pairing a printer takes `admit_device` on the driver resource kind, the
     permission approving a registration takes.
 12. A pairing lives in the memory of one process. A restart ends it, and the
@@ -91,7 +92,7 @@ registration a pairing approves without a person typing its code.
 | option | why not |
 |---|---|
 | match by serial number alone | the serial is printed on the printer and sent in clear in every registration, so anything on the network can send it |
-| read the serial from `/api/v1/info` with the API key from the 200 | it makes this server hold the printer's PrusaLink password, and a firmware that answers `{"paired": true}` gives no key |
+| read the serial from `/api/v1/info` with the API key from the 200 | firmware gives the key only to the client `PrusaLink`, and this server would then hold the printer's password |
 | a nonce from the pairing in the registration | firmware has no field for it, and the 20 characters of the stored host have no room |
 | approve any registration that arrives while a pairing is open | any machine on the network would be approved because somebody paired another printer |
 | approve a registration held while waiting when the printer answers 404 | 404 is both a question that timed out and an approval whose answer was lost, and only one of them is a yes |
