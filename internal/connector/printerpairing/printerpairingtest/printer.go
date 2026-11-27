@@ -265,10 +265,16 @@ func (p *Printer) poll(w http.ResponseWriter, code string) {
 		w.WriteHeader(http.StatusAccepted)
 	case approved:
 		p.phase = none
-		// Firmware that runs PrusaLink puts its key here. A client must not
-		// need it, and must not keep it.
+		// The key goes only to PrusaLink, as firmware commit 7bb7738fe sends it.
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"api_key":"secretprinterkey","user":"maker"}`))
+
+		if p.request.Client == "PrusaLink" {
+			_, _ = w.Write([]byte(`{"api_key":"secretprinterkey","user":"maker"}`))
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"paired":true}`))
 	case refused:
 		p.phase = none
 		w.WriteHeader(http.StatusForbidden)
