@@ -319,8 +319,8 @@ sentence each.
 
 `mode` says whether a caller has to present a credential. `required` asks for
 one, and the same call creates the first administrator from the `account`
-field. `open` serves every request as `core.principal`, which is `operator` in
-the shipped file.
+field. `open` serves every request as `core.principal`, which is `operator`
+unless a configuration file sets it.
 
 `admission` says how a new printer joins. `ask` holds the printer at a code
 until somebody approves it. `open` lets a printer in the moment it dials.

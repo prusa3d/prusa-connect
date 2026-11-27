@@ -42,6 +42,12 @@ key by key, and a list or a single value is replaced whole. The wizard's file
 holds only `core` and `persistence`, and a key it does not read is refused
 with the file and the line, as in yours.
 
+A key you write wins even when its value is empty or is the default, and the
+wizard shows it as fixed and cannot change it. So leave a key out, or comment
+it out, when you want the wizard to ask it. The `config/config.yaml` a release
+ships does that for the sign-in and HTTPS keys: their defaults are in
+comments.
+
 The server also writes. Beside your file it creates a directory named
 `config.d/` and keeps these there:
 

@@ -49,11 +49,9 @@ core:
     # plain HTTP, which is the default. Set them to serve HTTPS directly
     # instead of behind a proxy. There is no minimum-version key: a browser
     # reaches this listener, and the floor is TLS 1.3.
-    tls:
-      certificate: ""
-      key: ""
-      # certificate: certs/server/api.crt
-      # key: certs/server/api.key
+    # tls:
+    #   certificate: certs/server/api.crt
+    #   key: certs/server/api.key
     # The browser origins a page served from somewhere else may call this API
     # from. Default empty, which lets only a page this server serves call it.
     # Set it where the app is hosted apart from the API. Each entry is one
@@ -298,7 +296,7 @@ core:
   # afterwards does not move that grant, and the server says at startup when
   # the configured principal holds nothing. Every other grant is written over
   # the API at /api/v1/grants/{object_type}/{object_id}.
-  principal: operator
+  # principal: operator
   authz:
     # The SQLite file the authorization graph lives in. Default config.d/
     # authz.db beside this file. It is created empty on the first run and
@@ -366,30 +364,27 @@ core:
   # printer is let in when it dials or waits for an operator to approve a
   # code. The printer answer is read when the server starts, so recording one
   # while it runs takes effect at the next start.
-  auth:
-    # The issuer identifier, this server's registration at it, and the address
-    # it sends the browser back to. All three empty is the default. The last
-    # two are required once the first is set.
-    issuer: ""
-    client_id: ""
-    redirect_uri: ""
-    # issuer: "http://127.0.0.1:58092"
-    # client_id: "prusa-connect"
-    # redirect_uri: "http://127.0.0.1:8080/api/v1/auth/callback"
-    #
-    # This server's own account store. Default false.
-    local: false
-    # An account file an earlier build wrote. The accounts are rows in the
-    # database, and this file is imported once when the database holds no
-    # account. Default config.d/accounts.json beside this file. Naming it
-    # while `local` is false is refused.
-    # accounts: config/config.d/accounts.json
-    #
-    # The code the first run asks for: 12 to 64 printable ASCII characters,
-    # at least 6 of them different. Empty is the default: the server then
-    # prints a new random code in its log at every start until the first run
-    # is done. Set it for an install a script does. Nothing turns it off.
-    # setup_code: ""
+  # auth:
+  #   # The issuer identifier, this server's registration at it, and the address
+  #   # it sends the browser back to. All three empty is the default. The last
+  #   # two are required once the first is set.
+  #   issuer: "http://127.0.0.1:58092"
+  #   client_id: "prusa-connect"
+  #   redirect_uri: "http://127.0.0.1:8080/api/v1/auth/callback"
+  #   #
+  #   # This server's own account store. Default false.
+  #   local: false
+  #   # An account file an earlier build wrote. The accounts are rows in the
+  #   # database, and this file is imported once when the database holds no
+  #   # account. Default config.d/accounts.json beside this file. Naming it
+  #   # while `local` is false is refused.
+  #   accounts: config/config.d/accounts.json
+  #   #
+  #   # The code the first run asks for: 12 to 64 printable ASCII characters,
+  #   # at least 6 of them different. Empty is the default: the server then
+  #   # prints a new random code in its log at every start until the first run
+  #   # is done. Set it for an install a script does. Nothing turns it off.
+  #   setup_code: ""
   # How many bytes of one device's reported state this process keeps. Default
   # 262144. Raise it for a device that describes itself in more paths than a
   # printer does.

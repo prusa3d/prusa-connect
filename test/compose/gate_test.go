@@ -400,12 +400,20 @@ func configWith(t *testing.T, shipped, ledger string) string {
 		"      config:\n        path: " + filepath.ToSlash(ledger) + "\n"
 
 	// The setup code joins the shipped auth block for the reason the probe joins
-	// the sinks: a second auth key under core is a duplicate.
+	// the sinks: a second auth key under core is a duplicate. The shipped file
+	// leaves core.auth commented out so the wizard can set it, so the block is
+	// added under core when there is none.
 	const auth = "\n  auth:\n"
 
 	withCode := strings.Replace(string(content), auth, auth+"    setup_code: "+setupCode+"\n", 1)
 	if withCode == string(content) {
-		t.Fatalf("%s carries no core.auth block for this gate to set the setup code in", shipped)
+		const core = "\ncore:\n"
+
+		withCode = strings.Replace(string(content), core, core+"  auth:\n    setup_code: "+setupCode+"\n", 1)
+	}
+
+	if withCode == string(content) {
+		t.Fatalf("%s carries no core block for this gate to set the setup code in", shipped)
 	}
 
 	content = []byte(withCode)
