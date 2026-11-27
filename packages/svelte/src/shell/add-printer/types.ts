@@ -105,6 +105,18 @@ export interface PrinterPairingView {
   state: PairingState;
 }
 
+/**
+ * A printer this server hears on the local network and does not hold yet, as
+ * the pairing picker lists it. A Buddy printer announces its host name and
+ * port and nothing else: no serial and no model.
+ */
+export interface NearbyCandidate {
+  /** The name it announces, which is its host name on the network. */
+  name: string;
+  address: string;
+  port: number;
+}
+
 /** What a person asks for when they pair a printer at its screen. */
 export interface PairingRequest {
   /** The printer's address on the local network, as typed. */
@@ -175,6 +187,12 @@ export interface AddPrinterScreenProps {
   onCancelPairing?: (() => void) | undefined;
   /** The person wants to pair again after a pairing ended. */
   onPairAgain?: (() => void) | undefined;
+  /**
+   * The printers on the local network that could be paired, which the
+   * picker lists. Undefined until the host has read them, and for a host
+   * that cannot list them: the picker then offers the address field alone.
+   */
+  nearby?: readonly NearbyCandidate[] | undefined;
   /** The pairing this screen started, until it ends and the person moves on. */
   pairing?: PrinterPairingView | undefined;
   /** Whether a pairing request is on its way to the printer. */

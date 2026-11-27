@@ -19,9 +19,11 @@
     AddPrinterScreen,
     type JoinedPrinter,
     type JoiningPrinter,
+    type NearbyCandidate,
     type PairingRequest,
     type PendingPrinter,
     printerHref,
+    printersToAdd,
   } from '@prusa/connect-ui/shell';
   import { deviceIdOf } from '@prusa/connect-ui/data';
   import { onMount } from 'svelte';
@@ -155,6 +157,20 @@
     return { reason: last.reason, ...described(last.model) };
   });
 
+  // The printers the picker offers. A printer the server already names in
+  // device_id connects from that address, or last did, so it is here; and
+  // another server is no printer. Nothing is offered until the list is read,
+  // nor to a person who may not read it.
+  const nearby = $derived<NearbyCandidate[] | undefined>(
+    ctx.nearby.loaded && ctx.nearby.error === undefined
+      ? printersToAdd(ctx.nearby.items).map((entry) => ({
+          name: entry.name,
+          address: entry.address,
+          port: entry.port,
+        }))
+      : undefined,
+  );
+
   onMount(() => {
     void registrations.load();
     void ctx.deviceModels.read();
@@ -168,8 +184,12 @@
       }
     });
 
+    void ctx.nearby.load();
+    const stopNearby = ctx.nearby.listen();
+
     return () => {
       unsubscribe();
+      stopNearby();
       pairing.dispose();
     };
   });
@@ -196,6 +216,7 @@
     void registrations.reject(code);
   }}
   pairing={pairing.pairing}
+  {nearby}
   pairingBusy={pairing.busy}
   pairingError={pairing.error}
   onPair={(request: PairingRequest) => {

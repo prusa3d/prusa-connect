@@ -1,7 +1,7 @@
 <!--
-  The form that asks a printer on the network to pair: the printer's address,
-  and behind one disclosure the address of this server that the printer
-  stores. The server address starts as the one the settings file carries, so
+  The form that asks a printer on the network to pair: a printer picked from
+  the ones this server hears, or one typed by its address, and behind one
+  disclosure the address of this server that the printer stores. The server address starts as the one the settings file carries, so
   a person who never opens the disclosure sends the same address the file
   would.
 -->
@@ -22,15 +22,18 @@
     Label,
     Switch,
   } from '../../primitives';
-  import { storedHostFits } from './presentation';
-  import type { AutoConnect, PairingRequest } from './types';
+  import PairPicker from './pair-picker.svelte';
+  import { pairingAddress, storedHostFits } from './presentation';
+  import type { AutoConnect, NearbyCandidate, PairingRequest } from './types';
 
   let {
     connection,
+    nearby,
     busy = false,
     onPair,
   }: {
     connection: AutoConnect;
+    nearby?: readonly NearbyCandidate[] | undefined;
     busy?: boolean;
     onPair: (request: PairingRequest) => void;
   } = $props();
@@ -54,38 +57,61 @@
   );
   const own = $derived(isOwnAddress(host));
   const tooLong = $derived(!storedHostFits(host.trim()));
-  const ready = $derived(
-    printer.trim() !== '' && host.trim() !== '' && portValid && !own,
-  );
+  const serverReady = $derived(host.trim() !== '' && portValid && !own);
+  const ready = $derived(printer.trim() !== '' && serverReady);
 
-  const submit = (event: SubmitEvent): void => {
-    event.preventDefault();
-    if (!ready || busy) return;
+  const pair = (address: string): void => {
+    if (!serverReady || busy) return;
     onPair({
-      printer: printer.trim(),
+      printer: address,
       connect: { host: host.trim(), port: portNumber, tls },
     });
   };
+
+  const submit = (event: SubmitEvent): void => {
+    event.preventDefault();
+    if (!ready) return;
+    pair(printer.trim());
+  };
 </script>
 
-<form class="flex flex-col gap-4" data-part="pair-form" onsubmit={submit}>
-  <Field
-    label={t('addPrinter.pair.printer.label')}
-    description={t('addPrinter.pair.printer.hint')}
-    control={Input}
-    controlProps={{
-      value: printer,
-      type: 'text',
-      inputmode: 'url',
-      autocomplete: 'off',
-      spellcheck: false,
-      placeholder: '192.168.1.20',
-      class: 'font-mono',
-      oninput: (event: Event & { currentTarget: HTMLInputElement }) => {
-        printer = event.currentTarget.value;
-      },
-    }}
-  />
+<div class="flex flex-col gap-6" data-part="pair-form">
+  {#if nearby !== undefined}
+    <PairPicker
+      {nearby}
+      disabled={!serverReady || busy}
+      onChoose={(candidate: NearbyCandidate) => {
+        pair(pairingAddress(candidate));
+      }}
+    />
+  {/if}
+
+  <form class="flex flex-col gap-4" data-part="pair-manual" onsubmit={submit}>
+    <h3 class="text-sm font-semibold">{t('addPrinter.pair.manual.heading')}</h3>
+    <Field
+      label={t('addPrinter.pair.printer.label')}
+      description={t('addPrinter.pair.printer.hint')}
+      control={Input}
+      controlProps={{
+        value: printer,
+        type: 'text',
+        inputmode: 'url',
+        autocomplete: 'off',
+        spellcheck: false,
+        placeholder: '192.168.1.20',
+        class: 'font-mono',
+        oninput: (event: Event & { currentTarget: HTMLInputElement }) => {
+          printer = event.currentTarget.value;
+        },
+      }}
+    />
+
+    <div>
+      <Button type="submit" disabled={!ready || busy} aria-busy={busy}>
+        {t('addPrinter.pair.start')}
+      </Button>
+    </div>
+  </form>
 
   <Collapsible bind:open={serverOpen}>
     <CollapsibleTrigger variant="inline">
@@ -157,10 +183,4 @@
       </AlertDescription>
     </Alert>
   {/if}
-
-  <div>
-    <Button type="submit" disabled={!ready || busy} aria-busy={busy}>
-      {t('addPrinter.pair.start')}
-    </Button>
-  </div>
-</form>
+</div>

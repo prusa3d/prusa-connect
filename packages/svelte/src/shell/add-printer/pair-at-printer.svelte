@@ -13,6 +13,7 @@
   import PairStatus from './pair-status.svelte';
   import type {
     AutoConnect,
+    NearbyCandidate,
     PairingRequest,
     PrinterPairingView,
   } from './types';
@@ -20,6 +21,7 @@
   let {
     connection,
     pairing,
+    nearby,
     busy = false,
     error,
     onPair,
@@ -28,6 +30,7 @@
   }: {
     connection: AutoConnect;
     pairing: PrinterPairingView | undefined;
+    nearby?: readonly NearbyCandidate[] | undefined;
     busy?: boolean;
     error?: unknown;
     onPair: (request: PairingRequest) => void;
@@ -55,7 +58,7 @@
     {/if}
 
     {#if pairing === undefined || pairing.state === 'withdrawn'}
-      <PairForm {connection} {busy} {onPair} />
+      <PairForm {connection} {nearby} {busy} {onPair} />
     {:else}
       <PairStatus {pairing} {onCancel} {onAgain} />
     {/if}

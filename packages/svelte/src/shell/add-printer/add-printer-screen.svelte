@@ -67,6 +67,7 @@
     onCancelPairing,
     onPairAgain,
     pairing,
+    nearby,
     pairingBusy = false,
     pairingError,
   }: AddPrinterScreenProps = $props();
@@ -273,6 +274,7 @@
             <PairAtPrinter
               {connection}
               {pairing}
+              {nearby}
               busy={pairingBusy}
               error={pairingError}
               {onPair}

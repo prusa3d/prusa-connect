@@ -5,6 +5,7 @@ export {
   type AutoConnect,
   type JoinedPrinter,
   type JoiningPrinter,
+  type NearbyCandidate,
   type PairingRequest,
   type PairingState,
   type PendingPrinter,
@@ -162,6 +163,7 @@ export {
   NearbyPrintersPanel,
   type NearbyPrintersPanelProps,
   type NearbySource,
+  printersToAdd,
 } from './nearby-printers';
 export { SettingsPeopleScreen } from './settings-people';
 export {

@@ -33,18 +33,40 @@ way.
 ## Pair the printer
 
 1. Open **Printers**, then **Add a printer**.
-2. Under **Pair from the printer's screen**, type the printer's address, for
-   example `192.168.1.20`. Add a port, such as `192.168.1.20:8080`, when the
-   printer's web page is not on port 80.
-3. Check the server address under **The printer will connect to**. It is the
+2. Check the server address under **The printer will connect to**. It is the
    address the settings file would carry. Change it when the printer reaches
    this server at another address.
-4. Choose **Ask the printer**. The page shows a code, such as `K7QX-29FM`.
-5. Go to the printer. It shows the question, this server's address and the
-   same code. Check that the code matches, then press **Yes**.
+3. Under **Printers on this network**, find the printer and choose **Pair**.
+   Type part of its name or IP address in the search box to narrow the list.
+4. A printer that is not listed is added under **Add by IP address**. Type its
+   address, for example `192.168.1.20`, and choose **Ask the printer**. Add a
+   port, such as `192.168.1.20:8080`, when the printer's web page is not on
+   port 80.
+5. The page shows a code, such as `K7QX-29FM`. Go to the printer. It shows the
+   question, this server's address and the same code. Check that the code
+   matches, then press **Yes**.
 
 The printer registers with this server at once. The page moves to **Printer
 connected** when the printer has joined.
+
+## Which printers the list shows
+
+The list shows the printers that announce themselves on the local network
+over mDNS, the protocol a slicer uses to find printers. This server reads that
+list every 15 seconds.
+
+A Buddy printer announces its name, its address and its port, and nothing
+else. It announces no serial number and no model. So the list shows the model
+only when the printer still has the name the firmware gives a new printer,
+such as `prusa-xl`.
+
+The list leaves out a printer that connects to this server from the same
+address, or that last connected from it. It also leaves out another Prusa
+Connect server. A printer that waits for approval is still listed, because its
+registration carries no address to compare.
+
+A printer is not listed when this server runs in a container on a bridge
+network, because mDNS does not cross the bridge. Add it by its IP address.
 
 ## What happens after Yes
 

@@ -44,3 +44,53 @@ export const storedHostFits = (host: string): boolean => {
 
   return host.length <= 20;
 };
+
+/**
+ * The models whose name a printer announces until somebody renames it. The
+ * firmware names a new printer after its model (LAN_HOSTNAME_DEF in
+ * src/common/config.h), and mDNS carries nothing else that says what the
+ * printer is.
+ */
+const DEFAULT_NAMES: Readonly<Record<string, string>> = {
+  'prusa-mini': 'MINI',
+  'prusa-mk3-5': 'MK3.5',
+  'prusa-mk4': 'MK4',
+  'prusa-xl': 'XL',
+  'prusa-ix': 'iX',
+  'prusa-core-one': 'CORE One',
+  'prusa-core-one-l': 'CORE One L',
+};
+
+/** The model a printer's announced name says, when it still has its default name. */
+export const modelOfName = (name: string): string | undefined =>
+  DEFAULT_NAMES[name.trim().toLowerCase()];
+
+/**
+ * The address the pairing request goes to: the IP alone on the printer's
+ * default port 80, and with the port otherwise. An IPv6 address is bracketed.
+ */
+export const pairingAddress = (candidate: {
+  address: string;
+  port: number;
+}): string => {
+  const host = candidate.address.includes(':')
+    ? `[${candidate.address}]`
+    : candidate.address;
+
+  return candidate.port === 80 ? host : `${host}:${String(candidate.port)}`;
+};
+
+/** The candidates whose name or address holds the search, ignoring case. */
+export const matchingCandidates = <T extends { name: string; address: string }>(
+  candidates: readonly T[],
+  query: string,
+): T[] => {
+  const needle = query.trim().toLowerCase();
+  if (needle === '') return [...candidates];
+
+  return candidates.filter(
+    (one) =>
+      one.name.toLowerCase().includes(needle) ||
+      one.address.toLowerCase().includes(needle),
+  );
+};

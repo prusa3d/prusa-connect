@@ -5,6 +5,7 @@ export type {
   AutoConnect,
   JoinedPrinter,
   JoiningPrinter,
+  NearbyCandidate,
   PairingRequest,
   PairingState,
   PendingPrinter,
