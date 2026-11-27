@@ -11,6 +11,15 @@ import { chromium } from 'playwright';
 /** The size earlier research measured at, so the numbers are comparable. */
 export const VIEWPORT = { width: 1280, height: 900 };
 
+/**
+ * The time every page reads from `Date`: when `fixtures/api.json` was last
+ * recorded. Every date in the fixture lies before it. A screen that compares
+ * a fixture date with the time, such as the badge on a credential that expires
+ * within a fortnight, then draws the same thing on every day the lane runs.
+ * Timers keep running, so a screen still settles.
+ */
+const RECORDED = new Date('2026-11-19T15:20:00Z');
+
 export interface Pair {
   readonly color: string;
   readonly background: string;
@@ -200,6 +209,7 @@ export const open = async (
     // throttles a background tab would report it as four.
     reducedMotion: 'no-preference',
   });
+  await context.clock.setFixedTime(RECORDED);
 
   const sheet = await context.newPage();
   await sheet.addInitScript(install);
