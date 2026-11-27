@@ -747,6 +747,7 @@ func standHostileWith(t *testing.T, log *slog.Logger, deadline time.Duration) *h
 	session := newSession(settings{
 		identity:        connectorapi.Identity{Vendor: Vendor, Model: "MK4", Serial: "SN-HOSTILE"},
 		caps:            caps,
+		sends:           connectorapi.Set{VerbStartInlineDownload: {Flag: true}},
 		storage:         defaultStorage,
 		queueDepth:      4,
 		log:             log,

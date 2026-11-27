@@ -110,6 +110,9 @@ func (s *Session) attach(ctx context.Context, conn *websocket.Conn) bool {
 	// one's answer: a printer can come back with a stick pulled.
 	s.storagesReported = false
 	s.stateHeard.Store(false)
+	// The device asks for a block again on this connection, under a file id it
+	// has not used before, so a stray stop from the last one starts over.
+	s.strayTransfer, s.strayTransferKnown = 0, false
 
 	// A printer that dials again before its first socket failed reaches here
 	// with ready already closed, and closing a closed channel panics.

@@ -259,6 +259,11 @@ type Session struct {
 	// none. A device runs one transfer at a time, so this is a field rather than
 	// a map: see transfer.go.
 	transfer *transfer
+	// strayTransfer is the file id of the last transfer the device asked for on
+	// this connection while this host held none, and strayTransferKnown is
+	// false until there is one. It keeps a stray transfer to one stop.
+	strayTransfer      uint32
+	strayTransferKnown bool
 	// retiredTransfer is what the device called the last transfer this session
 	// stopped waiting for, and retiredKnown is false until one whose id was
 	// learned has ended. The device's word for that transfer ending can arrive
@@ -314,6 +319,10 @@ type call struct {
 	// takes the value and the pump only needs to know the command is over.
 	settled chan struct{}
 	once    sync.Once
+	// wire moves once from callQueued: to callWritten when the pump is about to
+	// write the frame, or to callAbandoned when the caller gave up first. An
+	// abandoned call is never written.
+	wire atomic.Int32
 }
 
 // running is one G-code command the printer accepted and is still carrying out.
@@ -530,7 +539,7 @@ func (s *Session) noteChange() {
 // on. connectorapitest's cancellation clause is what caught it.
 func (s *Session) Do(ctx context.Context, cmd connectorapi.Command) (connectorapi.Result, error) {
 	if err := ctx.Err(); err != nil {
-		return connectorapi.Result{}, fmt.Errorf("xbuddy: %s was not sent: %w", cmd.Verb, err)
+		return connectorapi.Result{}, fmt.Errorf("xbuddy: %s %w: %w", cmd.Verb, errNotSent, err)
 	}
 
 	// A verb reaches the wire when a caller may ask for it, or when this driver
@@ -608,9 +617,7 @@ func (s *Session) Do(ctx context.Context, cmd connectorapi.Command) (connectorap
 
 			return answer.result, answer.err
 		case <-ctx.Done():
-			pending.settle(outcome{err: fmt.Errorf("xbuddy: waiting for %s: %w", cmd.Verb, ctx.Err())})
-
-			return connectorapi.Result{}, fmt.Errorf("xbuddy: waiting for %s: %w", cmd.Verb, ctx.Err())
+			return connectorapi.Result{}, pending.giveUp(ctx.Err())
 		}
 	}
 }
@@ -727,6 +734,11 @@ func (s *Session) deliver(pending *call) {
 		if err := s.refuseInState(pending.verb); err != nil {
 			pending.settle(outcome{err: err})
 
+			return
+		}
+
+		// The caller may have given up while the pump waited for a connection.
+		if !pending.claimWire() {
 			return
 		}
 

@@ -13,6 +13,8 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/prusa3d/prusa-connect/internal/connector/xbuddy"
+	"github.com/prusa3d/prusa-connect/internal/printer/capability"
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 	"github.com/prusa3d/prusa-connect/sdk/fault"
 )
@@ -490,6 +492,242 @@ func TestAFileCanBeSentAfterACancelledTransfer(t *testing.T) {
 	})
 }
 
+// A printer that comes back fetching a transfer this server no longer holds is
+// told to stop fetching it.
+//
+// A printer that stays away past its grace comes back to a new session, and the
+// stop the old one queued for a cancelled transfer went with it. A Buddy board
+// keeps that transfer on its USB drive, resumes it at every boot and refuses
+// every later file while it is open, so silence alone leaves the printer stuck
+// for good. A server restarted in the middle of a transfer is the same case.
+func TestATransferThePrinterResumesAfterTheServerDroppedItIsStopped(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration, withGrace(time.Minute))
+		defer rig.stop(t)
+
+		rig.connect(t)
+		transfers := uploadsOf(t, rig.spy.inner)
+
+		ctx, giveUp := context.WithCancel(rig.ctx)
+		held := &heldContent{data: sampleFile(40_000), release: make(chan struct{})}
+		abandoned := make(chan error, 1)
+
+		go func() {
+			abandoned <- transfers.Send(ctx, connectorapi.Upload{
+				Path: "usb/orphan.bgcode", Content: held,
+			})
+		}()
+
+		synctest.Wait()
+
+		rig.printer.GoOffline()
+		synctest.Wait()
+
+		giveUp()
+		synctest.Wait()
+
+		if err := <-abandoned; !errors.Is(err, context.Canceled) {
+			t.Fatalf("the abandoned transfer answered %v, and a cancelled caller is %v", err, context.Canceled)
+		}
+
+		// Past the grace, so the session and the stop it queued are gone.
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+
+		rig.printer.GoOnline()
+		rig.await(t)
+
+		time.Sleep(time.Minute)
+		synctest.Wait()
+
+		data := sampleFile(30_000)
+		if err := uploadsOf(t, rig.spy.inner).Send(rig.ctx, connectorapi.Upload{
+			Path: "usb/second.bgcode", Content: bytesContent{data: data},
+		}); err != nil {
+			t.Fatalf("the printer is still fetching the transfer the server dropped: %v", err)
+		}
+
+		landed, ok := rig.printer.LastTransfer()
+		if !ok || !landed.Finished || landed.Digest != digestOf(data) {
+			t.Fatalf("the second file did not land intact: %+v", landed)
+		}
+	})
+}
+
+// A printer that comes back printing and fetching a transfer the server no
+// longer holds is told to stop it at once, and the print is not stopped.
+//
+// Buddy itself pauses a print of that file on a file warning; the simulator
+// does not, so the check is only that this host sent the print no stop.
+func TestAResumedStrayTransferOnAPrintingPrinterIsStopped(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration, withGrace(time.Minute))
+		defer rig.stop(t)
+
+		session := rig.connect(t)
+
+		do := func(session *capability.Session, verb connectorapi.Capability, args map[string]string) {
+			t.Helper()
+
+			answer, err := session.Do(rig.ctx, connectorapi.Command{Verb: verb, Args: args})
+			if err != nil || !answer.OK {
+				t.Fatalf("%s: %v %+v", verb, err, answer)
+			}
+
+			// The session reads the machine's state off its telemetry.
+			time.Sleep(5 * time.Second)
+			synctest.Wait()
+		}
+
+		do(session, xbuddy.VerbStartPrint, map[string]string{"path": "tangle.bgcode"})
+
+		ctx, giveUp := context.WithCancel(rig.ctx)
+		held := &heldContent{data: sampleFile(40_000), release: make(chan struct{})}
+		abandoned := make(chan error, 1)
+
+		go func() {
+			abandoned <- uploadsOf(t, rig.spy.inner).Send(ctx, connectorapi.Upload{
+				Path: "usb/orphan.bgcode", Content: held,
+			})
+		}()
+
+		synctest.Wait()
+
+		rig.printer.GoOffline()
+		synctest.Wait()
+
+		giveUp()
+		synctest.Wait()
+
+		if err := <-abandoned; !errors.Is(err, context.Canceled) {
+			t.Fatalf("the abandoned transfer answered %v, and a cancelled caller is %v", err, context.Canceled)
+		}
+
+		// Past the grace, so the session and the stop it queued are gone.
+		time.Sleep(2 * time.Minute)
+		synctest.Wait()
+
+		rig.printer.GoOnline()
+		rig.await(t)
+
+		time.Sleep(time.Minute)
+		synctest.Wait()
+
+		if !rig.printer.Printing() {
+			t.Fatal("the print ended, so this case no longer watches a printing printer")
+		}
+
+		if got := rig.printer.Asked("STOP_TRANSFER"); got != 1 {
+			t.Fatalf("a printing printer was told to stop the transfer it resumed %d times, want 1", got)
+		}
+
+		if !rig.printer.Printing() {
+			t.Fatal("stopping the stray transfer also stopped the print")
+		}
+	})
+}
+
+// A block request naming another transfer does not stop the one this host is
+// sending.
+//
+// While a file is on its way, a request under another file id may be a late
+// one for that same file from a connection that has ended, and a stop would end
+// the transfer the caller is waiting for.
+func TestAStrayBlockRequestLeavesTheTransferInFlightRunning(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration)
+		defer rig.stop(t)
+
+		rig.connect(t)
+
+		data := sampleFile(40_000)
+		held := &heldContent{data: data, release: make(chan struct{})}
+		sent := make(chan error, 1)
+
+		go func() {
+			sent <- uploadsOf(t, rig.spy.inner).Send(rig.ctx, connectorapi.Upload{
+				Path: "usb/in-flight.bgcode", Content: held,
+			})
+		}()
+
+		synctest.Wait()
+
+		if err := rig.printer.RequestStrayBlock(4242); err != nil {
+			t.Fatalf("send a stray block request: %v", err)
+		}
+
+		synctest.Wait()
+		close(held.release)
+
+		if err := <-sent; err != nil {
+			t.Fatalf("the transfer in flight did not finish after a stray block request: %v", err)
+		}
+
+		landed, ok := rig.printer.LastTransfer()
+		if !ok || !landed.Finished || landed.Digest != digestOf(data) {
+			t.Fatalf("the file in flight did not land intact: %+v", landed)
+		}
+	})
+}
+
+// A printer holding a print is told to stop a transfer the server does not hold
+// at once, and only once for that request. The check on the print is only that
+// this host sent it no stop.
+func TestAStrayTransferIsStoppedDuringAPrint(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration)
+		defer rig.stop(t)
+
+		session := rig.connect(t)
+
+		answer, err := session.Do(rig.ctx, connectorapi.Command{
+			Verb: xbuddy.VerbStartPrint, Args: map[string]string{"path": "tangle.bgcode"},
+		})
+		if err != nil || !answer.OK {
+			t.Fatalf("start print: %v %+v", err, answer)
+		}
+
+		// The session reads the machine's state off its telemetry.
+		time.Sleep(5 * time.Second)
+		synctest.Wait()
+
+		stray := func() {
+			t.Helper()
+
+			if sendErr := rig.printer.RequestStrayBlock(4242); sendErr != nil {
+				t.Fatalf("send a stray block request: %v", sendErr)
+			}
+
+			time.Sleep(time.Second)
+			synctest.Wait()
+		}
+
+		stray()
+
+		if got := rig.printer.Asked("STOP_TRANSFER"); got != 1 {
+			t.Fatalf("a printing printer was told to stop a stray transfer %d times, want 1", got)
+		}
+
+		if !rig.printer.Printing() {
+			t.Fatal("stopping the stray transfer also stopped the print")
+		}
+
+		stray()
+
+		if got := rig.printer.Asked("STOP_TRANSFER"); got != 1 {
+			t.Fatalf("a stray transfer already stopped was stopped again: %d stops, want 1", got)
+		}
+	})
+}
+
 // A printer that takes the start of a transfer and answers it too late is told
 // to stop fetching.
 //
@@ -501,7 +739,7 @@ func TestAnUnansweredTransferStartIsStopped(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
-		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline(commandDeadline))
+		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline)
 		defer rig.stop(t)
 
 		rig.connect(t)
@@ -536,6 +774,121 @@ func TestAnUnansweredTransferStartIsStopped(t *testing.T) {
 		landed, ok := rig.printer.LastTransfer()
 		if !ok || !landed.Finished || landed.Digest != digestOf(data) {
 			t.Fatalf("the second file did not land intact: %+v", landed)
+		}
+	})
+}
+
+// A transfer the caller stops while its start is still unanswered is stopped on
+// the printer too.
+//
+// The start may already be on the printer. A Buddy board that opens it keeps a
+// full-size partial file, refuses to delete it, and resumes the transfer at every
+// boot, so a stop that only ends the wait leaves the printer unusable.
+func TestATransferStoppedBeforeItsStartIsAnsweredIsStopped(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline)
+		defer rig.stop(t)
+
+		rig.connect(t)
+		transfers := uploadsOf(t, rig.spy.inner)
+
+		// The storage request a new connection makes is on the wire at this
+		// point, and the pump carries one command at a time.
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+
+		// Answered within the deadline, but only after the caller has stopped.
+		rig.printer.SetResponseDelay(commandDeadline / 2)
+
+		ctx, stop := context.WithCancel(rig.ctx)
+		defer stop()
+
+		time.AfterFunc(time.Second, stop)
+
+		err := transfers.Send(ctx, connectorapi.Upload{
+			Path: "usb/stopped.bgcode", Content: bytesContent{data: sampleFile(30_000)},
+		})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Send answered %v, want %v", err, context.Canceled)
+		}
+
+		// The printer runs the late start, and whatever the server sent after it.
+		rig.printer.SetResponseDelay(0)
+		time.Sleep(2 * commandDeadline)
+		synctest.Wait()
+
+		data := sampleFile(30_000)
+		if err = transfers.Send(rig.ctx, connectorapi.Upload{
+			Path: "usb/second.bgcode", Content: bytesContent{data: data},
+		}); err != nil {
+			t.Fatalf("the printer is still fetching the file whose transfer was stopped: %v", err)
+		}
+
+		landed, ok := rig.printer.LastTransfer()
+		if !ok || !landed.Finished || landed.Digest != digestOf(data) {
+			t.Fatalf("the second file did not land intact: %+v", landed)
+		}
+	})
+}
+
+// A transfer the caller stops while its start is unanswered is stopped on a
+// printing printer too, and the print is not stopped.
+//
+// The printer may also ask for a block of that transfer after Send has let it
+// go, and that request is stopped as a stray one: a printer that no longer
+// runs the transfer refuses the second stop.
+func TestATransferStoppedBeforeItsStartIsAnsweredIsStoppedDuringAPrint(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline)
+		defer rig.stop(t)
+
+		session := rig.connect(t)
+		transfers := uploadsOf(t, rig.spy.inner)
+
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+
+		answer, err := session.Do(rig.ctx, connectorapi.Command{
+			Verb: xbuddy.VerbStartPrint, Args: map[string]string{"path": "tangle.bgcode"},
+		})
+		if err != nil || !answer.OK {
+			t.Fatalf("start a print: %v %+v", err, answer)
+		}
+
+		// The session reads the machine's state off its telemetry.
+		time.Sleep(5 * time.Second)
+		synctest.Wait()
+
+		rig.printer.SetResponseDelay(commandDeadline / 2)
+
+		ctx, stop := context.WithCancel(rig.ctx)
+		defer stop()
+
+		time.AfterFunc(time.Second, stop)
+
+		err = transfers.Send(ctx, connectorapi.Upload{
+			Path: "usb/stopped.bgcode", Content: bytesContent{data: sampleFile(30_000)},
+		})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Send answered %v, want %v", err, context.Canceled)
+		}
+
+		rig.printer.SetResponseDelay(0)
+		time.Sleep(2 * commandDeadline)
+		synctest.Wait()
+
+		if !rig.printer.Printing() {
+			t.Fatal("the print ended, so this case no longer watches a printing printer")
+		}
+
+		// One stop from Send, and at most one for the printer's later request on
+		// this connection.
+		if got := rig.printer.Asked("STOP_TRANSFER"); got < 1 || got > 2 {
+			t.Fatalf("the printer was told to stop the transfer %d times, want 1 or 2", got)
 		}
 	})
 }

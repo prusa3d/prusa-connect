@@ -35,7 +35,7 @@ func TestACommandThePrinterNeverAnswersEndsAtItsDeadline(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
-		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline(commandDeadline))
+		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline)
 		defer rig.stop(t)
 
 		session := rig.connect(t)
@@ -99,7 +99,7 @@ func TestACommandAnsweredInsideItsDeadlineIsUntouched(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
-		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline(commandDeadline))
+		rig := start(t, "MK4", withAutoRegistration, withCommandDeadline)
 		defer rig.stop(t)
 
 		session := rig.connect(t)

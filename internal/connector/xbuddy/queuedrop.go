@@ -2,13 +2,16 @@ package xbuddy
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/prusa3d/prusa-connect/sdk/connectorapi"
 	"github.com/prusa3d/prusa-connect/sdk/fault"
 )
 
-// This file is what a command is told when the session carrying it ends.
+// This file is what a command is told when the session carrying it ends, or
+// when its caller stops waiting for it.
 //
 // It is separate from session.go because the answer has to tell three endings
 // apart, and a command told the wrong one is worse than a command told nothing:
@@ -132,4 +135,34 @@ func (s *Session) dropQueued() {
 			slog.Int("commands", len(dropped)),
 			slog.Bool("printer_changed", s.replacedBy.Load() != nil))
 	}
+}
+
+// errNotSent marks a command whose caller gave up before any part of it was
+// written, so the printer never saw it.
+var errNotSent = errors.New("was not sent")
+
+// The values of call.wire.
+const (
+	callQueued int32 = iota
+	callWritten
+	callAbandoned
+)
+
+// claimWire reports whether the pump may write the call: false once its caller
+// gave up before any write.
+func (c *call) claimWire() bool {
+	return c.wire.CompareAndSwap(callQueued, callWritten) || c.wire.Load() == callWritten
+}
+
+// giveUp settles a call whose caller stopped waiting with cause. The error
+// carries errNotSent when nothing of the call was written.
+func (c *call) giveUp(cause error) error {
+	err := fmt.Errorf("xbuddy: waiting for %s: %w", c.verb, cause)
+	if c.wire.CompareAndSwap(callQueued, callAbandoned) || c.wire.Load() == callAbandoned {
+		err = fmt.Errorf("xbuddy: %s %w: %w", c.verb, errNotSent, cause)
+	}
+
+	c.settle(outcome{err: err})
+
+	return err
 }

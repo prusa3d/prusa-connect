@@ -510,11 +510,10 @@ func withGrace(grace time.Duration) rigOption {
 	return func(o *rigOptions) { o.grace = grace }
 }
 
-// withCommandDeadline bounds how long one command waits for the printer. Zero
-// leaves the driver's own default, which is longer than any case here waits.
-func withCommandDeadline(deadline time.Duration) rigOption {
-	return func(o *rigOptions) { o.deadline = deadline }
-}
+// withCommandDeadline bounds how long one command waits for the printer to
+// commandDeadline. Without it the driver's own default applies, which is longer
+// than any case here waits.
+func withCommandDeadline(o *rigOptions) { o.deadline = commandDeadline }
 
 // withPrinter varies the simulated printer.
 func withPrinter(tweak func(*simulator.Config)) rigOption {

@@ -305,10 +305,11 @@ func (s *Session) Send(ctx context.Context, up connectorapi.Upload) error {
 			slog.String("reason", paramOf(startErr, "reason")),
 			slog.String("error", startErr.Error()))
 
-		// An unanswered start may have opened the transfer on the printer, and
+		// A start that reached the printer and went unanswered, or that the
+		// caller stopped waiting for, may have opened the transfer there, and
 		// nothing here serves it once Send returns. A Buddy board left like that
 		// shows "Downloading 0 %" and resumes the transfer at every boot.
-		if fault.HasCode(startErr, connectorapi.CommandUnanswered.Code()) {
+		if startMayHaveOpened(startErr) {
 			s.stopTransfer(ctx, pending)
 		}
 
@@ -440,35 +441,6 @@ func (s *Session) awaitTransfer(ctx context.Context, pending *transfer) error {
 	}
 }
 
-// stopTransfer abandons whatever the device is fetching, for a caller that
-// stopped waiting or a start the device did not answer.
-//
-// It leaves on a goroutine of its own, under its own budget, and the caller does
-// not wait for it. A command waits for a socket to attach, and the printer being
-// away is the usual reason a caller cancels: stopping the transfer on the
-// caller's way out held Send until the printer came back, and while Send held
-// the transfer slot every later Send was refused as busy. The budget is what
-// bounds the other shape, a firmware that never answers STOP_TRANSFER while its
-// telemetry keeps the connection alive.
-func (s *Session) stopTransfer(ctx context.Context, pending *transfer) {
-	if !s.caps.Has(VerbStopTransfer) {
-		return
-	}
-
-	// The context the caller ended is not the one this travels under.
-	detached := context.WithoutCancel(ctx)
-
-	go func() {
-		bounded, done := context.WithTimeout(detached, stopTransferBudget)
-		defer done()
-
-		if _, err := s.Do(bounded, connectorapi.Command{Verb: VerbStopTransfer}); err != nil {
-			s.logDebug(detached, "the printer was not told to stop a transfer nobody is waiting for",
-				slog.String("path", pending.path), slog.String("error", err.Error()))
-		}
-	}()
-}
-
 // beginTransfer files the offer so that the device's first block request can
 // find it. It is what makes one transfer at a time true by construction.
 func (s *Session) beginTransfer(up connectorapi.Upload) (*transfer, error) {
@@ -565,18 +537,22 @@ func (s *Session) serveBlockRequest(ctx context.Context, current *link, message 
 		// The device is fetching something this host is not holding: a transfer
 		// whose caller gave up, or one this session never started.
 		//
-		// Nothing is sent back. An empty chunk is the wire's failure signal and
+		// No chunk is sent back. An empty chunk is the wire's failure signal and
 		// it is answered here with silence instead, because a Buddy board that
 		// receives one for a transfer it is starting closes the connection
 		// within ten milliseconds: measured on an MK4S at 6.5.7, where every
 		// reconnection was answered with an empty block and ended the same way.
-		// Silence costs the device a retry, which is what it already does.
+		// Silence costs the device a retry, which is what it already does. What
+		// ends the transfer is STOP_TRANSFER, a command and not a chunk: see
+		// stopStrayTransfer.
 		s.logDebug(ctx, "the printer asked for a block of a file this server is not holding",
 			slog.Uint64("file_id", uint64(request.fileID)),
 			slog.Bool("opens_a_transfer", request.initial),
 			slog.String("transfer", request.hash),
 			slog.Int64("team_id", request.teamID),
 			slog.String("holding", s.transferSummary()))
+
+		s.stopStrayTransfer(ctx, current, request)
 
 		return
 	}

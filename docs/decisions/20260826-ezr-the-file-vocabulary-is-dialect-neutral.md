@@ -85,7 +85,7 @@ deletes are separate keys because devices refuse one aimed at the other's kind.
 | one `FileManager.Delete(path, recursive bool)` | the firmware refuses a file delete aimed at a folder and the reverse, so a caller that could not say which it meant would be asking the device to guess. Two keys also let a profile withhold one |
 | gate the whole interface on one capability | a printer that can create a folder and not remove one is a real answer, and one check reports it as neither |
 | drop the two download starts out of the wire table as well | `Transfers.Send` is what puts one on the wire. A verb with no wire form cannot be sent at all |
-| let a caller start a download through the command endpoint | the device then asks for ranges against a transfer nothing is holding, and every request is answered with silence for ever. That is the recorded reason `START_ENCRYPTED_DOWNLOAD` was never ported |
+| let a caller start a download through the command endpoint | the device then asks for ranges against a transfer nothing is holding, so no file ever arrives, and the driver answers such a request by stopping the transfer. That is the recorded reason `START_ENCRYPTED_DOWNLOAD` was never ported |
 
 ## enforcement
 
