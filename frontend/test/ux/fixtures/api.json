@@ -87,7 +87,7 @@
   "GET /api/v1/auth/credentials": {
     "status": 200,
     "type": "application/json",
-    "body": "{\"items\":[{\"id\":\"CEJ6ttzDniKRnDVRjIUJRf\",\"name\":\"demo\",\"subject\":\"user:operator\",\"created_at\":\"2026-09-12T13:09:57.7458915Z\",\"expires_at\":\"2026-12-11T13:09:57.7458915Z\",\"last_used_at\":\"2026-09-12T13:09:57.7469012Z\",\"scopes\":[\"administer\"],\"origin\":\"mint\"},{\"id\":\"s4JOe7faQXaeGHz6HdhYRK\",\"name\":\"demo\",\"subject\":\"user:operator\",\"created_at\":\"2026-09-14T07:54:52.1997755Z\",\"expires_at\":\"2026-12-13T07:54:52.1997755Z\",\"last_used_at\":\"2026-09-14T07:54:52.1997755Z\",\"scopes\":[\"read\"],\"origin\":\"app_pairing\"}]}\n"
+    "body": "{\"items\":[{\"id\":\"CEJ6ttzDniKRnDVRjIUJRf\",\"name\":\"demo\",\"subject\":\"user:operator\",\"created_at\":\"2026-09-12T13:09:57.7458915Z\",\"expires_at\":\"2099-12-11T13:09:57.7458915Z\",\"last_used_at\":\"2026-09-12T13:09:57.7469012Z\",\"scopes\":[\"administer\"],\"origin\":\"mint\"},{\"id\":\"s4JOe7faQXaeGHz6HdhYRK\",\"name\":\"demo\",\"subject\":\"user:operator\",\"created_at\":\"2026-09-14T07:54:52.1997755Z\",\"expires_at\":\"2099-12-13T07:54:52.1997755Z\",\"last_used_at\":\"2026-09-14T07:54:52.1997755Z\",\"scopes\":[\"read\"],\"origin\":\"app_pairing\"}]}\n"
   },
   "GET /api/v1/auth/accounts": {
     "status": 200,
