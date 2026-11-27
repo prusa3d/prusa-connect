@@ -119,7 +119,7 @@ func (d *devices) List(
 
 		tags := entry.tagList()
 		match := clauseMatch{
-			state:    len(filter.states) == 0 || matchesAny(filter.states, facts.state),
+			state:    len(filter.states) == 0 || matchesAny(filter.states, facts.listedState()),
 			model:    len(filter.models) == 0 || matchesAny(filter.models, facts.model),
 			search:   filter.matchesSearch(facts),
 			tags:     entry.carriesTags(filter.tags) && entry.matchesLabels(filter.labels),

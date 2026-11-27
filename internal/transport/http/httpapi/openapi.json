@@ -17715,12 +17715,12 @@
             }
           },
           {
-            "description": "Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device reporting none of them is left out.",
+            "description": "Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device that is not connected matches OFFLINE and not the last state it reported. A device reporting none of them is left out.",
             "explode": false,
             "in": "query",
             "name": "state",
             "schema": {
-              "description": "Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device reporting none of them is left out.",
+              "description": "Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device that is not connected matches OFFLINE and not the last state it reported. A device reporting none of them is left out.",
               "examples": [
                 [
                   "PRINTING",

@@ -137,3 +137,68 @@ func TestAValueOnlyAnExcludedPrinterCarriesStaysOnItsChip(t *testing.T) {
 	idle, _ := countOf(states, "IDLE")
 	require.Equal(t, 1, idle)
 }
+
+// TestASwitchedOffPrinterIsListedUnderOffline is a machine that finished a
+// print and was then switched off. Its record keeps the FINISHED it last
+// reported, and a filter reading that record listed it among the finished
+// printers, as one a person could go and unload, while its card said offline.
+func TestASwitchedOffPrinterIsListedUnderOffline(t *testing.T) {
+	t.Parallel()
+
+	graph := newGraph(t)
+	plane := planeOn(t, graph)
+
+	ids := make([]string, 0, 2)
+
+	for _, serial := range []string{"SIM-OFF-ON", "SIM-OFF-GONE"} {
+		session := arriveSpeaking(t, plane, serial)
+		id := plane.idOf(session.identity)
+		require.NoError(t, graph.Write(t.Context(),
+			tuple(t, authz.TypeDevice, id, authz.RelManager, manager)))
+		session.report(t, plane, "/state", `"FINISHED"`)
+		ids = append(ids, id)
+	}
+
+	on, gone := ids[0], ids[1]
+
+	entry, live := plane.entry(gone)
+	require.True(t, live)
+	plane.retirePrinter(entry)
+
+	everything, err := plane.List(t.Context(), manager, httpapi.DeviceQuery{})
+	require.NoError(t, err)
+	require.Equal(t, 2, everything.Total)
+
+	for _, item := range everything.Items {
+		if item.ID == gone {
+			require.False(t, item.Connected)
+			require.JSONEq(t, `"FINISHED"`, string(item.State[printerStatePath]),
+				"the listing no longer carries the last state the printer reported")
+		}
+	}
+
+	finished, err := plane.List(t.Context(), manager, httpapi.DeviceQuery{States: []string{"FINISHED"}})
+	require.NoError(t, err)
+	require.Len(t, finished.Items, 1, "a switched-off printer is listed under the state it last reported")
+	require.Equal(t, on, finished.Items[0].ID)
+
+	offline, err := plane.List(t.Context(), manager, httpapi.DeviceQuery{States: []string{"offline"}})
+	require.NoError(t, err)
+	require.Len(t, offline.Items, 1, "a switched-off printer is not listed under offline")
+	require.Equal(t, gone, offline.Items[0].ID)
+
+	states := filterNamed(t, everything, "state")
+
+	finishedCount, _ := countOf(states, "FINISHED")
+	require.Equal(t, 1, finishedCount, "the finished chip counts a switched-off printer")
+
+	offlineCount, listed := countOf(states, "OFFLINE")
+	require.True(t, listed, "the state filter offers no offline value")
+	require.Equal(t, 1, offlineCount)
+
+	sorted, err := plane.List(t.Context(), manager, httpapi.DeviceQuery{Sort: sortByState})
+	require.NoError(t, err)
+	require.Len(t, sorted.Items, 2)
+	require.Equal(t, []string{on, gone}, []string{sorted.Items[0].ID, sorted.Items[1].ID},
+		"the state order reads the last state of a switched-off printer")
+}

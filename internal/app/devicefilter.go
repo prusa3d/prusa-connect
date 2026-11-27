@@ -238,6 +238,21 @@ type deviceFacts struct {
 	connected bool
 }
 
+// offlineState is the state a listing files a machine under while it is not
+// connected. A printer card already reads that way.
+const offlineState = "OFFLINE"
+
+// listedState is the state the state filter, its counts and the state order
+// read. A machine that is not connected is offline, whatever it reported last.
+// The row still carries that last report, because the departure record keeps it.
+func (f deviceFacts) listedState() string {
+	if !f.connected {
+		return offlineState
+	}
+
+	return f.state
+}
+
 // filterFacts reads the values a listing filters and orders by.
 func (e *device) filterFacts(directory string) deviceFacts {
 	connected := e.connected()
@@ -421,7 +436,7 @@ func (f deviceFilter) less(a, b candidate) bool {
 	case sortByModel:
 		return foldedLess(a.facts.model, b.facts.model)
 	case sortByState:
-		return foldedLess(a.facts.state, b.facts.state)
+		return foldedLess(a.facts.listedState(), b.facts.listedState())
 	case sortBySeen:
 		return a.facts.lastSeen.Before(b.facts.lastSeen)
 	default:

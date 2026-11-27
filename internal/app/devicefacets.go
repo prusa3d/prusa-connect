@@ -140,7 +140,7 @@ func newFacets(filter deviceFilter, query httpapi.DeviceQuery) facets {
 
 // count adds one device to every dimension whose other clauses it passes.
 func (f facets) count(match clauseMatch, facts deviceFacts, tags []string, issues []httpapi.DeviceIssue) {
-	f.state.add(strings.ToLower, facts.state, match.search && match.model && match.tags && match.severity)
+	f.state.add(strings.ToLower, facts.listedState(), match.search && match.model && match.tags && match.severity)
 	f.model.add(strings.ToLower, facts.model, match.search && match.state && match.tags && match.severity)
 
 	// The tag filter is an AND, so a tag's count is the printers carrying

@@ -687,6 +687,7 @@ type DeviceQuery struct {
 
 	// States narrows the page to devices reporting one of these machine states.
 	// The values are the machine's own words, and the comparison ignores case.
+	// A device that is not connected matches OFFLINE instead of its last state.
 	States []string
 
 	// Models narrows the page to devices of one of these models, again in the
@@ -729,7 +730,7 @@ type listDevicesInput struct {
 	Labels []string `query:"labels" maxItems:"16" doc:"Deprecated. The tag filter spelled as labels, each key or key=value, comma separated. key=value finds the tag key: value, and a bare key finds the tag key or any tag that starts with key and a colon. A term that is not a valid label key or value is refused. Use tag instead. This parameter is removed in a later release." example:"site=brno"`
 
 	//nolint:lll // the huma tag is one field's whole contract and does not wrap.
-	State []string `query:"state" maxItems:"16" doc:"Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device reporting none of them is left out." example:"PRINTING,PAUSED"`
+	State []string `query:"state" maxItems:"16" doc:"Return only the devices reporting one of these machine states, comma separated. The values are the machine's own words, from the vocabulary the device kind declares, and the match ignores case. A device that is not connected matches OFFLINE and not the last state it reported. A device reporting none of them is left out." example:"PRINTING,PAUSED"`
 
 	//nolint:lll // the huma tag is one field's whole contract and does not wrap.
 	Model []string `query:"model" maxItems:"16" doc:"Return only the devices of one of these models, comma separated. The values are the machine's own spelling, as get-device-model-vocabulary lists them, and the match ignores case." example:"MK4S,CoreOne"`
