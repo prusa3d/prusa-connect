@@ -714,17 +714,28 @@ func (d *Driver) handlePollRegistration(w http.ResponseWriter, r *http.Request) 
 
 	entry, err := d.registrar.complete(r.Context(), code)
 
+	answer := "token"
+
 	switch {
 	case errors.Is(err, ErrRegistrationPending):
+		answer = "pending"
 		w.WriteHeader(http.StatusAccepted)
 	case errors.Is(err, ErrUnknownCode):
+		answer = "unknown code"
 		http.Error(w, "no registration answers to that code", http.StatusNotFound)
 	case err != nil:
+		answer = "failed"
 		http.Error(w, "the registration could not be completed", http.StatusInternalServerError)
 	default:
 		w.Header().Set(tokenHeader, entry.Token)
 		w.WriteHeader(http.StatusOK)
 	}
+
+	// A printer whose screen keeps showing its code is the case this line
+	// answers: whether its polls arrive, and what each one was told. The
+	// token itself is never logged.
+	d.logDebug(r.Context(), "a printer polled its registration",
+		slog.String("code", code), slog.String("answer", answer), slog.String("remote", r.RemoteAddr))
 }
 
 // handleWebsocket is the whole of the join: the printer proves it is one this
@@ -922,6 +933,16 @@ func (d *Driver) logError(ctx context.Context, message string, attrs ...slog.Att
 	}
 
 	d.log.LogAttrs(ctx, slog.LevelError, message, attrs...)
+}
+
+// logDebug reports what a developer reads while following one printer through
+// its handshake. It is off unless the log level is debug.
+func (d *Driver) logDebug(ctx context.Context, message string, attrs ...slog.Attr) {
+	if d.log == nil {
+		return
+	}
+
+	d.log.LogAttrs(ctx, slog.LevelDebug, message, attrs...)
 }
 
 // logWarn reports something an operator has to know about and this process has
