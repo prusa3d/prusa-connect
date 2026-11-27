@@ -287,6 +287,11 @@ func setupDocument(
 
 	for path, answer := range answers {
 		key, known := keys[path]
+		if part, missing := notBuilt(path); !known && missing {
+			return nil, httpfault.RequestInvalid("body.configuration."+path,
+				"a path get-setup-configuration lists", part.without)
+		}
+
 		if !known {
 			return nil, httpfault.RequestInvalid("body.configuration."+path,
 				"a path get-setup-configuration lists", "this key is not one the wizard sets")

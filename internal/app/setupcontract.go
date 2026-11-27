@@ -62,17 +62,65 @@ func wizardFields() []config.Field {
 	return slices.DeleteFunc(fields, func(field config.Field) bool { return !offered(field) })
 }
 
+// optionalPart is a part of the server that a build tag adds or takes out, the
+// keys that configure it, and whether this binary carries it.
+type optionalPart struct {
+	// keys is one key path, or a prefix that ends in a dot.
+	keys string
+	// built is the build-tagged constant that says this binary carries it.
+	built bool
+	// without says why this binary cannot run the keys, naming the tag.
+	without string
+}
+
+// optionalParts are the parts whose keys the wizard offers only when this
+// binary carries them. adapters/tags.json maps the same keys onto the same tags
+// for `make build`.
+func optionalParts() []optionalPart {
+	return []optionalPart{
+		{
+			keys: "core.observability.", built: prom.Compiled,
+			without: "this binary was built without the observability tag, so it links no metrics client",
+		},
+		{
+			keys: "core.diagnostics.", built: diagnosticsBuilt,
+			without: "this binary was built without the diagnostics tag, so it carries no support bundle",
+		},
+		{
+			keys: "core.dashboards.enabled", built: dashboardsBuilt,
+			without: "this binary was built with the nodashboards tag, so it carries no dashboards",
+		},
+		{
+			keys: "persistence.postgres.", built: authz.PostgresLinked,
+			without: "this binary was built without the postgres tag, so it links no PostgreSQL driver",
+		},
+	}
+}
+
+// notBuilt returns the part a key belongs to when this binary was built
+// without it.
+func notBuilt(path string) (optionalPart, bool) {
+	for _, part := range optionalParts() {
+		matches := path == part.keys || (strings.HasSuffix(part.keys, ".") && strings.HasPrefix(path, part.keys))
+		if matches && !part.built {
+			return part, true
+		}
+	}
+
+	return optionalPart{}, false
+}
+
 // offered says whether the wizard asks a key. It leaves out what it cannot
 // draw, a key under a name the operator chooses or a raw mapping, and a key
 // whose part this binary was built without.
 func offered(field config.Field) bool {
+	_, missing := notBuilt(field.Path)
+
 	switch {
 	case wizardHidden[field.Path],
 		field.Kind == config.KindMapping,
 		strings.Contains(field.Path, config.Placeholder),
-		strings.HasPrefix(field.Path, "core.observability.") && !prom.Compiled,
-		field.Path == "core.dashboards.enabled" && !dashboardsBuilt,
-		strings.HasPrefix(field.Path, "persistence.postgres.") && !authz.PostgresLinked:
+		missing:
 		return false
 	}
 
