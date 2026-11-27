@@ -453,6 +453,14 @@ const MaterialFullWeight = "material_package_instance/actual_netto_full_weight"
 
 MaterialFullWeight is the weight of the material when the spool was full, in grams, as a number: the OpenPrintTag actual\_netto\_full\_weight.
 
+### `MaterialNominalFullWeight` {#connectorapi-materialnominalfullweight}
+
+```go
+const MaterialNominalFullWeight = "material_package_instance/package/nominal_netto_full_weight"
+```
+
+MaterialNominalFullWeight is the weight of the material in a full package as sold, in grams, as a number: the OpenPrintTag nominal\_netto\_full\_weight. A tag that carries no actual weight often carries this one.
+
 ### `NozzleTemp` {#connectorapi-nozzletemp}
 
 ```go
@@ -2936,8 +2944,9 @@ type ReportedMaterial struct {
     // Type is the kind of material, and ColorRGBA its primary colour, empty
     // unless it is ValidColor.
     Type, ColorRGBA string
-    // FullWeight is the weight of the full spool in grams.
-    FullWeight *float64
+    // FullWeight is the weight of the full spool in grams, and
+    // NominalFullWeight the weight of a full package of it as sold.
+    FullWeight, NominalFullWeight *float64
     // Properties is the reported profile temperatures by name, each one of
     // ProfileTemperatures.
     Properties map[string]float64

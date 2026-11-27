@@ -502,7 +502,7 @@ func noFeeder(w *writer, id connectorapi.ToolID) {
 // treeMaterial writes the material of one tree-shaped tool: null is nothing
 // loaded, and a package names its material by abbreviation, or by type when
 // the abbreviation is left out (the architecture lets the abbreviation be
-// inherited from the type). The uuids, type, colour, full weight and profile
+// inherited from the type). The uuids, type, colour, full weights and profile
 // temperatures are written when the instance carries them and removed when it
 // does not, so a spool taken out leaves nothing of itself behind.
 func treeMaterial(w *writer, id connectorapi.ToolID, raw json.RawMessage) {
@@ -519,8 +519,9 @@ func treeMaterial(w *writer, id connectorapi.ToolID, raw json.RawMessage) {
 	var instance struct {
 		UUID    json.RawMessage `json:"uuid"`
 		Package struct {
-			UUID     json.RawMessage `json:"uuid"`
-			Material struct {
+			UUID          json.RawMessage `json:"uuid"`
+			NominalWeight json.RawMessage `json:"nominal_netto_full_weight"`
+			Material      struct {
 				UUID         json.RawMessage `json:"uuid"`
 				Abbreviation json.RawMessage `json:"abbreviation"`
 				Type         json.RawMessage `json:"type"`
@@ -572,6 +573,7 @@ func treeMaterial(w *writer, id connectorapi.ToolID, raw json.RawMessage) {
 	}
 
 	reportNumber(w, id, connectorapi.MaterialFullWeight, instance.FullWeight)
+	reportNumber(w, id, connectorapi.MaterialNominalFullWeight, instance.Package.NominalWeight)
 
 	for _, name := range connectorapi.ProfileTemperatures() {
 		reportNumber(w, id, connectorapi.MaterialProperty(name), properties[name])

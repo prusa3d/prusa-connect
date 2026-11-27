@@ -292,6 +292,11 @@ legal id. There is no fixed number of tools.
 | `/tools/<id>/feeder/model`, `base_model`, `type` | the feeder's model and its family, such as `MMU3`, and its kind, `MMU` | architecture |
 | `/tools/<id>/feeder/mmu_progress_code`, `mmu_command_in_progress` | the step the unit is at, and the command it runs as one character | architecture |
 | `/tools/<id>/material_package_instance/package/material/abbreviation` | the filament loaded, such as `PLA`, and `""` for nothing loaded | architecture |
+| `/tools/<id>/material_package_instance/uuid`, `package/uuid`, `package/material/uuid` | the uuids of the loaded spool, its package and its material, as an OpenPrintTag names them | architecture |
+| `/tools/<id>/material_package_instance/package/material/type`, `package/material/primary_color/color_rgba` | the kind of filament, such as `PLA`, and its colour as `#rrggbbaa` | architecture |
+| `/tools/<id>/material_package_instance/actual_netto_full_weight` | the weight of the full spool, in grams, when its tag carries it | architecture |
+| `/tools/<id>/material_package_instance/package/nominal_netto_full_weight` | the weight of a full package as sold, in grams, when the tag carries only that one | architecture |
+| `/tools/<id>/consumed_weight` | the grams used of the loaded spool, as its tag counts them | architecture |
 | `/tools/<id>/nozzle_temp`, `nozzle_target_temp` | a head's reading and target, and a target of `0` while the heater is off | architecture |
 | `/tools/<id>/odometer_id`, `odometer_e`, `odometer_weight` | a number that changes at each reset of the odometers, and the filament extruded since, in millimetres and in grams | architecture |
 | `/gcode_tool_map/<n>` | the tool id a G-code `T<n>` selects, when the machine says | Prusa Connect |

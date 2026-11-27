@@ -1,0 +1,2 @@
+### Fixed
+- [sdk] A tool now reports the nominal weight of a full spool at `material_package_instance/package/nominal_netto_full_weight`, as a Prusa printer sends it for an OpenPrintTag that carries no actual weight. The member is `connectorapi.MaterialNominalFullWeight`, and `connectorapi.ReportedMaterial` gains the field `NominalFullWeight`, so a struct converted to `ReportedMaterial` needs that field too.

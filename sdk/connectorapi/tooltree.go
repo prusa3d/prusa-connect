@@ -71,8 +71,9 @@ type ReportedMaterial struct {
 	// Type is the kind of material, and ColorRGBA its primary colour, empty
 	// unless it is ValidColor.
 	Type, ColorRGBA string
-	// FullWeight is the weight of the full spool in grams.
-	FullWeight *float64
+	// FullWeight is the weight of the full spool in grams, and
+	// NominalFullWeight the weight of a full package of it as sold.
+	FullWeight, NominalFullWeight *float64
 	// Properties is the reported profile temperatures by name, each one of
 	// ProfileTemperatures.
 	Properties map[string]float64
@@ -216,7 +217,8 @@ func (t *Tool) read(member string, value json.RawMessage) {
 		if material, ok := text(value); ok {
 			t.Material = &material
 		}
-	case MaterialInstanceUUID, MaterialPackageUUID, MaterialUUID, MaterialType, MaterialColor, MaterialFullWeight:
+	case MaterialInstanceUUID, MaterialPackageUUID, MaterialUUID, MaterialType, MaterialColor, MaterialFullWeight,
+		MaterialNominalFullWeight:
 		t.readReported(member, value)
 	case OdometerID:
 		if n, ok := wholeNumber(value); ok {
@@ -232,9 +234,15 @@ func (t *Tool) read(member string, value json.RawMessage) {
 
 // readReported takes one member of the reported material package instance.
 func (t *Tool) readReported(member string, value json.RawMessage) {
-	if member == MaterialFullWeight {
-		if weight := number(value); weight != nil {
+	if member == MaterialFullWeight || member == MaterialNominalFullWeight {
+		weight := number(value)
+
+		switch {
+		case weight == nil:
+		case member == MaterialFullWeight:
 			t.reported().FullWeight = weight
+		default:
+			t.reported().NominalFullWeight = weight
 		}
 
 		return
@@ -602,6 +610,10 @@ func instanceImage(tool *Tool) map[string]any {
 
 		if r.FullWeight != nil {
 			instance["actual_netto_full_weight"] = *r.FullWeight
+		}
+
+		if r.NominalFullWeight != nil {
+			pack["nominal_netto_full_weight"] = *r.NominalFullWeight
 		}
 	}
 

@@ -374,11 +374,13 @@ func TestToolTransitions(t *testing.T) {
 					mmuOnInfo(), noInstance("0"),
 					map[string]string{tool("0", connectorapi.MaterialAbbreviation): "null"},
 				)
-				// The head never reported a profile temperature, so there is
-				// none to remove.
+				// The head never reported a profile temperature or a nominal
+				// weight, so there is none to remove.
 				for _, name := range connectorapi.ProfileTemperatures() {
 					delete(on, tool("0", connectorapi.MaterialProperty(name)))
 				}
+
+				delete(on, tool("0", connectorapi.MaterialNominalFullWeight))
 
 				return []transitionStep{
 					{name: "MMU on", frame: info(t, fixtureFrame(t, "info-mmu-on.json", nil)), want: mmuOnInfo()},

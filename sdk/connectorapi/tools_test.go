@@ -465,6 +465,7 @@ func reportedInstance() map[string]json.RawMessage {
 		at("0", connectorapi.MaterialAbbreviation), `"PLA"`,
 		at("0", connectorapi.MaterialColor), `"#ff8800ff"`,
 		at("0", connectorapi.MaterialFullWeight), `1000`,
+		at("0", connectorapi.MaterialNominalFullWeight), `750`,
 		at("0", connectorapi.MaterialProperty("min_print_temperature")), `190`,
 		at("0", connectorapi.MaterialProperty("foo")), `1`,
 	)
@@ -485,6 +486,10 @@ func TestReadToolsKeepsTheReportedInstance(t *testing.T) {
 
 	if got.FullWeight == nil || *got.FullWeight != 1000 {
 		t.Errorf("full weight %v", got.FullWeight)
+	}
+
+	if got.NominalFullWeight == nil || *got.NominalFullWeight != 750 {
+		t.Errorf("nominal full weight %v", got.NominalFullWeight)
 	}
 
 	if !reflect.DeepEqual(got.Properties, map[string]float64{"min_print_temperature": 190}) {
@@ -553,7 +558,8 @@ func TestToolTreeJSONCarriesTheInstance(t *testing.T) {
 				UUID    string  `json:"uuid"`
 				Weight  float64 `json:"actual_netto_full_weight"`
 				Package struct {
-					UUID     string `json:"uuid"`
+					UUID     string  `json:"uuid"`
+					Nominal  float64 `json:"nominal_netto_full_weight"`
 					Material struct {
 						UUID         string `json:"uuid"`
 						Type         string `json:"type"`
@@ -576,7 +582,7 @@ func TestToolTreeJSONCarriesTheInstance(t *testing.T) {
 	m := got.Package.Material
 
 	if got.UUID != "i-1" || got.Package.UUID != "p-1" || m.UUID != "m-1" || m.Type != "PLA" ||
-		m.Abbreviation != "PLA" || m.Color.RGBA != "#ff8800ff" || got.Weight != 1000 ||
+		m.Abbreviation != "PLA" || m.Color.RGBA != "#ff8800ff" || got.Weight != 1000 || got.Package.Nominal != 750 ||
 		m.Properties["min_print_temperature"] != 190 {
 		t.Errorf("the instance reads %s", raw)
 	}

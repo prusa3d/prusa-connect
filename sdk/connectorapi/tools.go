@@ -110,6 +110,11 @@ const (
 	// MaterialFullWeight is the weight of the material when the spool was
 	// full, in grams, as a number: the OpenPrintTag actual_netto_full_weight.
 	MaterialFullWeight = "material_package_instance/actual_netto_full_weight"
+	// MaterialNominalFullWeight is the weight of the material in a full
+	// package as sold, in grams, as a number: the OpenPrintTag
+	// nominal_netto_full_weight. A tag that carries no actual weight
+	// often carries this one.
+	MaterialNominalFullWeight = "material_package_instance/package/nominal_netto_full_weight"
 
 	// NozzleTemp is the nozzle temperature of a head in degrees Celsius, as a
 	// number. A machine with one nozzle reports it under head "0".
@@ -179,7 +184,7 @@ func ToolMembers() []string {
 		FeederSlotCount, FeederModel, FeederBaseModel, FeederType,
 		FeederMMUProgressCode, FeederMMUCommandInProgress,
 		MaterialAbbreviation, MaterialInstanceUUID, MaterialPackageUUID, MaterialUUID,
-		MaterialType, MaterialColor, MaterialFullWeight,
+		MaterialType, MaterialColor, MaterialFullWeight, MaterialNominalFullWeight,
 		NozzleTemp, NozzleTargetTemp, PrintFanRPM, HeatbreakFanRPM, ConsumedWeight,
 		OdometerID, OdometerE, OdometerWeight,
 	}

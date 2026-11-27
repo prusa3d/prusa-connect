@@ -367,7 +367,7 @@ func TestReservedPathsNameTheToolsINFOWrites(t *testing.T) {
 	require.Len(t, legacySlotPaths(), 1+len(legacyFlatPaths)+legacySlotCount*len(legacySlotMembers))
 }
 
-const reportedInstance = `{"uuid":"i-1","package":{"uuid":"p-1","material":{"uuid":"m-1","type":"PLA",` +
+const reportedInstance = `{"uuid":"i-1","package":{"uuid":"p-1","nominal_netto_full_weight":750,"material":{"uuid":"m-1","type":"PLA",` +
 	`"abbreviation":"PLA","primary_color":{"color_rgba":"#ff0000ff"},` +
 	`"properties":{"min_print_temperature":190,"max_print_temperature":230}}` +
 	`},"actual_netto_full_weight":1000}`
@@ -389,6 +389,7 @@ func TestTreeMaterialPublishesTheInstance(t *testing.T) {
 		connectorapi.MaterialAbbreviation:                      `"PLA"`,
 		connectorapi.MaterialColor:                             `"#ff0000ff"`,
 		connectorapi.MaterialFullWeight:                        "1000",
+		connectorapi.MaterialNominalFullWeight:                 "750",
 		connectorapi.MaterialProperty("min_print_temperature"): "190",
 		connectorapi.MaterialProperty("max_print_temperature"): "230",
 	} {
@@ -404,6 +405,7 @@ func TestTreeMaterialDropsTheInstanceItNoLongerReports(t *testing.T) {
 	gone := []string{
 		connectorapi.MaterialInstanceUUID, connectorapi.MaterialPackageUUID, connectorapi.MaterialUUID,
 		connectorapi.MaterialType, connectorapi.MaterialColor, connectorapi.MaterialFullWeight,
+		connectorapi.MaterialNominalFullWeight,
 		connectorapi.MaterialProperty("min_print_temperature"),
 		connectorapi.MaterialProperty("max_print_temperature"),
 	}
