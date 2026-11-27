@@ -6,7 +6,8 @@
 // frame is mounted. A class, because every such tile shares it (svelte-5.md).
 //
 // A tile reads the list with `load` from `onMount`, and holds the timer with
-// `hold` from an effect, so no effect fetches (svelte-data.md).
+// `hold` from an effect, so no effect fetches (svelte-data.md). A card's
+// settings read it with `reload`, so a camera added since shows there.
 import { untrack } from 'svelte';
 
 import type { Camera, Cameras } from '../../data';
@@ -46,6 +47,11 @@ export class CameraFrames {
     return this.#store.loaded;
   }
 
+  /** True while a read of the cameras is running. */
+  get loading(): boolean {
+    return this.#store.loading;
+  }
+
   get error(): unknown {
     return this.#store.error;
   }
@@ -80,6 +86,14 @@ export class CameraFrames {
   /** Reads the cameras, unless they were read or are being read. */
   load(): void {
     if (!this.#store.loaded && !this.#store.loading) void this.#store.load();
+  }
+
+  /**
+   * Reads the cameras again, unless they are being read. A camera added since
+   * the last read then shows, even when that read found none.
+   */
+  reload(): void {
+    if (!this.#store.loading) void this.#store.load();
   }
 
   /** Starts the frames for one more tile, and answers the call that lets it go. */

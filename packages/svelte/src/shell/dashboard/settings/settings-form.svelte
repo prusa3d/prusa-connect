@@ -124,9 +124,10 @@
     };
 
   // A card's settings may turn on a camera picture, so the cameras are read
-  // as the form opens and the choice works at once.
+  // again each time the form opens. A camera added since the dashboard last
+  // read the list is then offered without a reload of the page.
   onMount(() => {
-    cameras.load();
+    cameras.reload();
   });
 
   const optionsOf = (
@@ -169,7 +170,7 @@
       <Pick
         label={label(field.label)}
         empty={t('dashboard.settings.cameraNone')}
-        note={cameras.loaded && cameras.items.length === 0
+        note={cameras.loaded && !cameras.loading && cameras.items.length === 0
           ? t('dashboard.settings.cameraNoneNote')
           : undefined}
         value={text(field.key)}

@@ -11,9 +11,13 @@ import {
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
+import { Cameras } from '../../data/cameras.svelte';
+import type { Camera, CamerasClient } from '../../data/services/cameras';
+import { stubUrlBuilder } from '../../data/stubs';
 import type { LeaveCheck } from '../../router';
 import { expectNoViolations } from '../../test/axe';
 import { fakeDevice } from '../../test/fakes';
+import { CameraFrames } from './cameras.svelte';
 import DashboardScreen from './dashboard-screen.svelte';
 import {
   dashboardContextOver,
@@ -60,6 +64,7 @@ const open = async ({
   kiosk = false,
   edit = false,
   printers = PRINTERS,
+  cameras,
 }: {
   dashboards?: Parameters<typeof fakeCore>[0];
   grants?: readonly Grant[];
@@ -68,12 +73,16 @@ const open = async ({
   kiosk?: boolean;
   edit?: boolean;
   printers?: Parameters<typeof dashboardContextOver>[1];
+  cameras?: CameraFrames;
 } = {}) => {
   const { core, client } = fakeCore(dashboards, {
     defaultId,
     ...(grants === undefined ? {} : { grants }),
   });
-  const { context, moves } = dashboardContextOver(client, printers);
+  const over = dashboardContextOver(client, printers);
+  const { moves } = over;
+  const context =
+    cameras === undefined ? over.context : { ...over.context, cameras };
   const screen = await render(DashboardScreen, {
     props: { context, id, kiosk, edit },
   });
@@ -611,6 +620,156 @@ describe('the dashboard screen', () => {
     const screen = document.querySelector('[data-part="dashboard-screen"]');
     if (screen === null) throw new Error('the screen drew no section');
     await expectNoViolations(screen);
+  });
+});
+
+const BUDDY: Camera = {
+  device_id: 'mk4',
+  type: 'buddy3d',
+  formats: ['image/jpeg'],
+  name: 'buddy-cam',
+  serving: true,
+  snapshot: true,
+  stream: false,
+  watch: true,
+};
+
+const CAMERA_WALL = storedDashboard(9, 'Camera wall', [
+  {
+    id: 'c1',
+    type: 'core/camera',
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    title: '',
+    config: {},
+  },
+]);
+
+const NO_CAMERA_NOTE = 'The server knows no camera you may see.';
+
+/**
+ * A server whose list of cameras the test changes, counting each read. While
+ * `held`, a read answers only when the test lets it go, with the list as it
+ * is then.
+ */
+const cameraServer = (rows: Camera[] = []) => {
+  const server = { rows, reads: 0, held: false };
+  const waiting: (() => void)[] = [];
+  const client: CamerasClient = {
+    watchCamera: () => Promise.resolve('v=0'),
+    listCameras: () => {
+      server.reads += 1;
+      if (!server.held) return Promise.resolve({ items: [...server.rows] });
+
+      return new Promise((resolve) => {
+        waiting.push(() => {
+          resolve({ items: [...server.rows] });
+        });
+      });
+    },
+    transport: stubUrlBuilder(),
+  };
+  const frames = new CameraFrames(new Cameras(client));
+  const answer = (): void => {
+    for (const reply of waiting.splice(0)) reply();
+  };
+
+  return { server, frames, answer };
+};
+
+/** Opens the settings of the camera card, on the dashboard opened to be changed. */
+const openCameraSettings = async () => {
+  await userEvent.click(
+    page.getByRole('button', { name: 'Settings of Camera' }),
+  );
+  await expect
+    .element(page.getByRole('combobox', { name: 'Camera' }))
+    .toBeVisible();
+};
+
+/** The cameras the camera card's settings offer, by their label. */
+const offeredCameras = async (): Promise<string[]> => {
+  await userEvent.click(page.getByRole('combobox', { name: 'Camera' }));
+  const offered = page
+    .getByRole('option')
+    .elements()
+    .map((option) => option.textContent.trim());
+  await userEvent.keyboard('{Escape}');
+
+  return offered;
+};
+
+describe("the cameras a card's settings offer", () => {
+  it('offers a camera registered after the dashboard first read the list when the settings open again', async () => {
+    const { server, frames } = cameraServer();
+    await open({ dashboards: [CAMERA_WALL], id: 9, cameras: frames });
+    await expect.poll(() => frames.loaded).toBe(true);
+
+    await userEvent.click(page.getByRole('button', { name: 'Edit' }));
+    await openCameraSettings();
+    await expect.element(page.getByText(NO_CAMERA_NOTE)).toBeVisible();
+    await userEvent.click(page.getByRole('button', { name: 'Done' }));
+
+    // The camera is added on the printer's own page, which keeps a store of
+    // its own, so the dashboard's list is not told.
+    server.rows = [BUDDY];
+    await openCameraSettings();
+
+    await expect.poll(offeredCameras).toContain('MK4 Garage (buddy-cam)');
+    await expect
+      .element(page.getByText(NO_CAMERA_NOTE))
+      .not.toBeInTheDocument();
+    expect(server.reads).toBe(3);
+  });
+
+  it('offers a camera the first read already found', async () => {
+    const { frames } = cameraServer([BUDDY]);
+    await open({ dashboards: [CAMERA_WALL], id: 9, cameras: frames });
+    await expect.poll(() => frames.loaded).toBe(true);
+
+    await userEvent.click(page.getByRole('button', { name: 'Edit' }));
+    await openCameraSettings();
+
+    expect(await offeredCameras()).toContain('MK4 Garage (buddy-cam)');
+    await expect
+      .element(page.getByText(NO_CAMERA_NOTE))
+      .not.toBeInTheDocument();
+  });
+
+  it('starts no second read while the list is being read', async () => {
+    const { server, frames, answer } = cameraServer([BUDDY]);
+    server.held = true;
+    await open({ dashboards: [CAMERA_WALL], id: 9, cameras: frames });
+    await expect.poll(() => server.reads).toBe(1);
+
+    await userEvent.click(page.getByRole('button', { name: 'Edit' }));
+    await openCameraSettings();
+    expect(server.reads).toBe(1);
+
+    answer();
+    await expect.poll(offeredCameras).toContain('MK4 Garage (buddy-cam)');
+    expect(server.reads).toBe(1);
+  });
+
+  it('says there is no camera only once the list read again has answered', async () => {
+    const { server, frames, answer } = cameraServer();
+    await open({ dashboards: [CAMERA_WALL], id: 9, cameras: frames });
+    await expect.poll(() => frames.loaded).toBe(true);
+
+    server.held = true;
+    await userEvent.click(page.getByRole('button', { name: 'Edit' }));
+    await openCameraSettings();
+    await expect.poll(() => server.reads).toBe(2);
+    // The first read found no camera, but the list is being read again, so
+    // the settings do not say so yet.
+    await expect
+      .element(page.getByText(NO_CAMERA_NOTE))
+      .not.toBeInTheDocument();
+
+    answer();
+    await expect.element(page.getByText(NO_CAMERA_NOTE)).toBeVisible();
   });
 });
 
