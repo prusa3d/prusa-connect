@@ -408,6 +408,7 @@ func (m *maintenance) Prepare(ctx context.Context) (upgrade.Journal, error) {
 		Printing: active, PreparationOnly: true, ModuleImpacts: impacts,
 		TrialRequired: m.trialExtensions(withPlan, impacts), ExtensionReviews: reviews,
 		DiskRequired: required, DiskAvailable: available, Extensions: extensions,
+		ConfigPath: m.configPath,
 	})
 	if err != nil {
 		return upgrade.Journal{}, err

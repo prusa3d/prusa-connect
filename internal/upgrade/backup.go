@@ -1411,6 +1411,24 @@ func syncExistingDirectory(path string) error {
 	return syncDirectory(path)
 }
 
+// holdsBackup reports whether the destination already holds the bytes the
+// manifest records, in the mode a restore would give it. The copy is skipped
+// then: copyFile stages a temporary file beside the destination, and a
+// configuration directory mounted read-only refuses that write.
+func holdsBackup(entry BackupFile, mode fs.FileMode) bool {
+	info, err := os.Stat(entry.Source)
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	if info.Size() != entry.Size || info.Mode().Perm() != mode.Perm() {
+		return false
+	}
+
+	_, digest, err := fileDigest(entry.Source)
+
+	return err == nil && digest == entry.SHA256
+}
+
 func restoreFile(root string, entry BackupFile) error {
 	source := filepath.Join(root, filepath.Clean(entry.Path))
 	if !within(root, source) {
@@ -1422,8 +1440,10 @@ func restoreFile(root string, entry BackupFile) error {
 		mode = backupPerm
 	}
 
-	if err := copyFile(source, entry.Source, mode); err != nil {
-		return fmt.Errorf("restore %s: %w", entry.Name, err)
+	if !holdsBackup(entry, mode) {
+		if err := copyFile(source, entry.Source, mode); err != nil {
+			return fmt.Errorf("restore %s: %w", entry.Name, err)
+		}
 	}
 
 	if entry.Kind == "sqlite" {
