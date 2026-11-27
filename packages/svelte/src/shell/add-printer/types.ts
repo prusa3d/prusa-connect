@@ -88,6 +88,44 @@ export interface AutoConnect {
 }
 
 /**
+ * Where a pairing at the printer's own screen stands. `waiting` is the
+ * question on the printer's screen, `approved` a person who pressed yes while
+ * the printer registers, and `admitted` the printer let in. The other three
+ * end the pairing.
+ */
+export type PairingState =
+  'waiting' | 'approved' | 'admitted' | 'refused' | 'expired' | 'withdrawn';
+
+/** A pairing this server sent to a printer, as the screen draws it. */
+export interface PrinterPairingView {
+  /** The code the printer shows, which the person checks before pressing yes. */
+  code: string;
+  /** The address the pairing went to, as host:port. */
+  printer: string;
+  state: PairingState;
+}
+
+/**
+ * A printer this server hears on the local network and does not hold yet, as
+ * the pairing picker lists it. A Buddy printer announces its host name and
+ * port and nothing else: no serial and no model.
+ */
+export interface NearbyCandidate {
+  /** The name it announces, which is its host name on the network. */
+  name: string;
+  address: string;
+  port: number;
+}
+
+/** What a person asks for when they pair a printer at its screen. */
+export interface PairingRequest {
+  /** The printer's address on the local network, as typed. */
+  printer: string;
+  /** This server's address, which the printer stores when the person says yes. */
+  connect: { host: string; port: number; tls: boolean };
+}
+
+/**
  * What the screen reads, and what it hands back. A callback says what the
  * reader did and never how to do it, so a product on another core hands in an
  * object of its own and decides for itself what an approval performs.
@@ -139,4 +177,26 @@ export interface AddPrinterScreenProps {
   onBegin: () => void;
   onApprove: (code: string) => void;
   onReject: (code: string) => void;
+  /**
+   * The person asked a printer on the network to pair at its own screen. A
+   * host that cannot pair printers leaves it out, and the screen then offers
+   * only the settings file.
+   */
+  onPair?: ((request: PairingRequest) => void) | undefined;
+  /** The person withdrew the pairing, which takes the question off the printer. */
+  onCancelPairing?: (() => void) | undefined;
+  /** The person wants to pair again after a pairing ended. */
+  onPairAgain?: (() => void) | undefined;
+  /**
+   * The printers on the local network that could be paired, which the
+   * picker lists. Undefined until the host has read them, and for a host
+   * that cannot list them: the picker then offers the address field alone.
+   */
+  nearby?: readonly NearbyCandidate[] | undefined;
+  /** The pairing this screen started, until it ends and the person moves on. */
+  pairing?: PrinterPairingView | undefined;
+  /** Whether a pairing request is on its way to the printer. */
+  pairingBusy?: boolean | undefined;
+  /** Why the last pairing request failed, as it was thrown. */
+  pairingError?: unknown;
 }

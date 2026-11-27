@@ -996,6 +996,106 @@ No printer is registered with that id.
 - **parameters** `device_id`
 - **what to do** Read the id from the printer list. An id that was removed is not reissued, so a stored one can go stale.
 
+### `core.printer/PAIRING_ADDRESS_REFUSED` {#core-printer-pairing-address-refused}
+
+This server pairs only with a printer on the local network.
+
+- **status** `422`
+- **retryable** no
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Type the address the printer shows on its network screen: a private address such as 192.168.1.20, or a name that resolves to one.
+
+### `core.printer/PAIRING_BUSY` {#core-printer-pairing-busy}
+
+The printer is printing or shows another dialog, so it cannot ask about pairing.
+
+- **status** `409`
+- **retryable** yes
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Wait until the printer is idle and its screen shows no dialog, then try again.
+
+### `core.printer/PAIRING_DISABLED` {#core-printer-pairing-disabled}
+
+Pairing is off on the printer until it restarts.
+
+- **status** `429`
+- **retryable** no
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** A person cancelled two pairing questions in a row. Restart the printer to pair again, or add it with a settings file instead.
+
+### `core.printer/PAIRING_LIMITED` {#core-printer-pairing-limited}
+
+This server already has a pairing open with that printer, or too many open at once.
+
+- **status** `409`
+- **retryable** yes
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Cancel the open pairing or wait a minute for it to end, then try again.
+
+### `core.printer/PAIRING_LOCKED` {#core-printer-pairing-locked}
+
+The printer takes no pairing request for a while.
+
+- **status** `429`
+- **retryable** yes
+- **occurrence detail** shown
+- **parameters** `retry_after_seconds`
+- **what to do** Wait for the time Retry-After gives in seconds. A printer locks pairing for five minutes after a cancel, a question nobody answered, or three requests in five minutes.
+
+### `core.printer/PAIRING_PENDING` {#core-printer-pairing-pending}
+
+The printer already shows a pairing question.
+
+- **status** `409`
+- **retryable** yes
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Answer or cancel the question on the printer, or wait a minute for it to close, then try again.
+
+### `core.printer/PAIRING_REFUSED` {#core-printer-pairing-refused}
+
+The printer refused the pairing request.
+
+- **status** `422`
+- **retryable** no
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** The detail says which value the printer refused. A server address longer than the printer stores is the usual cause: use the IP address instead of a long name.
+
+### `core.printer/PAIRING_SERVER_ADDRESS` {#core-printer-pairing-server-address}
+
+The printer cannot use the server address in the request.
+
+- **status** `422`
+- **retryable** no
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Give an address the printer reaches this server at: not localhost, at most 35 characters, and a port between 1 and 65535.
+
+### `core.printer/PAIRING_UNREACHABLE` {#core-printer-pairing-unreachable}
+
+This server got no answer from the printer.
+
+- **status** `502`
+- **retryable** yes
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Check the printer's address on its network screen, and that the printer and this server are on the same network.
+
+### `core.printer/PAIRING_UNSUPPORTED` {#core-printer-pairing-unsupported}
+
+The printer's firmware cannot pair.
+
+- **status** `422`
+- **retryable** no
+- **occurrence detail** shown
+- **parameters** none
+- **what to do** Update the printer's firmware, or add the printer with a settings file on a USB drive.
+
 ### `core.printer/PATH_NOT_ALLOWED` {#core-printer-path-not-allowed}
 
 The path leaves the storage it names.

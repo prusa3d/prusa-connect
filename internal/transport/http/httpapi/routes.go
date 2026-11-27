@@ -187,6 +187,7 @@ func registerOperations(api huma.API, cfg Config, closing <-chan struct{}) {
 	registerCameras(api, cfg, closing)
 	registerCameraSettings(api, cfg.CameraSettings)
 	registerRegistrations(api, cfg)
+	registerPrinterPairings(api, cfg)
 	registerPrinterAuthority(api, cfg)
 
 	// Always, and never conditionally on what an operator declared: the document

@@ -8,14 +8,22 @@
   approves each printer is read from the server and never guessed. A printer
   counts as the one just added when its approval, its arrival or its refusal
   came after the guide began to wait.
+
+  The page can also ask a printer on the network to pair at its own screen.
+  The server sends the request and approves the registration that follows,
+  so the guide learns of that printer from the same approval and arrival
+  frames as of any other.
 -->
 <script lang="ts">
   import {
     AddPrinterScreen,
     type JoinedPrinter,
     type JoiningPrinter,
+    type NearbyCandidate,
+    type PairingRequest,
     type PendingPrinter,
     printerHref,
+    printersToAdd,
   } from '@prusa/connect-ui/shell';
   import { deviceIdOf } from '@prusa/connect-ui/data';
   import { onMount } from 'svelte';
@@ -23,11 +31,15 @@
   import { client } from '../client';
   import type { AppContext } from '../screens';
   import { PrinterAuthority } from '../stores/printer-authority.svelte';
+  import { PrinterPairingStore } from '../stores/printer-pairing.svelte';
 
   let { ctx }: { ctx: AppContext } = $props();
 
   const registrations = $derived(ctx.registrations);
   const authority = new PrinterAuthority(client);
+  // One pairing at a time, owned by this page: a pairing waits about a
+  // minute and means nothing once the person leaves.
+  const pairing = new PrinterPairingStore(client);
 
   // The paths a printer dials are the connector's, not this page's, and they
   // are fixed: `internal/connector/xbuddy/xbuddy.go` mounts /p/register and
@@ -145,18 +157,41 @@
     return { reason: last.reason, ...described(last.model) };
   });
 
+  // The printers the picker offers. A printer the server already names in
+  // device_id connects from that address, or last did, so it is here; and
+  // another server is no printer. Nothing is offered until the list is read,
+  // nor to a person who may not read it.
+  const nearby = $derived<NearbyCandidate[] | undefined>(
+    ctx.nearby.loaded && ctx.nearby.error === undefined
+      ? printersToAdd(ctx.nearby.items).map((entry) => ({
+          name: entry.name,
+          address: entry.address,
+          port: entry.port,
+        }))
+      : undefined,
+  );
+
   onMount(() => {
     void registrations.load();
     void ctx.deviceModels.read();
     if (connection.customCert && connection.tls) void authority.load();
 
-    return ctx.fleet.subscribe((event) => {
+    const unsubscribe = ctx.fleet.subscribe((event) => {
       if (event.type !== ARRIVED) return;
       const id = deviceIdOf(event);
       if (id !== undefined && !arrivals.has(id)) {
         arrivals = new Set([...arrivals, id]);
       }
     });
+
+    void ctx.nearby.load();
+    const stopNearby = ctx.nearby.listen();
+
+    return () => {
+      unsubscribe();
+      stopNearby();
+      pairing.dispose();
+    };
   });
 </script>
 
@@ -179,5 +214,18 @@
   }}
   onReject={(code: string) => {
     void registrations.reject(code);
+  }}
+  pairing={pairing.pairing}
+  {nearby}
+  pairingBusy={pairing.busy}
+  pairingError={pairing.error}
+  onPair={(request: PairingRequest) => {
+    void pairing.start(request);
+  }}
+  onCancelPairing={() => {
+    void pairing.cancel();
+  }}
+  onPairAgain={() => {
+    pairing.reset();
   }}
 />

@@ -32,6 +32,9 @@ puts nothing here, because nothing waits.
 | see which printers are waiting, and the code each one shows | [`list-pending-registrations`](#list-pending-registrations) |
 | let one in, and learn the device id it became | [`approve-registration`](#approve-registration) |
 | turn one away, or take back a credential already issued | [`reject-registration`](#reject-registration) |
+| ask a printer on the local network to pair, so a person adds it by pressing yes on its screen | [`start-printer-pairing`](#start-printer-pairing) |
+| follow that pairing until the printer has joined | [`get-printer-pairing`](#get-printer-pairing) |
+| take the question off the printer's screen | [`cancel-printer-pairing`](#cancel-printer-pairing) |
 
 A page adding a printer does not have to ask this listing on a timer. The
 three registration events on
@@ -41,6 +44,15 @@ three registration events on
 away. The origin is the connector instance, and the approved frame carries
 the device id, so a page follows a machine from the code to its device page
 without asking again.
+
+A printer pairing is the other way in. This server sends a pairing request to
+the printer's local API, and the printer shows a code and a question. When the
+person at the printer presses yes, the printer stores this server's address and
+registers. That registration is approved with no code to type, because it
+comes from the address the pairing reached, within two minutes of the yes.
+[ADR-20261126-qca](../../../../../decisions/20261126-qca-a-printer-paired-at-its-screen-is-approved-by-its-address.md)
+holds the rules. A server behind a proxy for the printer wire sees another
+address, so there the registration waits here for a person.
 
 Rejecting is not permanent. It forgets the code and every credential behind
 it, so an approved printer stops being accepted, but the printer registers
@@ -96,6 +108,51 @@ The server answers `200`:
 }
 ```
 
+### `cancel-printer-pairing` {#cancel-printer-pairing}
+
+`DELETE /api/v1/printer-pairings/{pairing_id}`. Withdraw one printer pairing.
+
+Takes the question off the printer's screen while it is still there. A printer that already accepted keeps the server address it stored, and its registration waits for a person on the registrations surface. A pairing that already ended is answered as it ended. It takes admit_device on the driver resource kind.
+
+| parameter | in | type | required | description |
+|---|---|---|---|---|
+| `pairing_id` | path | `string` | yes | The pairing's id, as starting it answered. |
+
+- credential: bearer token. The client method is `cancelPrinterPairing`
+- request body: none
+- response `200`: OK, `application/json` (`PrinterPairing`)
+- errors: `401`, `403`, `404`, `422`, `500`, each a [problem document](../../error-codes.md)
+
+#### Sample {#sample-cancel-printer-pairing}
+
+```sh
+curl -X DELETE "http://127.0.0.1:8080/api/v1/printer-pairings/4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```ts
+await client.cancelPrinterPairing({
+  path: { pairing_id: "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c" },
+});
+```
+
+The server answers `200`:
+
+```json
+{
+  "code": "K7QX-29FM",
+  "connect": {
+    "host": "192.168.1.50",
+    "port": 8080,
+    "tls": false
+  },
+  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+  "printer": "192.168.1.20:80",
+  "started_at": "2026-11-26T10:00:00Z",
+  "state": "withdrawn"
+}
+```
+
 ### `get-printer-authority` {#get-printer-authority}
 
 `GET /api/v1/printer-authority`. The certificate of this server's own authority.
@@ -108,6 +165,58 @@ The DER file a printer loads from its USB drive as connect.der, so it trusts the
 - errors: `401`, `403`, `404`, `500`, each a [problem document](../../error-codes.md)
 
 This operation has no sample: one DER certificate. A worked example of binary bytes is the file, and it does not belong in a contract document.
+
+### `get-printer-pairing` {#get-printer-pairing}
+
+`GET /api/v1/printer-pairings/{pairing_id}`. Read where one printer pairing stands.
+
+The state of the pairing and, once the printer's registration was approved, the device it became. This server asks the printer about the question once a second, so reading this more often learns nothing new. A pairing that ended stays readable for ten minutes. It takes admit_device on the driver resource kind.
+
+| parameter | in | type | required | description |
+|---|---|---|---|---|
+| `pairing_id` | path | `string` | yes | The pairing's id, as starting it answered. |
+
+- credential: bearer token. The client method is `getPrinterPairing`
+- request body: none
+- response `200`: OK, `application/json` (`PrinterPairing`)
+- errors: `401`, `403`, `404`, `422`, `500`, each a [problem document](../../error-codes.md)
+
+#### Sample {#sample-get-printer-pairing}
+
+```sh
+curl "http://127.0.0.1:8080/api/v1/printer-pairings/4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```ts
+await client.getPrinterPairing({
+  path: { pairing_id: "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c" },
+});
+```
+
+The server answers `200`:
+
+```json
+{
+  "code": "K7QX-29FM",
+  "connect": {
+    "host": "192.168.1.50",
+    "port": 8080,
+    "tls": false
+  },
+  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+  "printer": "192.168.1.20:80",
+  "registration": {
+    "code": "K7PQ2XR4MN",
+    "connector": "xbuddy",
+    "device_id": "9f2a4c18-6d3b-4e07-b5a1-8c0f2d7e4b93",
+    "model": "MK4",
+    "serial": "8221-1234567"
+  },
+  "started_at": "2026-11-26T10:00:00Z",
+  "state": "admitted"
+}
+```
 
 ### `list-pending-registrations` {#list-pending-registrations}
 
@@ -173,5 +282,65 @@ A code no connector holds is a 404, and so is one that was already rejected. It 
 - errors: `401`, `403`, `404`, `422`, `500`, each a [problem document](../../error-codes.md)
 
 This operation has no sample: 204, for the same reason the resource delete is.
+
+### `start-printer-pairing` {#start-printer-pairing}
+
+`POST /api/v1/printer-pairings`. Ask a printer on the local network to pair.
+
+This server sends a pairing request to the printer's local API, and the printer shows a question with the code from the answer. When the person at the printer accepts, the printer stores the server address from the request and registers with this server. That registration is approved with no second step, and the pairing's state becomes admitted.
+
+This server sends the request, and not the browser, because the printer is on this server's network. Only private, link-local and shared addresses are dialled. Firmware without pairing answers PAIRING_UNSUPPORTED: add that printer with a settings file. It takes admit_device on the driver resource kind.
+
+- credential: bearer token. The client method is `startPrinterPairing`
+- request body: `application/json` (`PrinterPairingRequest`), required
+- response `201`: Created, `application/json` (`PrinterPairing`)
+- errors: `401`, `403`, `409`, `422`, `429`, `500`, `502`, each a [problem document](../../error-codes.md)
+
+#### Sample {#sample-start-printer-pairing}
+
+```sh
+curl -X POST "http://127.0.0.1:8080/api/v1/printer-pairings" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connect": {
+      "host": "192.168.1.50",
+      "port": 8080,
+      "tls": false
+    },
+    "printer": "192.168.1.20"
+  }'
+```
+
+```ts
+await client.startPrinterPairing({
+  body: {
+    connect: {
+      host: "192.168.1.50",
+      port: 8080,
+      tls: false,
+    },
+    printer: "192.168.1.20",
+  },
+});
+```
+
+The server answers `201`:
+
+```json
+{
+  "code": "K7QX-29FM",
+  "connect": {
+    "host": "192.168.1.50",
+    "port": 8080,
+    "tls": false
+  },
+  "id": "4f2a9c1e7b3d4a6f8e0c2b5d7a9f1e3c",
+  "printer": "192.168.1.20:80",
+  "started_at": "2026-11-26T10:00:00Z",
+  "state": "waiting",
+  "until": "2026-11-26T10:01:15Z"
+}
+```
 
 <!-- end generated -->

@@ -12,6 +12,7 @@ export const operationTable = {
   "approve-link-node": { id: "approve-link-node", method: "POST", path: "/api/v1/links/{name}/nodes/{id}/approve", response: "json", anonymous: false },
   "approve-registration": { id: "approve-registration", method: "POST", path: "/api/v1/registrations/{code}/approve", response: "json", anonymous: false },
   "begin-login": { id: "begin-login", method: "GET", path: "/api/v1/auth/login", response: "none", anonymous: true },
+  "cancel-printer-pairing": { id: "cancel-printer-pairing", method: "DELETE", path: "/api/v1/printer-pairings/{pairing_id}", response: "json", anonymous: false },
   "cancel-server-upgrade": { id: "cancel-server-upgrade", method: "DELETE", path: "/api/v1/server/upgrade", response: "none", anonymous: false },
   "check-access": { id: "check-access", method: "POST", path: "/api/v1/access/check", body: "application/json", response: "json", anonymous: false },
   "check-setup-oidc": { id: "check-setup-oidc", method: "POST", path: "/api/v1/setup/oidc", body: "application/json", response: "json", anonymous: true },
@@ -84,6 +85,7 @@ export const operationTable = {
   "get-module-why-not": { id: "get-module-why-not", method: "GET", path: "/api/v1/modules/why-not/{namespace}", response: "json", anonymous: false },
   "get-principal": { id: "get-principal", method: "GET", path: "/api/v1/principal", response: "json", anonymous: false },
   "get-printer-authority": { id: "get-printer-authority", method: "GET", path: "/api/v1/printer-authority", response: "raw", anonymous: false },
+  "get-printer-pairing": { id: "get-printer-pairing", method: "GET", path: "/api/v1/printer-pairings/{pairing_id}", response: "json", anonymous: false },
   "get-readiness": { id: "get-readiness", method: "GET", path: "/api/v1/readiness", response: "json", anonymous: true },
   "get-resource": { id: "get-resource", method: "GET", path: "/api/v1/resources/{kind}/{name}", response: "json", anonymous: false },
   "get-resource-kind-vocabulary": { id: "get-resource-kind-vocabulary", method: "GET", path: "/api/v1/vocabularies/resource-kinds", response: "json", anonymous: true },
@@ -183,6 +185,7 @@ export const operationTable = {
   "stage-server-upgrade": { id: "stage-server-upgrade", method: "POST", path: "/api/v1/server/upgrade/staged", body: "application/json", response: "json", anonymous: false },
   "stage-server-upgrade-bundle": { id: "stage-server-upgrade-bundle", method: "POST", path: "/api/v1/server/upgrade/staged/bundle", body: "application/octet-stream", response: "json", anonymous: false, longRunning: true },
   "start-beta-portal-pairing": { id: "start-beta-portal-pairing", method: "POST", path: "/api/v1/server/beta-portal-pairing", response: "json", anonymous: false },
+  "start-printer-pairing": { id: "start-printer-pairing", method: "POST", path: "/api/v1/printer-pairings", body: "application/json", response: "json", anonymous: false },
   "stat-storage-entry": { id: "stat-storage-entry", method: "GET", path: "/api/v1/storages/{storage}/stat", response: "json", anonymous: false },
   "stop-device-transfer": { id: "stop-device-transfer", method: "POST", path: "/api/v1/devices/{device_id}/transfers/{transfer_id}/stop", response: "none", anonymous: false },
   "stream-camera": { id: "stream-camera", method: "GET", path: "/api/v1/cameras/{camera}/stream", response: "raw", anonymous: false, longRunning: true },
@@ -271,6 +274,18 @@ export interface Operations {
     request?: Record<string, never>,
     signal?: AbortSignal,
   ): Promise<void>;
+
+  /**
+   * DELETE /api/v1/printer-pairings/{pairing_id}
+   *
+   * Withdraw one printer pairing
+   */
+  cancelPrinterPairing(
+    request: {
+      path: operations["cancel-printer-pairing"]["parameters"]["path"];
+    },
+    signal?: AbortSignal,
+  ): Promise<operations["cancel-printer-pairing"]["responses"][200]["content"]["application/json"]>;
 
   /**
    * DELETE /api/v1/server/upgrade
@@ -1142,6 +1157,18 @@ export interface Operations {
     request?: Record<string, never>,
     signal?: AbortSignal,
   ): Promise<Response>;
+
+  /**
+   * GET /api/v1/printer-pairings/{pairing_id}
+   *
+   * Read where one printer pairing stands
+   */
+  getPrinterPairing(
+    request: {
+      path: operations["get-printer-pairing"]["parameters"]["path"];
+    },
+    signal?: AbortSignal,
+  ): Promise<operations["get-printer-pairing"]["responses"][200]["content"]["application/json"]>;
 
   /**
    * GET /api/v1/readiness
@@ -2326,6 +2353,18 @@ export interface Operations {
   ): Promise<operations["start-beta-portal-pairing"]["responses"][201]["content"]["application/json"]>;
 
   /**
+   * POST /api/v1/printer-pairings
+   *
+   * Ask a printer on the local network to pair
+   */
+  startPrinterPairing(
+    request: {
+      body: NonNullable<operations["start-printer-pairing"]["requestBody"]>["content"]["application/json"];
+    },
+    signal?: AbortSignal,
+  ): Promise<operations["start-printer-pairing"]["responses"][201]["content"]["application/json"]>;
+
+  /**
    * GET /api/v1/storages/{storage}/stat
    *
    * Describe one entry of a storage
@@ -2479,6 +2518,7 @@ export function bindOperations(transport: Transport): Operations {
     approveLinkNode: (request, signal) => transport.call(operationTable["approve-link-node"], request, signal),
     approveRegistration: (request, signal) => transport.call(operationTable["approve-registration"], request, signal),
     beginLogin: (request = {}, signal) => transport.call(operationTable["begin-login"], request, signal),
+    cancelPrinterPairing: (request, signal) => transport.call(operationTable["cancel-printer-pairing"], request, signal),
     cancelServerUpgrade: (request = {}, signal) => transport.call(operationTable["cancel-server-upgrade"], request, signal),
     checkAccess: (request, signal) => transport.call(operationTable["check-access"], request, signal),
     checkSetupOidc: (request, signal) => transport.call(operationTable["check-setup-oidc"], request, signal),
@@ -2551,6 +2591,7 @@ export function bindOperations(transport: Transport): Operations {
     getModuleWhyNot: (request, signal) => transport.call(operationTable["get-module-why-not"], request, signal),
     getPrincipal: (request = {}, signal) => transport.call(operationTable["get-principal"], request, signal),
     getPrinterAuthority: (request = {}, signal) => transport.call(operationTable["get-printer-authority"], request, signal),
+    getPrinterPairing: (request, signal) => transport.call(operationTable["get-printer-pairing"], request, signal),
     getReadiness: (request = {}, signal) => transport.call(operationTable["get-readiness"], request, signal),
     getResource: (request, signal) => transport.call(operationTable["get-resource"], request, signal),
     getResourceKindVocabulary: (request = {}, signal) => transport.call(operationTable["get-resource-kind-vocabulary"], request, signal),
@@ -2650,6 +2691,7 @@ export function bindOperations(transport: Transport): Operations {
     stageServerUpgrade: (request, signal) => transport.call(operationTable["stage-server-upgrade"], request, signal),
     stageServerUpgradeBundle: (request, signal) => transport.call(operationTable["stage-server-upgrade-bundle"], request, signal),
     startBetaPortalPairing: (request = {}, signal) => transport.call(operationTable["start-beta-portal-pairing"], request, signal),
+    startPrinterPairing: (request, signal) => transport.call(operationTable["start-printer-pairing"], request, signal),
     statStorageEntry: (request, signal) => transport.call(operationTable["stat-storage-entry"], request, signal),
     stopDeviceTransfer: (request, signal) => transport.call(operationTable["stop-device-transfer"], request, signal),
     streamCamera: (request, signal) => transport.call(operationTable["stream-camera"], request, signal),

@@ -416,6 +416,10 @@ func serveOver(
 	// same tables and re-binds through the same fleet.
 	admissions := newRegistrations(built.admissions, fleet)
 
+	// A printer paired at its own screen is approved through the same surface.
+	pairings := newPrinterPairings(admissions, built.admissions, logger, opts.pairingPermit)
+	defer pairings.Close()
+
 	// The origins the registration events are published on. Without this a
 	// subscriber holding admit_device would be offered no connector to watch,
 	// and the three frames would reach nobody.
@@ -717,6 +721,7 @@ func serveOver(
 			built.admissions,
 		),
 		Registrations:    admissions,
+		PrinterPairings:  printerPairings{service: pairings},
 		PrinterAuthority: printerAuthority(core.Frontend, opts.ConfigPath),
 		DeviceStates:     states,
 		// A module's own HTTP surface, under /api/v1/modules/<namespace>/, and

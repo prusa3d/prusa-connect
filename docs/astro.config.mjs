@@ -353,6 +353,7 @@ export default defineConfig({
             { label: 'Metrics', slug: 'metrics' },
             { label: 'Tracing', slug: 'tracing' },
             { label: 'Printer configuration', slug: 'printer-configuration' },
+            { label: 'Pair a printer at its screen', slug: 'pair-a-printer-at-its-screen' },
             { label: 'Bench preflight', slug: 'bench-preflight' },
             { label: 'Certificates', slug: 'certificates' },
             { label: 'Printer simulator', slug: 'emulator' },

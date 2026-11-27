@@ -58,7 +58,11 @@
 <!--
   One story per step, then the states of the waiting step a person meets:
   nothing yet, two printers asking, a printer approved and connecting, a
-  printer turned away, and the help that opens when nothing comes.
+  printer turned away, and the help that opens when nothing comes. The last
+  stories are pairing at the printer's screen: the form, the printers heard
+  on the network and none heard, the code while the
+  printer asks, the printer registering, the two ways a pairing ends without
+  a yes, and two refusals from the printer.
 -->
 
 <Story name="Prepare The File" args={{ ...ports, connection }} />
@@ -154,5 +158,117 @@
     ...ports,
     connection,
     error: { code: 'core.auth/ACCESS_DENIED', status: 403 },
+  }}
+/>
+
+<Story
+  name="Pair At The Printer"
+  args={{ ...ports, connection, onPair: () => undefined }}
+/>
+
+<Story
+  name="Pair At The Printer – Printers Nearby"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    nearby: [
+      { name: 'prusa-core-one', address: '192.168.1.21', port: 80 },
+      { name: 'prusa-mk4', address: '192.168.1.22', port: 80 },
+      { name: 'workshop-xl', address: '192.168.1.23', port: 8080 },
+    ],
+  }}
+/>
+
+<Story
+  name="Pair At The Printer – None Nearby"
+  args={{ ...ports, connection, onPair: () => undefined, nearby: [] }}
+/>
+
+<Story
+  name="Pairing – Waiting For Yes"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    onCancelPairing: () => undefined,
+    pairing: {
+      code: 'K7QX-29FM',
+      printer: '192.168.1.20:80',
+      state: 'waiting',
+    },
+  }}
+/>
+
+<Story
+  name="Pairing – Printer Registering"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    pairing: {
+      code: 'K7QX-29FM',
+      printer: '192.168.1.20:80',
+      state: 'approved',
+    },
+  }}
+/>
+
+<Story
+  name="Pairing – Cancelled At The Printer"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    onPairAgain: () => undefined,
+    pairing: {
+      code: 'K7QX-29FM',
+      printer: '192.168.1.20:80',
+      state: 'refused',
+    },
+  }}
+/>
+
+<Story
+  name="Pairing – Nobody Answered"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    onPairAgain: () => undefined,
+    pairing: {
+      code: 'K7QX-29FM',
+      printer: '192.168.1.20:80',
+      state: 'expired',
+    },
+  }}
+/>
+
+<Story
+  name="Pairing – Firmware Cannot Pair"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    pairingError: {
+      code: 'core.printer/PAIRING_UNSUPPORTED',
+      status: 422,
+      message: "the printer's firmware cannot pair",
+    },
+  }}
+/>
+
+<Story
+  name="Pairing – Printer Locked"
+  args={{
+    ...ports,
+    connection,
+    onPair: () => undefined,
+    pairingError: {
+      code: 'core.printer/PAIRING_LOCKED',
+      status: 429,
+      message: 'the printer takes no pairing request for now',
+      params: { retry_after_seconds: 240 },
+    },
   }}
 />
