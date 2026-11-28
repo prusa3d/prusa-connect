@@ -112,8 +112,9 @@ const jobStartRounding = time.Minute
 // Moonraker sends only what changed, so a reading alone does not say which
 // print is on the bed or which head is printing.
 type reader struct {
-	prints prints
-	heads  heads
+	prints  prints
+	heads   heads
+	machine machineState
 }
 
 // patchesFrom turns one reading of the Klipper objects into patches, in a fixed
@@ -129,7 +130,7 @@ func (r *reader) patchesFrom(status map[string]json.RawMessage, now time.Time) [
 	var out []connectorapi.StatePatch
 
 	stats := objects[objectPrintStats]
-	out = appendState(out, stats["state"])
+	out = r.machine.appendState(out, stats["state"], objects[objectWebhooks]["state"])
 
 	// Klipper reports print_stats whether a print is on the bed or not: an idle
 	// machine sends state "standby", an empty filename and a print_duration of
@@ -276,23 +277,59 @@ func objectFields(status map[string]json.RawMessage) map[string]map[string]json.
 	return out
 }
 
-// appendState maps Klipper's own state word onto the one every dialect here
-// reports.
-func appendState(
-	out []connectorapi.StatePatch, raw json.RawMessage,
+// hookErrorStates are the webhooks.state values that mean Klipper is not
+// running. It shut down, for example after M112, or it stopped with a
+// configuration or MCU error. The other values are ready and startup.
+//
+//nolint:gochecknoglobals // a lookup table, read-only after init.
+var hookErrorStates = []string{"shutdown", "error"}
+
+// Moonraker sends only what changed, so one frame may carry either object
+// alone. print_stats changes only when a print starts, pauses, ends or fails,
+// so it stays "standby" after M112 on an idle machine and when an MCU cannot
+// connect. The machine's own state is webhooks.state, and /state needs both.
+type machineState struct {
+	print, hook string
+	// errored is set once ERROR has been written, so a recovery that has no
+	// print state to report is still told as IDLE.
+	errored bool
+}
+
+func (m *machineState) appendState(
+	out []connectorapi.StatePatch, printState, hookState json.RawMessage,
 ) []connectorapi.StatePatch {
-	if len(raw) == 0 {
+	heard := false
+
+	if value := klipperText(printState); value != "" {
+		m.print, heard = value, true
+	}
+
+	if value := klipperText(hookState); value != "" {
+		m.hook, heard = value, true
+	}
+
+	if !heard {
 		return out
 	}
 
-	var reported string
-	if json.Unmarshal(raw, &reported) != nil || reported == "" {
-		return out
-	}
+	var word string
 
-	word, known := stateWords[reported]
-	if !known {
-		word = strings.ToUpper(reported)
+	switch {
+	case slices.Contains(hookErrorStates, m.hook):
+		word, m.errored = stateWords["error"], true
+	case m.print == "" && m.errored:
+		word, m.errored = stateWords["standby"], false
+	case m.print == "":
+		return out
+	default:
+		var known bool
+
+		word, known = stateWords[m.print]
+		if !known {
+			word = strings.ToUpper(m.print)
+		}
+
+		m.errored = false
 	}
 
 	encoded, err := json.Marshal(word)
