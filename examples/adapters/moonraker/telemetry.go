@@ -87,16 +87,20 @@ const roundingUnit = 100
 //
 // Klipper counts no jobs. The driver contract asks every driver that reports a
 // print to report one at /job/id, because a host names the row and the events
-// of a print by it, so this derives one: the file's name and the moment the
-// print began. The moment is worked out from the machine's own total_duration,
-// which counts from the start of the print, and it is held for the life of the
-// print so that two readings of one print produce one id.
+// of a print by it, so this derives one from the file's name and the moment the
+// print began. That moment is Klipper's eventtime minus the print's
+// total_duration, rounded to a whole second. Klipper computes total_duration as
+// eventtime minus the time the print started, so the difference is the same on
+// every reading of one print, and a driver that reconnects mid-print derives the
+// same id from a fresh reading. It is held for the life of the print.
 //
-// The moment is rounded to the minute. A driver that reconnects to a machine
-// mid-print works it out again from a fresh reading, and total_duration and the
-// clock are not read in the same instant: a finer rounding would give one print
-// two ids across a reconnect, which is two prints in every record that reads
-// them.
+// Klipper's clock restarts when its host reboots, so one file that starts in the
+// same second of uptime after two boots gets the same id.
+//
+// When either value is missing the moment falls back to the driver's own clock
+// minus total_duration, rounded to the minute. The driver's clock and
+// total_duration are not read in the same instant, so that id can differ from
+// the one a reconnect derives.
 type prints struct {
 	// id is the print on the bed now, empty when nothing is printing.
 	id string
@@ -105,15 +109,15 @@ type prints struct {
 	file string
 }
 
-// jobStartRounding is how coarsely a derived start is rounded. See prints.
 const jobStartRounding = time.Minute
 
 // reader is what this driver remembers between two readings of one machine.
 // Moonraker sends only what changed, so a reading alone does not say which
 // print is on the bed or which head is printing.
 type reader struct {
-	prints prints
-	heads  heads
+	prints  prints
+	heads   heads
+	machine machineState
 }
 
 // patchesFrom turns one reading of the Klipper objects into patches, in a fixed
@@ -122,14 +126,16 @@ type reader struct {
 // A field the machine did not report produces no patch. Moonraker sends only
 // what changed, so a frame carrying one temperature must not blank the rest of
 // the tree.
-func (r *reader) patchesFrom(status map[string]json.RawMessage, now time.Time) []connectorapi.StatePatch {
+func (r *reader) patchesFrom(
+	status map[string]json.RawMessage, eventTime float64, now time.Time,
+) []connectorapi.StatePatch {
 	p := &r.prints
 	objects := objectFields(status)
 
 	var out []connectorapi.StatePatch
 
 	stats := objects[objectPrintStats]
-	out = appendState(out, stats["state"])
+	out = r.machine.appendState(out, stats["state"], objects[objectWebhooks]["state"])
 
 	// Klipper reports print_stats whether a print is on the bed or not: an idle
 	// machine sends state "standby", an empty filename and a print_duration of
@@ -143,7 +149,7 @@ func (r *reader) patchesFrom(status map[string]json.RawMessage, now time.Time) [
 	// outcome. That reading is the last one about a print appendJob has just
 	// taken off the bed.
 	before := p.id
-	out = p.appendJob(out, stats, now)
+	out = p.appendJob(out, stats, eventTime, now)
 
 	if before != "" || p.id != "" {
 		out = appendVerbatim(out, stats["filename"], jobNamePath)
@@ -174,7 +180,7 @@ func (r *reader) patchesFrom(status map[string]json.RawMessage, now time.Time) [
 // a state nor a file name says nothing about which print it means, so it leaves
 // what is held alone: Moonraker sends only what changed.
 func (p *prints) appendJob(
-	out []connectorapi.StatePatch, stats map[string]json.RawMessage, now time.Time,
+	out []connectorapi.StatePatch, stats map[string]json.RawMessage, eventTime float64, now time.Time,
 ) []connectorapi.StatePatch {
 	state, file := klipperText(stats["state"]), klipperText(stats["filename"])
 
@@ -204,31 +210,39 @@ func (p *prints) appendJob(
 	}
 
 	if p.id == "" || p.file != file {
-		p.file, p.id = file, derivedJobID(file, startOf(stats, now))
+		p.file, p.id = file, derivedJobID(file, jobStart(stats, eventTime, now))
 	}
 
 	return appendText(out, jobIDPath, p.id)
 }
 
-// startOf is when this print began, from the machine's own count of how long it
-// has been running. A machine that reports no count began it now.
-func startOf(stats map[string]json.RawMessage, now time.Time) time.Time {
+// With Klipper's clock and the machine's count of the print's age, the start is
+// the second the print began at, prefixed "klipper:", and a reconnect reads it
+// the same. Without either it is the minute by the driver's clock, prefixed
+// "wall:". The prefixes keep the two kinds of id from colliding.
+func jobStart(stats map[string]json.RawMessage, eventTime float64, now time.Time) string {
 	var running float64
-	if json.Unmarshal(stats["total_duration"], &running) != nil {
-		return now.Truncate(jobStartRounding)
+
+	var reported *float64
+
+	known := json.Unmarshal(stats["total_duration"], &reported) == nil && reported != nil && *reported >= 0
+	if known {
+		running = *reported
 	}
 
-	return now.Add(-time.Duration(running * float64(time.Second))).Truncate(jobStartRounding)
+	if eventTime > 0 && known {
+		return "klipper:" + strconv.FormatInt(int64(math.Round(eventTime-running)), 10)
+	}
+
+	return "wall:" + now.Add(-time.Duration(running*float64(time.Second))).
+		Truncate(jobStartRounding).UTC().Format(time.RFC3339)
 }
 
-// derivedJobID is the id this driver gives a print the machine did not number:
-// the file and the minute the print began, as the hex of their digest.
-//
 // A digest rather than the two values joined, because a file name is whatever
 // somebody called the file and an id travels in a URL, in a cursor and in an
 // event.
-func derivedJobID(file string, started time.Time) string {
-	sum := sha256.Sum256([]byte(file + "\x00" + started.UTC().Format(time.RFC3339)))
+func derivedJobID(file, start string) string {
+	sum := sha256.Sum256([]byte(file + "\x00" + start))
 
 	return hex.EncodeToString(sum[:jobIDBytes])
 }
@@ -276,23 +290,59 @@ func objectFields(status map[string]json.RawMessage) map[string]map[string]json.
 	return out
 }
 
-// appendState maps Klipper's own state word onto the one every dialect here
-// reports.
-func appendState(
-	out []connectorapi.StatePatch, raw json.RawMessage,
+// hookErrorStates are the webhooks.state values that mean Klipper is not
+// running. It shut down, for example after M112, or it stopped with a
+// configuration or MCU error. The other values are ready and startup.
+//
+//nolint:gochecknoglobals // a lookup table, read-only after init.
+var hookErrorStates = []string{"shutdown", "error"}
+
+// Moonraker sends only what changed, so one frame may carry either object
+// alone. print_stats changes only when a print starts, pauses, ends or fails,
+// so it stays "standby" after M112 on an idle machine and when an MCU cannot
+// connect. The machine's own state is webhooks.state, and /state needs both.
+type machineState struct {
+	print, hook string
+	// errored is set once ERROR has been written, so a recovery that has no
+	// print state to report is still told as IDLE.
+	errored bool
+}
+
+func (m *machineState) appendState(
+	out []connectorapi.StatePatch, printState, hookState json.RawMessage,
 ) []connectorapi.StatePatch {
-	if len(raw) == 0 {
+	heard := false
+
+	if value := klipperText(printState); value != "" {
+		m.print, heard = value, true
+	}
+
+	if value := klipperText(hookState); value != "" {
+		m.hook, heard = value, true
+	}
+
+	if !heard {
 		return out
 	}
 
-	var reported string
-	if json.Unmarshal(raw, &reported) != nil || reported == "" {
-		return out
-	}
+	var word string
 
-	word, known := stateWords[reported]
-	if !known {
-		word = strings.ToUpper(reported)
+	switch {
+	case slices.Contains(hookErrorStates, m.hook):
+		word, m.errored = stateWords["error"], true
+	case m.print == "" && m.errored:
+		word, m.errored = stateWords["standby"], false
+	case m.print == "":
+		return out
+	default:
+		var known bool
+
+		word, known = stateWords[m.print]
+		if !known {
+			word = strings.ToUpper(m.print)
+		}
+
+		m.errored = false
 	}
 
 	encoded, err := json.Marshal(word)

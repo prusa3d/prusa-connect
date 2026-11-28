@@ -170,7 +170,7 @@ func (s *Session) handshake(ctx context.Context, offered connectorapi.Set) (conn
 
 	s.reader.heads.count = len(extruders)
 	s.first = append(toolPatches(dumped, extruders), buildVolumePatches(dumped)...)
-	s.first = append(s.first, s.reader.patchesFrom(opening.Status, time.Now())...)
+	s.first = append(s.first, s.reader.patchesFrom(opening.Status, opening.EventTime, time.Now())...)
 
 	s.probe = probe(listed.Objects, heaters, len(extruders), offered)
 
@@ -538,7 +538,14 @@ func (s *Session) update(params json.RawMessage) {
 		return
 	}
 
-	for _, patch := range s.reader.patchesFrom(status, time.Now()) {
+	// A missing or non-numeric event time stays 0, which makes the reader use
+	// the driver's clock, so a failed parse is not an error here.
+	var eventTime float64
+	if len(carried) > 1 {
+		_ = json.Unmarshal(carried[1], &eventTime)
+	}
+
+	for _, patch := range s.reader.patchesFrom(status, eventTime, time.Now()) {
 		s.report(patch)
 	}
 }
