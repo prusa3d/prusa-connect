@@ -22,6 +22,10 @@
     type PageSize,
     RadioGroup,
     RadioGroupItem,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
     SettingsPane,
     ToggleGroup,
     ToggleGroupItem,
@@ -29,10 +33,34 @@
     viewPreferences,
   } from '../../primitives';
   import { textSize, type TextSize } from '../../styles/text-size.svelte';
+  import { moduleTheme } from '../../styles/module-theme.svelte';
   import { theme, type ThemePreference } from '../../styles/theme.svelte';
   import type { SettingsAppearanceScreenProps } from './types';
 
-  let { home, dashboards = true }: SettingsAppearanceScreenProps = $props();
+  let {
+    home,
+    dashboards = true,
+    themes = [],
+  }: SettingsAppearanceScreenProps = $props();
+
+  // The value the app's own look stands under. A key always holds a slash,
+  // so no module theme can take it.
+  const OWN_LOOK = 'own';
+
+  const chooseModuleTheme = (next: string): void => {
+    moduleTheme.choose(themes.find((option) => option.key === next));
+  };
+
+  // Every choice the dropdown offers, so its trigger can name the one held.
+  const themeItems = $derived([
+    { value: OWN_LOOK, label: t('settingsAppearance.moduleTheme.none') },
+    ...themes.map((option) => ({ value: option.key, label: option.title })),
+  ]);
+
+  const chosenThemeTitle = $derived(
+    themeItems.find((item) => item.value === (moduleTheme.key ?? OWN_LOOK))
+      ?.label ?? t('settingsAppearance.moduleTheme.none'),
+  );
 
   const THEME_ICON = {
     system: MonitorIcon,
@@ -171,6 +199,57 @@
           {/each}
         </ToggleGroup>
       </div>
+      {#if themes.length > 0}
+        <div class="flex flex-col gap-2">
+          <h3 class="text-body font-medium">
+            {t('settingsAppearance.moduleTheme.label')}
+          </h3>
+          <Select
+            value={moduleTheme.key ?? OWN_LOOK}
+            items={themeItems}
+            onValueChange={chooseModuleTheme}
+          >
+            <SelectTrigger
+              class="w-full max-w-80 min-w-0"
+              aria-label={t('settingsAppearance.moduleTheme.label')}
+            >
+              <!-- Its own span and not SelectValue, which clips a long title
+                   without an ellipsis. -->
+              <span class="min-w-0 truncate">{chosenThemeTitle}</span>
+            </SelectTrigger>
+            <SelectContent class="max-w-(--radix-select-trigger-width)">
+              <SelectItem
+                value={OWN_LOOK}
+                label={t('settingsAppearance.moduleTheme.none')}
+              >
+                {t('settingsAppearance.moduleTheme.none')}
+              </SelectItem>
+              {#each themes as option (option.key)}
+                <SelectItem value={option.key} label={option.title}>
+                  <span class="flex min-w-0 flex-col">
+                    <span class="truncate">{option.title}</span>
+                    {#if option.module !== undefined}
+                      <span class="text-sm text-muted-foreground">
+                        {t('settingsAppearance.moduleTheme.from', {
+                          module: option.module,
+                        })}
+                      </span>
+                    {/if}
+                    {#if option.key === moduleTheme.defaultKey}
+                      <span class="text-sm text-muted-foreground">
+                        {t('settingsAppearance.moduleTheme.serverDefault')}
+                      </span>
+                    {/if}
+                  </span>
+                </SelectItem>
+              {/each}
+            </SelectContent>
+          </Select>
+          <span class="text-sm text-muted-foreground">
+            {t('settingsAppearance.moduleTheme.note')}
+          </span>
+        </div>
+      {/if}
     </div>
   </div>
 {/snippet}

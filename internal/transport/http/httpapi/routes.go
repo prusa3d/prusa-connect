@@ -155,6 +155,7 @@ func registerOperations(api huma.API, cfg Config, closing <-chan struct{}) {
 		api, cfg.App, dashboardsCarried && !cfg.DashboardsOff, !cfg.ModulesOff, upgradesServed(cfg), cfg.MaxUploadBytes,
 		func() bool { return diagnosticsCarried && cfg.Diagnostics != nil && cfg.Diagnostics.Served() },
 	)
+	registerDefaultTheme(api, cfg.App.ExtensionTheme, cfg.Modules)
 	registerConnectorHealth(api, cfg.Connectors)
 	registerReadiness(api, cfg.Readiness, cfg.Principals, cfg.Grants)
 	registerDiagnostics(api, cfg)

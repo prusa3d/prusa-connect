@@ -311,6 +311,14 @@ const MaxStagedTitle = 80
 
 MaxStagedTitle is the longest title a staged route may give, in characters.
 
+### `MaxThemes` {#manifest-maxthemes}
+
+```go
+const MaxThemes = 8
+```
+
+MaxThemes is how many themes one bundle may offer.
+
 ### `MaxUIExports` {#manifest-maxuiexports}
 
 ```go
@@ -2111,12 +2119,29 @@ type Suggestion struct {
 
 Suggestion is one module a module works better with, and why.
 
+### `Theme` {#manifest-theme}
+
+```go
+type Theme struct {
+    // ID is the theme's name within the module, one label.
+    ID string
+    // Title is what the theme picker reads.
+    Title string
+    // Stylesheet is the theme's CSS file, relative to the bundle root, such as
+    // ui/theme.css. The host serves it under the module's namespace.
+    Stylesheet string
+}
+```
+
+Theme is one stylesheet a bundle offers as a look for the whole app. The app loads it after its own styles when a person picks it, so it may override anything the app draws.
+
 ### `UI` {#manifest-ui}
 
 ```go
 type UI struct {
     // Entry is the bundle's entry file, relative to the bundle root, such as
-    // ui/index.js. The host serves it under the module's namespace.
+    // ui/index.js. The host serves it under the module's namespace. It is
+    // empty only for a bundle that offers themes and nothing else.
     Entry string
     // Library is the range of @prusa/connect-ui the bundle compiled
     // against, in the form ParseRange reads.
@@ -2130,6 +2155,9 @@ type UI struct {
     Exports []UIExport
     // Imports is the components of other modules this bundle draws.
     Imports []UIImport
+    // Themes is the stylesheets the bundle offers as a look for the whole
+    // app. A person picks at most one.
+    Themes []Theme
 }
 ```
 

@@ -233,3 +233,39 @@ func TestAnInstanceThePlaneDoesNotHoldDrawsNothing(t *testing.T) {
 func uiWith(block string) string {
 	return "name: spools\nkind: asset\nlicense: MIT\nui:\n  " + block + "\n"
 }
+
+// themesBlock is a manifest that offers one stylesheet as a look for the app.
+const themesBlock = `
+name: ocean-theme
+kind: asset
+license: MIT
+version: 0.1.0
+ui:
+  entry: index.js
+  library: ">=0.3.0 <1.0.0"
+  themes:
+    - id: ocean
+      title: Ocean
+      stylesheet: ui/ocean.css
+`
+
+// TestAThemeReachesTheListingWithItsStylesheetAddress holds the stylesheet
+// address to the namespace the host derived, as the entry address is.
+func TestAThemeReachesTheListingWithItsStylesheetAddress(t *testing.T) {
+	t.Parallel()
+
+	w := newWired(t)
+	instance := theAsset(t)
+	dir, checksum := aBundleWith(t, themesBlock)
+
+	w.declareAsset(dir, checksum)
+	w.waitReady(instance)
+
+	surface, drawn := w.host.UI(instance)
+	require.True(t, drawn, "a ready module with a ui block draws nothing")
+	require.Equal(t, []httpapi.ResourceUITheme{{
+		ID:            "ocean",
+		Title:         "Ocean",
+		StylesheetURL: "/api/v1/modules/" + assetNamespace + "/ui/ui/ocean.css",
+	}}, surface.Themes)
+}

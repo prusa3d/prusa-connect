@@ -14,5 +14,6 @@
   <SettingsAppearanceScreen
     home={ctx.preferences}
     dashboards={ctx.settings.dashboards}
+    themes={ctx.modules.themes}
   />
 </SettingsScreen>

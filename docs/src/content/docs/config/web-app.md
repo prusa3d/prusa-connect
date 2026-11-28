@@ -42,6 +42,7 @@ Every key has a working default, so a file with no `core:` block starts a server
 | <a id="key-core-frontend-default-language"></a>`core.frontend.default_language` | text | `en` | no | The language the page falls back to: en, cs, de, es, fr, it or pl. |
 | <a id="key-core-frontend-theme"></a>`core.frontend.theme` | text | `system` | no | The palette the page opens in: system, light or dark. system follows the operating system. |
 | <a id="key-core-frontend-support-url"></a>`core.frontend.support_url` | text | - | no | Where the app's Support link points. Empty keeps the assistant on the beta portal. |
+| <a id="key-core-frontend-extension-theme"></a>`core.frontend.extension_theme` | text | - | no | The module theme, as `<namespace>/<id>`, the app is drawn in until a person picks another. Empty, or a theme no running module offers, draws the app's own look. |
 | <a id="key-core-dashboards-enabled"></a>`core.dashboards.enabled` | true or false | `true` | no | Serve the dashboards the home page draws. Off, the home page is the printer list, or the printer's page when there is one. `make build` leaves them out. |
 
 <!-- end generated -->

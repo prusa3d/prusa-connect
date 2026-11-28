@@ -162,6 +162,34 @@ describe('ModuleLoader', () => {
     expect(loader.ready).toBe(true);
   });
 
+  it('imports nothing for a bundle that only offers themes, and refuses nothing', async () => {
+    const { loader, imported } = loaderWith(
+      [
+        {
+          namespace: 'themes',
+          ui: {
+            library: '>=2.0.0 <3.0.0',
+            contributes: {},
+            themes: [
+              {
+                id: 'ocean',
+                title: 'Ocean',
+                stylesheet_url: '/api/v1/modules/themes/ui/ocean.css',
+              },
+            ],
+          },
+        },
+      ],
+      {},
+    );
+
+    await loader.activate();
+
+    expect(imported).toEqual([]);
+    expect(loader.refusals).toEqual([]);
+    expect(loader.ready).toBe(true);
+  });
+
   // ADR-20260911-4p6 rule 26.
   it('records a module that throws and loads the ones after it', async () => {
     const { loader, registry } = loaderWith(

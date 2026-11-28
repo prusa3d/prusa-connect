@@ -94,6 +94,11 @@ type ModuleSurface struct {
 	// page the core answers instead of the problem document.
 	Title   string
 	Summary string
+	// Themes is the stylesheet of each theme the module's bundle offers, by
+	// theme id, as a path inside the bundle such as ui/ocean.css. A theme is
+	// drawn on the sign-in page too, so a stylesheet, and the fonts and
+	// pictures in its directory, are served with no caller resolved.
+	Themes map[string]string
 }
 
 // ModulePlane answers which module claims one namespace. It is the seam between
@@ -228,6 +233,10 @@ func (s *Server) moduleCaller(
 		if route.Matches(inner.Method, inner.URL.Path) {
 			return Caller{}, true
 		}
+	}
+
+	if themeFile(inner, surface.Themes) {
+		return Caller{}, true
 	}
 
 	return s.allowModule(w, r, cfg, surface)

@@ -300,6 +300,19 @@ The server answers `200`:
 }
 ```
 
+### `get-default-theme` {#get-default-theme}
+
+`GET /api/v1/themes/default.css`. The stylesheet of this deployment's default theme.
+
+Redirects with 307 to the stylesheet of the theme core.frontend.extension_theme names, when a running module offers it. Otherwise it answers an empty stylesheet with 200, so a page that links it draws its own look. It takes no credential, because the page links it before anybody has signed in.
+
+- credential: none, the request is sent without a token. The client method is `getDefaultTheme`
+- request body: none
+- response `200`: An empty stylesheet: no default theme is drawn, `text/css` (`string`)
+- errors: `307`, `500`, each a [problem document](../../error-codes.md)
+
+This operation has no sample: 307 to a module's stylesheet, or an empty stylesheet. The answer is the Location header or nothing.
+
 ### `get-diagnostics` {#get-diagnostics}
 
 `GET /api/v1/diagnostics`. What a diagnostics bundle can include.

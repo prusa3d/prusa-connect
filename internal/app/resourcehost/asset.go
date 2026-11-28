@@ -158,13 +158,34 @@ func bundleUI(root *os.Root, namespace string) (*httpapi.ResourceUI, error) {
 		return nil, nil //nolint:nilnil // a module that declares no ui block draws nothing.
 	}
 
+	entry := ""
+	if declared.UI.Entry != "" {
+		entry = httpapi.ModuleUIPath(namespace) + declared.UI.Entry
+	}
+
 	return &httpapi.ResourceUI{
-		EntryURL:    httpapi.ModuleUIPath(namespace) + declared.UI.Entry,
+		EntryURL:    entry,
 		Library:     declared.UI.Library,
 		Contributes: contributesOf(declared.UI.Contributes),
 		Exports:     exportsOf(declared.UI.Exports),
 		Imports:     importsOf(declared.UI.Imports),
+		Themes:      themesOf(namespace, declared.UI.Themes),
 	}, nil
+}
+
+// themesOf renders the themes a bundle offers, each with the address its
+// stylesheet is served at.
+func themesOf(namespace string, declared []manifest.Theme) []httpapi.ResourceUITheme {
+	out := make([]httpapi.ResourceUITheme, 0, len(declared))
+	for _, theme := range declared {
+		out = append(out, httpapi.ResourceUITheme{
+			ID:            theme.ID,
+			Title:         theme.Title,
+			StylesheetURL: httpapi.ModuleUIPath(namespace) + theme.Stylesheet,
+		})
+	}
+
+	return out
 }
 
 // exportsOf renders the components a bundle exports.

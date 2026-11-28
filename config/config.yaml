@@ -194,6 +194,10 @@ core:
     # Where the app's Support link points. Default empty, which keeps the
     # assistant on the beta portal.
     # support_url: https://portal.example.com/beta
+    # The theme a module offers that the app is drawn in until a person picks
+    # another, as <namespace>/<id>. Default empty, which draws the app's own
+    # look.
+    # extension_theme: com.github.aux.acme.themes/ocean
   # What this server tells the local network about itself, so a slicer on the
   # same network finds it without anybody typing an address. It sends mDNS,
   # which is DNS sent to every machine on the same link, and the announcement

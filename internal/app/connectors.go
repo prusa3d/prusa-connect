@@ -766,6 +766,7 @@ func appSettings(frontend config.Frontend, diagnostics config.Diagnostics, state
 		PrinterCustomCA: frontend.PrinterCustomCA,
 		Documentation:   version.Documentation(),
 		SupportURL:      frontend.SupportURL,
+		ExtensionTheme:  frontend.ExtensionTheme,
 		// The address alone; whether the bundle is served is the diagnostics
 		// field, which the page reads first.
 		DiagnosticsSendURL: diagnostics.SendTarget(),

@@ -45,7 +45,12 @@ func (p modulePlane) Module(namespace string) (httpapi.ModuleSurface, bool) {
 			continue
 		}
 
-		return httpapi.ModuleSurface{Instance: instance, Handler: httpapi.ModuleUIHandler(ui)}, true
+		surface := httpapi.ModuleSurface{Instance: instance, Handler: httpapi.ModuleUIHandler(ui)}
+		if drawn, offers := p.host.UI(instance); offers {
+			surface.Themes = httpapi.ThemeFiles(namespace, drawn)
+		}
+
+		return surface, true
 	}
 
 	return httpapi.ModuleSurface{}, false

@@ -1,4 +1,5 @@
 import type { HomePreference } from '../../domain';
+import type { ModuleThemeOption } from '../../styles/module-theme.svelte';
 
 /** Which page this browser opens on. */
 export interface HomeSource {
@@ -11,4 +12,6 @@ export interface SettingsAppearanceScreenProps {
   home: HomeSource;
   /** False on a server that leaves dashboards out, which hides that choice. */
   dashboards?: boolean;
+  /** The themes installed modules offer. None hides the choice. */
+  themes?: readonly ModuleThemeOption[];
 }

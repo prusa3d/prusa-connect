@@ -20,3 +20,10 @@ export {
   ThemeStore,
   type ThemeStoreOptions,
 } from './styles/theme.svelte';
+export {
+  MODULE_THEME_STORAGE_KEY,
+  moduleTheme,
+  type ModuleThemeOption,
+  ModuleThemeStore,
+  type ModuleThemeStoreOptions,
+} from './styles/module-theme.svelte';

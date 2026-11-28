@@ -1,0 +1,23 @@
+# A module that is one stylesheet and nothing else: it offers a look for the
+# whole app under ui.themes. A person picks it under Settings, Appearance,
+# Extension theme, and the app links the stylesheet after its own, so it may
+# override anything the app draws. An operator can make it the server's
+# default with core.frontend.extension_theme.
+#
+# A bundle that offers themes and nothing else runs no script, so it names no
+# entry.
+
+name: ocean-theme
+title: Ocean theme
+summary: An example extension theme. It draws the app in blue with rounder corners.
+codeowner: Prusa Research
+kind: asset
+version: 0.1.0
+license: OCL v1.1 + Micro v1 + NoSaaS v1 + SWAtt v1
+
+ui:
+  library: ">=0.0.1 <1.0.0"
+  themes:
+    - id: ocean
+      title: Ocean
+      stylesheet: ui/ocean.css

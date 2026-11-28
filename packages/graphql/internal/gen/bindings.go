@@ -97,6 +97,7 @@ var unboundGroups = []struct {
 			"get-module-why",
 			"get-module-why-not",
 			"get-module-state",
+			"get-default-theme",
 			"get-principal",
 			"get-resource",
 			"get-resource-log",

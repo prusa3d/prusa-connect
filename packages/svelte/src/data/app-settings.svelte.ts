@@ -195,6 +195,15 @@ export class AppSettings {
   }
 
   /**
+   * The module theme this deployment draws the app in until a person picks
+   * another, as `<namespace>/<id>`. Undefined until the read lands, and on a
+   * server that names none.
+   */
+  get extensionTheme(): string | undefined {
+    return this.#settings?.extension_theme;
+  }
+
+  /**
    * True once a read has finished, whether it answered or failed. The page
    * waits on this rather than on the values, so a server that cannot answer
    * draws its own defaults instead of waiting for ever.

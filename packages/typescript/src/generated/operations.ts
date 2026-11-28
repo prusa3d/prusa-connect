@@ -53,6 +53,7 @@ export const operationTable = {
   "get-command": { id: "get-command", method: "GET", path: "/api/v1/commands/{command_id}", response: "json", anonymous: false },
   "get-connector-health": { id: "get-connector-health", method: "GET", path: "/api/v1/health/connectors", response: "json", anonymous: false },
   "get-dashboard": { id: "get-dashboard", method: "GET", path: "/api/v1/dashboards/{dashboard}", response: "json", anonymous: false },
+  "get-default-theme": { id: "get-default-theme", method: "GET", path: "/api/v1/themes/default.css", response: "raw", anonymous: true },
   "get-developer-connectors": { id: "get-developer-connectors", method: "GET", path: "/api/v1/dev/connectors", response: "json", anonymous: false },
   "get-developer-device-commands": { id: "get-developer-device-commands", method: "GET", path: "/api/v1/dev/devices/{device_id}/commands", response: "json", anonymous: false },
   "get-developer-view": { id: "get-developer-view", method: "GET", path: "/dev", response: "text", anonymous: false },
@@ -786,6 +787,18 @@ export interface Operations {
     },
     signal?: AbortSignal,
   ): Promise<operations["get-dashboard"]["responses"][200]["content"]["application/json"]>;
+
+  /**
+   * GET /api/v1/themes/default.css
+   *
+   * The stylesheet of this deployment's default theme
+   *
+   * Takes no credential.
+   */
+  getDefaultTheme(
+    request?: Record<string, never>,
+    signal?: AbortSignal,
+  ): Promise<Response>;
 
   /**
    * GET /api/v1/dev/connectors
@@ -2520,6 +2533,7 @@ export function bindOperations(transport: Transport): Operations {
     getCommand: (request, signal) => transport.call(operationTable["get-command"], request, signal),
     getConnectorHealth: (request = {}, signal) => transport.call(operationTable["get-connector-health"], request, signal),
     getDashboard: (request, signal) => transport.call(operationTable["get-dashboard"], request, signal),
+    getDefaultTheme: (request = {}, signal) => transport.call(operationTable["get-default-theme"], request, signal),
     getDeveloperConnectors: (request = {}, signal) => transport.call(operationTable["get-developer-connectors"], request, signal),
     getDeveloperDeviceCommands: (request, signal) => transport.call(operationTable["get-developer-device-commands"], request, signal),
     getDeveloperView: (request = {}, signal) => transport.call(operationTable["get-developer-view"], request, signal),

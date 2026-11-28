@@ -11,6 +11,7 @@ package httpapi
 //nolint:gochecknoglobals,gosec // a lookup table, read-only after init. G101 matches
 var bodylessOperations = map[string]string{
 	"begin-login":                "303 to the issuer. The body is empty and the answer is the Location header",
+	"get-default-theme":          "307 to a module's stylesheet, or an empty stylesheet. The answer is the Location header or nothing",
 	"complete-login":             "303 back to the application, with the session in a Set-Cookie header",
 	"logout":                     "204. The answer is the expired cookie, not a body",
 	"delete-resource":            "204. A delete that answered a body would be describing something that is gone",

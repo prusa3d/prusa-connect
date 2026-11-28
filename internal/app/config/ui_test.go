@@ -53,6 +53,7 @@ core:
     theme: dark
     printer_address: https://shop.example.net
     support_url: https://portal.example/beta
+    extension_theme: com.github.aux.acme.themes/ocean
 `))
 	require.NoError(t, err)
 
@@ -62,6 +63,7 @@ core:
 	require.Equal(t, "dark", core.Frontend.Theme)
 	require.Equal(t, "https://shop.example.net", core.Frontend.PrinterAddress)
 	require.Equal(t, "https://portal.example/beta", core.Frontend.SupportURL)
+	require.Equal(t, "com.github.aux.acme.themes/ocean", core.Frontend.ExtensionTheme)
 	require.NoError(t, core.Validate())
 }
 
@@ -90,6 +92,15 @@ func TestAValueTheAppCannotDrawIsRefused(t *testing.T) {
 		},
 		"a support link that is not http": {
 			block: "    support_url: ftp://x\n", says: "support_url",
+		},
+		"an extension theme with no id": {
+			block: "    extension_theme: com.github.aux.acme.themes\n", says: "extension_theme",
+		},
+		"an extension theme with no namespace": {
+			block: "    extension_theme: /ocean\n", says: "extension_theme",
+		},
+		"an extension theme id that is not one label": {
+			block: "    extension_theme: com.github.aux.acme.themes/Ocean/x\n", says: "extension_theme",
 		},
 		"a printer address only this machine answers on": {
 			block: "    printer_address: http://localhost:8080\n", says: "printer_address",

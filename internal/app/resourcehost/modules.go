@@ -485,6 +485,12 @@ func (h *Host) surfaceOf(instance ref.Ref, running *instance) (httpapi.ModuleSur
 		surface.Title, surface.Summary = module.Title, module.Summary
 	}
 
+	if drawn, ok := uiOf(running.runner); ok {
+		if namespace, named := moduleNamespaceOf(running.declaration); named {
+			surface.Themes = httpapi.ThemeFiles(namespace, drawn)
+		}
+	}
+
 	return surface, true
 }
 

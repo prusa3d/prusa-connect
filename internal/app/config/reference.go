@@ -140,6 +140,11 @@ var Keys = map[string]Key{
 		DependsOn: "core.frontend.printer_address",
 		See:       "certificates/",
 	},
+	"core.frontend.extension_theme": {
+		Doc: "The module theme, as `<namespace>/<id>`, the app is drawn in until a person picks " +
+			"another. Empty, or a theme no running module offers, draws the app's own look.",
+		DependsOn: "core.frontend.enabled",
+	},
 	"core.frontend.support_url": {
 		Doc:       "Where the app's Support link points. Empty keeps the assistant on the beta portal.",
 		DependsOn: "core.frontend.enabled",

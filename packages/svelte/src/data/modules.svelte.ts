@@ -1,6 +1,7 @@
 // Moved from frontend/src/lib/stores/modules.svelte.ts, 2026-09-11
 import { hiddenEntries } from '../module-hidden';
 import { modulePageHref } from '../module-href';
+import type { ModuleThemeOption } from '../styles/module-theme.svelte';
 import {
   type ModulesClient,
   readResources,
@@ -109,6 +110,25 @@ export class Modules {
         hidden: page.hidden || hidden.includes(`pages/${page.path}`),
         icon: page.icon,
         href: modulePageHref(namespace, page.path),
+      }));
+    }),
+  );
+
+  /** Every theme a module offers, as the appearance picker lists them. */
+  readonly themes: readonly ModuleThemeOption[] = $derived(
+    this.withUi.flatMap((item) => {
+      const namespace = item.namespace ?? '';
+      if (namespace === '') return [];
+      const module =
+        [item.module?.title, item.name].find(
+          (name) => name !== undefined && name !== '',
+        ) ?? namespace;
+
+      return (item.ui?.themes ?? []).map((theme) => ({
+        key: `${namespace}/${theme.id}`,
+        title: theme.title,
+        module,
+        href: theme.stylesheet_url,
       }));
     }),
   );

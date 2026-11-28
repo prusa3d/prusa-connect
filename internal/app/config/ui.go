@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -89,6 +90,11 @@ type Frontend struct {
 	// SupportURL is where the footer's Support link points. Empty keeps the
 	// assistant on the beta portal.
 	SupportURL string `yaml:"support_url"`
+	// ExtensionTheme is the theme a module offers that the app is drawn in
+	// until a person picks another, as <namespace>/<id>. Empty draws the app's
+	// own look. A theme no running module offers draws the app's own look too,
+	// so a module switched off does not stop the server starting.
+	ExtensionTheme string `yaml:"extension_theme"`
 }
 
 // On reports whether the app is served. An absent key is on.
@@ -121,7 +127,37 @@ func (f Frontend) validate() error {
 		return err
 	}
 
+	if err := validExtensionTheme(f.ExtensionTheme); err != nil {
+		return err
+	}
+
 	return validSupportURL(f.SupportURL)
+}
+
+// themeNamespace and themeID are the shapes of the two halves of
+// core.frontend.extension_theme: dot-separated DNS labels, and one label.
+//
+//nolint:gochecknoglobals // two patterns compiled once, never written.
+var (
+	themeNamespace = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$`)
+	themeID        = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+)
+
+// validExtensionTheme refuses a value that cannot name a theme: one that is
+// not a namespace, one slash and one id. Whether a module offers it is known
+// only once the modules have started, so that is not checked here.
+func validExtensionTheme(value string) error {
+	if value == "" {
+		return nil
+	}
+
+	namespace, id, found := strings.Cut(value, "/")
+	if !found || !themeNamespace.MatchString(namespace) || !themeID.MatchString(id) {
+		return fmt.Errorf("%w: core.frontend.extension_theme is %q, expected <namespace>/<id>, such as "+
+			"com.github.aux.acme.themes/ocean", ErrInvalid, value)
+	}
+
+	return nil
 }
 
 // validSupportURL refuses a link the browser would not open as a page: one that

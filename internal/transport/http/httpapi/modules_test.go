@@ -52,6 +52,8 @@ type fakeModulePlane struct {
 	staged []manifest.StagedRoute
 	// title and summary are the module's own, from its manifest.
 	title, summary string
+	// themes is the stylesheet of each theme the bundle offers, by id.
+	themes map[string]string
 }
 
 func (p fakeModulePlane) Module(namespace string) (ModuleSurface, bool) {
@@ -61,7 +63,7 @@ func (p fakeModulePlane) Module(namespace string) (ModuleSurface, bool) {
 
 	return ModuleSurface{
 		Instance: p.instance, Handler: p.handler, OpenAPI: p.openapi, Mount: p.mount, Public: p.public,
-		Staged: p.staged, Title: p.title, Summary: p.summary,
+		Staged: p.staged, Title: p.title, Summary: p.summary, Themes: p.themes,
 	}, true
 }
 

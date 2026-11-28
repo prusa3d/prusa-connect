@@ -405,6 +405,11 @@ export class ModuleLoader {
         (ui.exports ?? []).map((exported) => exported.name),
       );
 
+      // A bundle that only offers themes runs no script, so there is nothing
+      // to import. Its themes are read from the listing by the Modules store.
+      const entry = ui.entry_url;
+      if (entry === undefined || entry === '') continue;
+
       if (!satisfiesRange(version, ui.library)) {
         this.registry.refuse({
           namespace,
@@ -418,6 +423,7 @@ export class ModuleLoader {
       admissible.push({
         namespace,
         self: `${instance.kind}:${instance.name}`,
+        entry,
         ui,
         version: instance.module?.version,
       });
@@ -464,7 +470,7 @@ export class ModuleLoader {
      * English. A file that is not there is not a fault; the module has not
      * been translated yet.
      */
-    const merge = async (namespace: string, ui: ModuleUI): Promise<void> => {
+    const merge = async (namespace: string, entry: string): Promise<void> => {
       const wanted =
         locale.current === SOURCE_LOCALE
           ? [SOURCE_LOCALE]
@@ -473,7 +479,7 @@ export class ModuleLoader {
       for (const language of wanted) {
         try {
           const messages = await catalogueOf(
-            catalogueUrl(ui.entry_url, language),
+            catalogueUrl(entry, language),
             signal,
           );
           // A run a reset ended registers nothing, so it cannot put its
@@ -493,7 +499,7 @@ export class ModuleLoader {
     // One at a time rather than in parallel. A module contributes its pages
     // in the order it is loaded, and a sidebar whose order depends on which
     // bundle answered first would be a different menu on every reload.
-    for (const { namespace, self, ui, version } of discovery.instances) {
+    for (const { namespace, self, entry, ui, version } of discovery.instances) {
       if (stale()) return;
       if (!keep(namespace) || this.#attempted.has(namespace)) continue;
       this.#attempted.add(namespace);
@@ -501,22 +507,20 @@ export class ModuleLoader {
       try {
         // The catalogue is merged before the bundle runs, so a module that
         // draws in its own setup already has its words.
-        await merge(namespace, ui);
+        await merge(namespace, entry);
         if (stale()) return;
 
         let imported: unknown;
         try {
-          imported = await importModule(importUrl(ui.entry_url, version));
+          imported = await importModule(importUrl(entry, version));
         } catch {
           if (stale()) return;
-          imported = await importModule(
-            importUrl(ui.entry_url, version, Date.now()),
-          );
+          imported = await importModule(importUrl(entry, version, Date.now()));
         }
         const setup = setupOf(imported);
         if (stale()) return;
         if (!setup) {
-          throw new Error(`${ui.entry_url} default-exports no setup function`);
+          throw new Error(`${entry} default-exports no setup function`);
         }
 
         const store = createStore(namespace, principal);
@@ -616,6 +620,8 @@ interface Instance {
   namespace: string;
   /** The instance's kind and name, such as `sink:simple-queue`. */
   self: string;
+  /** Where the bundle's entry module is served. */
+  entry: string;
   ui: ModuleUI;
   /** The release the manifest declared; absent when the listing names none. */
   version: string | undefined;

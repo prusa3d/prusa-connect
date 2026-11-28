@@ -1,6 +1,11 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { browserStorage, forgetRemembered, theme } from '@prusa/connect-ui';
+  import {
+    browserStorage,
+    forgetRemembered,
+    moduleTheme,
+    theme,
+  } from '@prusa/connect-ui';
   import { operationTable } from '@prusa/connect';
   import {
     AppSettings,
@@ -143,8 +148,10 @@
   $effect(() => {
     if (!useServerAppearance || !settings.asked) return;
     const preferredTheme = settings.theme;
+    const extensionTheme = settings.extensionTheme;
     untrack(() => {
       theme.useDefault(preferredTheme);
+      moduleTheme.useDefault(extensionTheme);
     });
   });
   const appVersion = new AppVersion(client);
@@ -274,6 +281,16 @@
       void person.dashboards.reload();
     },
   );
+
+  // A module theme whose module was removed or switched off is dropped once
+  // the listing has answered.
+  $effect(() => {
+    if (!person.modules.loaded) return;
+    const offered = person.modules.themes;
+    untrack(() => {
+      moduleTheme.reconcile(offered);
+    });
+  });
 
   // What draws the modules this server has installed.
   const registry = new SlotRegistry();

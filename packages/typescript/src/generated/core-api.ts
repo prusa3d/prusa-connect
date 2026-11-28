@@ -3049,6 +3049,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/themes/default.css": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The stylesheet of this deployment's default theme
+         * @description Redirects with 307 to the stylesheet of the theme core.frontend.extension_theme names, when a running module offers it. Otherwise it answers an empty stylesheet with 200, so a page that links it draws its own look. It takes no credential, because the page links it before anybody has signed in.
+         */
+        get: operations["get-default-theme"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/time-server": {
         parameters: {
             query?: never;
@@ -3555,6 +3575,8 @@ export interface components {
             readonly documentation?: string;
             /** @description Whether this server serves the web app at its origin root. False means the root answers 404 and the page a client is reading came from somewhere else. */
             enabled: boolean;
+            /** @description The theme a module offers that the page is drawn in until a person picks another, as <namespace>/<id>. Absent draws the app's own look. GET /api/v1/themes/default.css serves its stylesheet. */
+            extension_theme?: string;
             /**
              * Format: int64
              * @description The largest file, in bytes, this server's storages take in one upload. It is core.api.max_upload_size, so a page can refuse a larger file before sending it.
@@ -7830,8 +7852,8 @@ export interface components {
         ResourceUI: {
             /** @description What the bundle may register. A registration outside it is refused. */
             contributes: components["schemas"]["ResourceContributes"];
-            /** @description Where the bundle's entry module is served. Import it as an ES module. */
-            entry_url: string;
+            /** @description Where the bundle's entry module is served. Import it as an ES module. Absent for a bundle that offers themes and nothing else, which runs no script. */
+            entry_url?: string;
             /** @description The components this bundle hands other modules' bundles. */
             exports?: components["schemas"]["ResourceUIExport"][];
             /**
@@ -7845,6 +7867,8 @@ export interface components {
             imports?: components["schemas"]["ResourceUIImport"][];
             /** @description The range of @prusa/connect-ui the bundle compiled against, as its manifest declared it. */
             library: string;
+            /** @description The stylesheets this bundle offers as a look for the whole app. A client loads the one a person picked after its own styles, so it may override anything the app draws. */
+            themes?: components["schemas"]["ResourceUITheme"][];
         };
         ResourceUIExport: {
             /**
@@ -7864,6 +7888,20 @@ export interface components {
              * @example spool-picker
              */
             name: string;
+        };
+        ResourceUITheme: {
+            /**
+             * @description The theme's name within the module, one DNS label.
+             * @example ocean
+             */
+            id: string;
+            /** @description Where the theme's stylesheet is served, an absolute path under the module's own prefix. */
+            stylesheet_url: string;
+            /**
+             * @description What the theme picker reads.
+             * @example Ocean
+             */
+            title: string;
         };
         RestartInputBody: {
             /**
@@ -24966,6 +25004,45 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ProblemError"];
                 };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemError"];
+                };
+            };
+        };
+    };
+    "get-default-theme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description An empty stylesheet: no default theme is drawn. */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    "Content-Type"?: string;
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/css": string;
+                };
+            };
+            /** @description The theme's stylesheet is at the address the Location header names. */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Internal Server Error */
             500: {

@@ -3,6 +3,7 @@
 #
 #   examples/spools            a module with a Go half and a browser half
 #   examples/nozzle-watch      a module that is one browser bundle
+#   examples/ocean-theme       a module that is one stylesheet, offered as a theme
 #   packages/graphql    a module that is one Go process, with no page
 #
 # Two callers read what this writes, and that is why the packing lives here
@@ -49,6 +50,7 @@ SPOOLS_CLIENT_DIR=$SPOOLS_DIR/client
 SPOOLS_UI_DIR=$SPOOLS_DIR/ui
 NOZZLE_DIR=examples/nozzle-watch
 NOZZLE_UI_DIR=$NOZZLE_DIR/ui
+OCEAN_DIR=examples/ocean-theme
 GRAPHQL_DIR=packages/graphql
 LIBRARY_DIR=packages/svelte
 # The client SDK the spools typed client links to. A fresh clone has no dist
@@ -57,6 +59,7 @@ CLIENT_SDK_DIR=packages/typescript
 
 SPOOLS_RELEASE=$PACK_ROOT/spools
 NOZZLE_RELEASE=$PACK_ROOT/nozzle-watch
+OCEAN_RELEASE=$PACK_ROOT/ocean-theme
 GRAPHQL_RELEASE=$PACK_ROOT/graphql
 
 CHECKSUMS_FILE=checksums.txt
@@ -75,10 +78,12 @@ manifest_version() {
 
 SPOOLS_VERSION=$(manifest_version "$SPOOLS_DIR")
 NOZZLE_VERSION=$(manifest_version "$NOZZLE_DIR")
+OCEAN_VERSION=$(manifest_version "$OCEAN_DIR")
 GRAPHQL_VERSION=$(manifest_version "$GRAPHQL_DIR")
 
 SPOOLS_ARCHIVE=$PACK_ROOT/spools-$SPOOLS_VERSION.tar.gz
 NOZZLE_ARCHIVE=$PACK_ROOT/nozzle-watch-$NOZZLE_VERSION.tar.gz
+OCEAN_ARCHIVE=$PACK_ROOT/ocean-theme-$OCEAN_VERSION.tar.gz
 GRAPHQL_ARCHIVE=$PACK_ROOT/graphql-$GRAPHQL_VERSION.tar.gz
 
 for tool in go pnpm sha256sum tar; do
@@ -140,19 +145,22 @@ stale() {
 
 SPOOLS_STALE=0
 NOZZLE_STALE=0
+OCEAN_STALE=0
 GRAPHQL_STALE=0
 
 stale "$SPOOLS_ARCHIVE" "$SPOOLS_DIR" "$LIBRARY_DIR/src" "packages/typescript/src" && SPOOLS_STALE=1
 stale "$NOZZLE_ARCHIVE" "$NOZZLE_DIR" "$LIBRARY_DIR/src" "packages/typescript/src" && NOZZLE_STALE=1
+stale "$OCEAN_ARCHIVE" "$OCEAN_DIR" && OCEAN_STALE=1
 # The GraphQL module's schema is generated from the core's own document, so
 # that document is one of its sources: a core that moved and a module that was
 # not rebuilt would ship a schema behind it.
 stale "$GRAPHQL_ARCHIVE" "$GRAPHQL_DIR" internal/transport/http/httpapi/openapi.json && GRAPHQL_STALE=1
 
-if [ "$SPOOLS_STALE" = 0 ] && [ "$NOZZLE_STALE" = 0 ] && [ "$GRAPHQL_STALE" = 0 ]; then
-	echo "OK    all three releases are newer than their sources, so nothing was rebuilt."
+if [ "$SPOOLS_STALE" = 0 ] && [ "$NOZZLE_STALE" = 0 ] && [ "$OCEAN_STALE" = 0 ] && [ "$GRAPHQL_STALE" = 0 ]; then
+	echo "OK    all four releases are newer than their sources, so nothing was rebuilt."
 	echo "      $SPOOLS_ARCHIVE"
 	echo "      $NOZZLE_ARCHIVE"
+	echo "      $OCEAN_ARCHIVE"
 	echo "      $GRAPHQL_ARCHIVE"
 	exit 0
 fi
@@ -254,6 +262,22 @@ if [ "$NOZZLE_STALE" = 1 ]; then
 	step "the nozzle-watch release packs" archive "$NOZZLE_RELEASE" "$NOZZLE_ARCHIVE"
 fi
 
+if [ "$OCEAN_STALE" = 1 ]; then
+	# One stylesheet and no script, so there is nothing to build: the release
+	# is the example's own files.
+	rm -rf "$OCEAN_RELEASE"
+	mkdir -p "$OCEAN_RELEASE"
+	cp "$OCEAN_DIR/module.yaml" "$OCEAN_RELEASE/module.yaml"
+	cp -R "$OCEAN_DIR/ui" "$OCEAN_RELEASE/ui"
+	if [ ! -f "$OCEAN_RELEASE/ui/ocean.css" ]; then
+		echo "FAIL  $OCEAN_RELEASE is missing ui/ocean.css"
+		exit 1
+	fi
+	checksums "$OCEAN_RELEASE"
+
+	step "the ocean-theme release packs" archive "$OCEAN_RELEASE" "$OCEAN_ARCHIVE"
+fi
+
 if [ "$GRAPHQL_STALE" = 1 ]; then
 	# One Go process and no bundle. The module carries its own go.mod, so the
 	# build runs inside its directory and the output path is absolute.
@@ -279,10 +303,11 @@ if [ "$GRAPHQL_STALE" = 1 ]; then
 	step "the GraphQL release packs" archive "$GRAPHQL_RELEASE" "$GRAPHQL_ARCHIVE"
 fi
 
-echo "OK    all three releases are packed under $PACK_ROOT"
+echo "OK    all four releases are packed under $PACK_ROOT"
 echo
 echo "      $SPOOLS_RELEASE  and  $SPOOLS_ARCHIVE"
 echo "      $NOZZLE_RELEASE  and  $NOZZLE_ARCHIVE"
+echo "      $OCEAN_RELEASE  and  $OCEAN_ARCHIVE"
 echo "      $GRAPHQL_RELEASE  and  $GRAPHQL_ARCHIVE"
 
 }

@@ -3,6 +3,7 @@ package manifest
 import (
 	"fmt"
 	"io/fs"
+	"reflect"
 	"slices"
 	"strings"
 )
@@ -11,7 +12,8 @@ import (
 // the library it compiled against, and what it contributes to the app.
 type UI struct {
 	// Entry is the bundle's entry file, relative to the bundle root, such as
-	// ui/index.js. The host serves it under the module's namespace.
+	// ui/index.js. The host serves it under the module's namespace. It is
+	// empty only for a bundle that offers themes and nothing else.
 	Entry string
 	// Library is the range of @prusa/connect-ui the bundle compiled
 	// against, in the form ParseRange reads.
@@ -25,6 +27,9 @@ type UI struct {
 	Exports []UIExport
 	// Imports is the components of other modules this bundle draws.
 	Imports []UIImport
+	// Themes is the stylesheets the bundle offers as a look for the whole
+	// app. A person picks at most one.
+	Themes []Theme
 }
 
 // UIExport is one component a bundle hands other bundles.
@@ -132,7 +137,7 @@ func contributesKeys() []string {
 //
 //nolint:gochecknoglobals // closed tables read at parse, never written.
 var (
-	uiKeys      = []string{"entry", "library", "contributes", "exports", "imports"}
+	uiKeys      = []string{"entry", "library", "contributes", "exports", "imports", "themes"}
 	pageKeys    = []string{"path", "title", "icon", "hidden"}
 	sectionKeys = []string{"id", "title"}
 	actionKeys  = []string{"id", "title", "icon", "destructive"}
@@ -184,19 +189,6 @@ func readUI(tree map[string]any) (*UI, error) {
 
 	var held UI
 
-	if held.Entry, err = requiredText(block, "ui", "entry"); err != nil {
-		return nil, err
-	}
-
-	if err = insideBundle("ui.entry", held.Entry); err != nil {
-		return nil, err
-	}
-
-	if !strings.HasSuffix(held.Entry, entrySuffix) {
-		return nil, fmt.Errorf("%w: ui.entry is %q and the app imports it as an ES module, so it ends in %s",
-			ErrInvalid, held.Entry, entrySuffix)
-	}
-
 	if held.Library, err = requiredText(block, "ui", "library"); err != nil {
 		return nil, err
 	}
@@ -213,9 +205,50 @@ func readUI(tree map[string]any) (*UI, error) {
 		return nil, err
 	}
 
-	held.Imports, err = readImports(block)
+	if held.Imports, err = readImports(block); err != nil {
+		return nil, err
+	}
 
-	return &held, err
+	if held.Themes, err = readThemes(block); err != nil {
+		return nil, err
+	}
+
+	if held.Entry, err = readEntry(block, held); err != nil {
+		return nil, err
+	}
+
+	return &held, nil
+}
+
+// readEntry reads ui.entry. A bundle that only offers themes runs no script,
+// so it may leave the entry out. Every other bundle names one.
+func readEntry(block map[string]any, held UI) (string, error) {
+	themesOnly := len(held.Themes) > 0 && reflect.ValueOf(held.Contributes).IsZero() &&
+		len(held.Exports) == 0 && len(held.Imports) == 0
+
+	entry, err := text(block, "ui", "entry")
+	if err != nil {
+		return "", err
+	}
+
+	if entry == "" && themesOnly {
+		return "", nil
+	}
+
+	if entry == "" {
+		return "", fmt.Errorf("%w: ui.entry is empty", ErrInvalid)
+	}
+
+	if err = insideBundle("ui.entry", entry); err != nil {
+		return "", err
+	}
+
+	if !strings.HasSuffix(entry, entrySuffix) {
+		return "", fmt.Errorf("%w: ui.entry is %q and the app imports it as an ES module, so it ends in %s",
+			ErrInvalid, entry, entrySuffix)
+	}
+
+	return entry, nil
 }
 
 // readExports reads ui.exports.

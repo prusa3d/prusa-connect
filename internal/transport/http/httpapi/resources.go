@@ -435,7 +435,7 @@ type ModuleDependant struct {
 type ResourceUI struct {
 	// EntryURL is where the bundle's entry module is served, an absolute path
 	// under the module's own prefix. The frontend imports it as an ES module.
-	EntryURL string `json:"entry_url" doc:"Where the bundle's entry module is served. Import it as an ES module."`
+	EntryURL string `json:"entry_url,omitempty" doc:"Where the bundle's entry module is served. Import it as an ES module. Absent for a bundle that offers themes and nothing else, which runs no script."`
 	// Library is the range of the component library the bundle compiled
 	// against, as the manifest declared it. The frontend checks its own
 	// version against it before the import.
@@ -452,7 +452,15 @@ type ResourceUI struct {
 	// and draws from them.
 	Exports []ResourceUIExport `json:"exports,omitempty" doc:"The components this bundle hands other modules' bundles."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                maxItems:"16" nullable:"false"`
 	Imports []ResourceUIImport `json:"imports,omitempty" doc:"The components of other modules this bundle draws."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      maxItems:"16" nullable:"false"`
+	Themes  []ResourceUITheme  `json:"themes,omitempty"  doc:"The stylesheets this bundle offers as a look for the whole app. A client loads the one a person picked after its own styles, so it may override anything the app draws."                                                                                                                                                                                                                                                                                                                                                                                                                 maxItems:"8"  nullable:"false"`
 	Hidden  []string           `json:"hidden,omitempty"  doc:"The entries of its own interface the running module hides now, each as slot key and identity joined by one /: pages/<path>, or settings, device_card, device_section, device_info_section, device_tab, device_action, file_action or print_section followed by /<id>. The module states it while it runs, such as when a feature of its own is switched off, and it is empty after each start until the module states it again. A client hides an entry that is here or in hidden_contributions. Like those, a hidden page still answers a direct link. Omitted or empty hides nothing." maxItems:"64" nullable:"false" example:"[\"pages/customers\"]"`
+}
+
+// ResourceUITheme is one stylesheet a bundle offers as a look for the app.
+type ResourceUITheme struct {
+	ID            string `json:"id"             doc:"The theme's name within the module, one DNS label."                                      example:"ocean" maxLength:"63" minLength:"1"`
+	Title         string `json:"title"          doc:"What the theme picker reads."                                                            example:"Ocean"                minLength:"1"`
+	StylesheetURL string `json:"stylesheet_url" doc:"Where the theme's stylesheet is served, an absolute path under the module's own prefix."                                minLength:"1"`
 }
 
 // ResourceUIExport is one component a bundle hands other bundles.

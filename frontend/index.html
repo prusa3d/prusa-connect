@@ -21,6 +21,43 @@
          until the file arrives, which on a local network is the same second. -->
   </head>
   <body>
+    <!-- The module theme is linked here, before anything is drawn, so the
+         first paint is already in it. A link the parser writes holds the
+         paint until it has loaded, and one placed in the body comes after
+         every stylesheet in the head, so the theme's rules win at the same
+         specificity. The pick and its format are the module-theme store's in
+         @prusa/connect-ui; with no pick the page links the server's default,
+         which is an empty stylesheet where the server names none. -->
+    <script>
+      (function () {
+        var attribute = 'data-module-theme-default';
+        var href = '/api/v1/themes/default.css';
+        try {
+          var pick = JSON.parse(
+            localStorage.getItem('module-theme') || 'false',
+          );
+          if (pick && pick.key === null) {
+            href = '';
+          } else if (
+            pick &&
+            typeof pick.key === 'string' &&
+            typeof pick.href === 'string' &&
+            pick.href.indexOf('/api/v1/modules/') === 0
+          ) {
+            attribute = 'data-module-theme';
+            href = pick.href;
+          }
+        } catch (ignored) {
+          // A browser that keeps nothing follows the default.
+        }
+        if (href !== '') {
+          var escaped = href.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          document.write(
+            '<link rel="stylesheet" ' + attribute + ' href="' + escaped + '">',
+          );
+        }
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -1,0 +1,42 @@
+/* The Ocean theme. The app links this after its own stylesheet, so a rule
+   here at the same specificity wins. It changes the tokens every component
+   reads, and one rule outside them to show a theme is not held to tokens. */
+
+:root {
+  --primary: oklch(0.55 0.16 245);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-hovered: oklch(0.5 0.16 245);
+  --primary-pressed: oklch(0.45 0.15 245);
+  --selected: oklch(0.55 0.16 245);
+  --selected-foreground: oklch(0.99 0 0);
+  --selected-hovered: oklch(0.5 0.16 245);
+  --control-on: oklch(0.55 0.16 245);
+  --progress: oklch(0.6 0.15 230);
+  --link: oklch(0.5 0.16 245);
+  --ring: oklch(0.55 0.16 245);
+  --background: oklch(0.97 0.01 240);
+  --corner-xs: 4px;
+  --corner-sm: 6px;
+  --corner-md: 10px;
+}
+
+.dark {
+  --primary: oklch(0.7 0.14 240);
+  --primary-foreground: oklch(0.18 0.02 250);
+  --primary-hovered: oklch(0.75 0.13 240);
+  --primary-pressed: oklch(0.65 0.14 240);
+  --selected: oklch(0.7 0.14 240);
+  --selected-foreground: oklch(0.18 0.02 250);
+  --selected-hovered: oklch(0.75 0.13 240);
+  --control-on: oklch(0.7 0.14 240);
+  --progress: oklch(0.72 0.12 225);
+  --link: oklch(0.75 0.13 240);
+  --ring: oklch(0.7 0.14 240);
+  --background: oklch(0.17 0.02 250);
+}
+
+/* Not a token: headings are drawn a little wider apart. */
+h1,
+h2 {
+  letter-spacing: 0.01em;
+}
