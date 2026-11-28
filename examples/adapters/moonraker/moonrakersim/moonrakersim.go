@@ -119,6 +119,7 @@ func DefaultStatus() map[string]map[string]any {
 		"print_stats": {
 			"state": "standby", "filename": "", "print_duration": coldest, "total_duration": coldest,
 		},
+		"webhooks":       {"state": "ready", "state_message": "Printer is ready"},
 		"display_status": {"progress": coldest, "message": nil},
 		"extruder":       {"temperature": roomNozzle, "target": coldest, "power": coldest},
 		"heater_bed":     {"temperature": roomBed, "target": coldest, "power": coldest},

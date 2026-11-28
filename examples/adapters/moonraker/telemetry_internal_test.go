@@ -22,7 +22,7 @@ func TestAnIdleMachineReportsNoPrintPath(t *testing.T) {
 	patches := held.patchesFrom(reading(`{
 		"print_stats": {"state": "standby", "filename": "", "print_duration": 0, "total_duration": 0},
 		"display_status": {"progress": 0}
-	}`, t), time.Unix(0, 0))
+	}`, t), 0, time.Unix(0, 0))
 
 	for _, patch := range patches {
 		if strings.HasPrefix(patch.Path, "/job/") {
@@ -42,7 +42,7 @@ func TestAPrintOnTheBedReportsItsIDAndItsOtherPaths(t *testing.T) {
 			"print_duration": 61.5, "filament_used": 120.25, "total_duration": 75
 		},
 		"display_status": {"progress": 0.42}
-	}`, t), time.Unix(0, 0))
+	}`, t), 0, time.Unix(0, 0))
 
 	written := map[string]bool{}
 	for _, patch := range patches {
@@ -72,14 +72,14 @@ func TestTheReadingThatEndsAPrintStillNamesIt(t *testing.T) {
 			"state": "printing", "filename": "bracket.gcode",
 			"print_duration": 61.5, "total_duration": 75
 		}
-	}`, t), time.Unix(0, 0))
+	}`, t), 0, time.Unix(0, 0))
 
 	patches := held.patchesFrom(reading(`{
 		"print_stats": {
 			"state": "complete", "filename": "bracket.gcode",
 			"print_duration": 120, "total_duration": 130
 		}
-	}`, t), time.Unix(0, 0))
+	}`, t), 0, time.Unix(0, 0))
 
 	written := map[string]bool{}
 	for _, patch := range patches {
