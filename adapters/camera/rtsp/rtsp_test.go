@@ -312,11 +312,24 @@ type fake struct {
 	// early makes the device send an RTCP report and an RTP packet before it
 	// answers PLAY, as a Buddy3D's LIVE555 server does.
 	early bool
+	// strict makes the device answer a SETUP, PLAY or keepalive that does not
+	// answer its challenge with 400 and close the connection, as a Reolink
+	// camera does.
+	strict bool
+	// stale makes the device answer the first answered SETUP with a 401 that
+	// marks its nonce stale and sends a new one, as RFC 7616 section 3.3 allows.
+	stale bool
 
 	url        string
 	authorized atomic.Bool
 	closed     atomic.Int32
 	keepalives atomic.Int32
+	// counted is the nonce count the last answer carried, and replays the
+	// answers whose count was not one above it.
+	counted atomic.Int64
+	replays atomic.Int32
+	// staled is set once the device has replaced its nonce.
+	staled atomic.Bool
 }
 
 // serve starts the fake device and returns it with the URL to dial.
@@ -370,7 +383,7 @@ func (f *fake) talk(conn net.Conn) {
 				"Public": "DESCRIBE, SETUP, PLAY, TEARDOWN",
 			}, nil)
 		case "DESCRIBE":
-			if f.challenge && !f.checked(headers["authorization"]) {
+			if f.challenge && !f.checked(method, headers) {
 				write(conn, "401 Unauthorized", seq, map[string]string{
 					"WWW-Authenticate": `Digest realm="camera", nonce="abc123", qop="auth"`,
 				}, nil)
@@ -381,11 +394,28 @@ func (f *fake) talk(conn net.Conn) {
 			write(conn, "200 OK", seq,
 				map[string]string{"Content-Type": "application/sdp"}, []byte(f.sdp()))
 		case "SETUP":
+			if f.refuses(conn, method, headers) {
+				return
+			}
+
+			if f.stale && f.staled.CompareAndSwap(false, true) {
+				f.counted.Store(0)
+				write(conn, "401 Unauthorized", seq, map[string]string{
+					"WWW-Authenticate": `Digest realm="camera", nonce="def456", qop="auth", stale=true`,
+				}, nil)
+
+				continue
+			}
+
 			write(conn, "200 OK", seq, map[string]string{
 				"Session":   "12345678;timeout=" + f.sessionTimeout(),
 				"Transport": "RTP/AVP/TCP;unicast;interleaved=0-1",
 			}, nil)
 		case "PLAY":
+			if f.refuses(conn, method, headers) {
+				return
+			}
+
 			if f.early {
 				report := []byte{'$', 1, 0, 8, 0x80, 0xc8, 0, 6, 0, 0, 0, 1}
 				_, _ = conn.Write(report)
@@ -421,9 +451,23 @@ func (f *fake) sessionTimeout() string {
 	return "60"
 }
 
+// refuses answers a strict device's 400 to a request that does not answer the
+// challenge. The caller returns, which closes the connection.
+func (f *fake) refuses(conn net.Conn, method string, headers map[string]string) bool {
+	if !f.strict || f.checked(method, headers) {
+		return false
+	}
+
+	write(conn, "400 Bad Request", headers["cseq"], nil, nil)
+
+	return true
+}
+
 // checked answers the digest the driver sent, so a case that asserts the
 // credential arrived is asserting a computed answer and not a header's presence.
-func (f *fake) checked(authorization string) bool {
+// The answer has to name the request's own target and the current nonce.
+func (f *fake) checked(method string, headers map[string]string) bool {
+	authorization := headers["authorization"]
 	if !strings.HasPrefix(authorization, "Digest ") {
 		return false
 	}
@@ -437,12 +481,26 @@ func (f *fake) checked(authorization string) bool {
 		}
 	}
 
-	ha1 := sum("operator:camera:hunter2")
-	ha2 := sum("DESCRIBE:" + fields["uri"])
-	want := sum(ha1 + ":abc123:" + fields["nc"] + ":" + fields["cnonce"] + ":auth:" + ha2)
+	nonce := "abc123"
+	if f.staled.Load() {
+		nonce = "def456"
+	}
 
-	if fields["response"] != want {
+	ha1 := sum("operator:camera:hunter2")
+	ha2 := sum(method + ":" + fields["uri"])
+	want := sum(ha1 + ":" + nonce + ":" + fields["nc"] + ":" + fields["cnonce"] + ":auth:" + ha2)
+
+	if fields["uri"] != headers[":uri"] || fields["response"] != want {
 		return false
+	}
+
+	count, err := strconv.ParseInt(fields["nc"], 16, 64)
+	if err != nil {
+		return false
+	}
+
+	if count != f.counted.Swap(count)+1 {
+		f.replays.Add(1)
 	}
 
 	f.authorized.Store(true)
@@ -530,8 +588,11 @@ func readRequest(reader *bufio.Reader) (string, map[string]string, error) {
 		return "", nil, err
 	}
 
-	method, _, _ := strings.Cut(strings.TrimSpace(line), " ")
-	headers := map[string]string{}
+	method, rest, _ := strings.Cut(strings.TrimSpace(line), " ")
+	target, _, _ := strings.Cut(rest, " ")
+	// A colon cannot start a header name, so the request target cannot clash
+	// with one.
+	headers := map[string]string{":uri": target}
 
 	for {
 		line, err = reader.ReadString('\n')
@@ -581,8 +642,14 @@ func sum(value string) string {
 // which is what makes the reply land between two packets.
 func (f *fake) answerKeepalives(conn net.Conn, reader *bufio.Reader) {
 	for {
-		_, headers, err := readRequest(reader)
+		method, headers, err := readRequest(reader)
 		if err != nil {
+			return
+		}
+
+		if f.refuses(conn, method, headers) {
+			_ = conn.Close()
+
 			return
 		}
 
@@ -622,4 +689,72 @@ func TestAStreamSurvivesTheKeepaliveOnTheMediaConnection(t *testing.T) {
 
 	require.Positive(t, device.keepalives.Load(),
 		"the session declared a timeout and the driver never refreshed it")
+}
+
+// A Reolink camera answers a SETUP that does not answer its challenge with 400
+// and closes the connection. So every
+// request after the first challenge answers it, with a nonce count that rises
+// each time, and the keepalives on the playing connection answer it too.
+func TestACameraThatRefusesAnUnansweredRequestStillPlays(t *testing.T) {
+	t.Parallel()
+
+	device := serve(t, &fake{challenge: true, strict: true, codec: "H264", endless: true, shortSession: true})
+
+	camera, err := rtsp.New(cameraapi.ProviderSpec{
+		ID: "watch", Type: rtsp.Type, Printer: "p1",
+		Config: map[string]any{
+			"url":      device.url,
+			"username": "operator",
+			"password": "hunter2",
+		},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, camera.Close()) })
+
+	stream, err := camera.Open(t.Context(), cameraapi.FormatH264AnnexB)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = stream.Body.Close() })
+
+	// The session declares one second, so reading for three crosses several
+	// keepalives. A keepalive the device refused would end the stream here.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		read(t, stream.Body, 64)
+	}
+
+	require.Positive(t, device.keepalives.Load(), "no keepalive answered the challenge")
+	require.Zero(t, device.replays.Load(), "an answer repeated a nonce count")
+}
+
+// A camera may replace its nonce in the middle of a handshake with a 401 that
+// marks the old one stale. The driver answers the new nonce from then on, and
+// its nonce count starts again at one.
+func TestAStaleNonceIsReplacedAndItsCountStartsAgain(t *testing.T) {
+	t.Parallel()
+
+	device := serve(t, &fake{challenge: true, strict: true, stale: true, codec: "H264", endless: true})
+
+	camera, err := rtsp.New(cameraapi.ProviderSpec{
+		ID: "watch", Type: rtsp.Type, Printer: "p1",
+		Config: map[string]any{
+			"url":      device.url,
+			"username": "operator",
+			"password": "hunter2",
+		},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, camera.Close()) })
+
+	stream, err := camera.Open(t.Context(), cameraapi.FormatH264AnnexB)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = stream.Body.Close() })
+
+	read(t, stream.Body, 64)
+
+	require.True(t, device.staled.Load(), "the device never replaced its nonce")
+	require.Zero(t, device.replays.Load(), "an answer did not count on from the one before")
 }
